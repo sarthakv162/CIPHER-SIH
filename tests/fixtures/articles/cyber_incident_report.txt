@@ -1,0 +1,57 @@
+INTERNAL INCIDENT REPORT - RANSOMWARE INTRUSION AT REGIONAL WATER UTILITY
+
+Reference: IR-2024-0917
+Classification: For Official Use Only
+Prepared by: Computer Security Incident Response Team
+
+Summary
+
+On 12 September 2024 at approximately 02:40 local time, monitoring analysts at a
+regional water utility observed anomalous outbound traffic from an engineering
+workstation on the corporate network. Within ninety minutes the intrusion had
+progressed to the deployment of file-encrypting malware across eleven servers,
+including the utility's billing platform and its historian database. Operational
+technology systems that control treatment and distribution were segmented from the
+affected network and were not encrypted. Water quality and supply were not
+affected at any point.
+
+Initial Access
+
+Forensic review indicates the attacker gained initial access through a reused
+credential belonging to a third-party maintenance contractor. The credential had
+not been rotated in fourteen months and was not protected by multi-factor
+authentication. The attacker authenticated to an internet-facing remote access
+portal on 4 September and maintained a low-profile foothold for eight days before
+escalating.
+
+Lateral Movement and Impact
+
+The attacker used a common open-source post-exploitation framework to move from
+the initial workstation to a domain controller, where they created two rogue
+administrator accounts. Backups stored on a network share were deleted before
+encryption began. Offline backups held at a separate site were intact and became
+the basis for recovery. Billing operations were restored within four days;
+full restoration of historian data took nine days.
+
+Indicators of Compromise
+
+- Command-and-control domain: update-svc-sync.net
+- Attacker IP address: 185.220.101.47
+- Dropped payload SHA-256: 9f2c4e1a7b6d8c3f5a0e2d4b6c8a1f3e5d7c9b0a2e4f6d8c0b2a4e6f8d0c2b4a6
+- Ransom note filename: RESTORE-FILES-NOW.txt
+
+Recommended Actions
+
+Rotate all contractor credentials immediately and enforce multi-factor
+authentication on every remote access path. Isolate backup infrastructure so that
+domain administrator accounts cannot reach it. Deploy endpoint detection and
+response agents to all servers and engineering workstations. Conduct a tabletop
+exercise covering a scenario in which corporate and operational networks must be
+decoupled under time pressure.
+
+Outlook
+
+There is no evidence that operational technology was targeted, but the intrusion
+demonstrates that a corporate compromise can force protective shutdowns that
+degrade service. The utility has requested assistance drafting external
+communications for regulators and the public.

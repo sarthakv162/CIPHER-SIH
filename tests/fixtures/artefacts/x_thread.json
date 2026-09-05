@@ -1,0 +1,27 @@
+{
+  "title": "X Thread: Water Utility Ransomware Breakdown",
+  "confidence_notes": "",
+  "artefact_type": "x_thread",
+  "tweets": [
+    {
+      "text": "A regional water utility got hit with ransomware last month. 11 servers encrypted in under 2 hours. Billing down 4 days. But the water never stopped. Here is why. A thread."
+    },
+    {
+      "text": "Entry point: a maintenance contractor's login. Not rotated in 14 months. No multi-factor authentication. The attacker sat quietly for 8 days before making a move."
+    },
+    {
+      "text": "Then it moved fast: open-source post-exploitation tooling, straight to a domain controller, two rogue admin accounts created, network backups deleted."
+    },
+    {
+      "text": "What saved them: the treatment and distribution controls were on a segmented network. The malware could not cross into it. Offline backups at another site survived the deletion."
+    },
+    {
+      "text": "Do these this week: rotate every third-party credential, enforce MFA on remote access, isolate backups from domain admins, and rehearse cutting corporate and OT networks apart."
+    }
+  ],
+  "hashtags": [
+    "OTSecurity",
+    "Ransomware"
+  ],
+  "thread_hook": "11 servers encrypted in under 2 hours, but the water never stopped. Here is why."
+}

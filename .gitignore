@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# Virtualenv
+.venv/
+
+# Project data
+models/*
+!models/.gitkeep
+data/outputs/*
+!data/outputs/.gitkeep
+data/samples/*
+!data/samples/.gitkeep
+data/*.db
+*.sqlite
+*.sqlite3
+
+# OS
+.DS_Store

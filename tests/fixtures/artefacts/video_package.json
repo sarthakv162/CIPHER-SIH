@@ -1,0 +1,59 @@
+{
+  "title": "Video Package: Governing Foundation Models in the Public Sector",
+  "confidence_notes": "Timings are targets; narration wording is a first pass for review.",
+  "artefact_type": "video_package",
+  "runtime_seconds_target": 90,
+  "logline": "A ninety-second explainer on why sensitive government work should default to offline AI models and what the centre must fund to make that practical.",
+  "scenes": [
+    {
+      "duration_seconds": 15,
+      "scene_description": "Title card over a muted shot of a government office corridor.",
+      "on_screen_text": "Governing Foundation Models in Government",
+      "narration": "Government teams are adopting powerful AI models faster than assurance processes can keep up.",
+      "visual_recommendation": "Slow push-in on the corridor, text fades in centred.",
+      "b_roll_suggestions": [
+        "empty meeting room",
+        "laptop on a desk",
+        "server room door"
+      ]
+    },
+    {
+      "duration_seconds": 25,
+      "scene_description": "Split screen contrasting a hosted cloud model with an on-premises rack.",
+      "on_screen_text": "Hosted power vs. on-premises control",
+      "narration": "Hosted models are the most capable, but using them means sending official information to an outside provider. On-premises models keep data inside the security boundary at the cost of hardware and effort.",
+      "visual_recommendation": "Animated data packets leaving a building on the hosted side; packets staying inside on the other.",
+      "b_roll_suggestions": [
+        "data centre aisle",
+        "network cabling",
+        "padlock icon animation"
+      ]
+    },
+    {
+      "duration_seconds": 25,
+      "scene_description": "Three stacked cards animate in, one per recommendation.",
+      "on_screen_text": "Evaluate centrally. Record provenance. Fund a reference stack.",
+      "narration": "The brief makes three asks: a central team that scores models on real government tasks, a mandate that every AI-assisted artefact carries a provenance manifest, and funding for a supported offline reference stack.",
+      "visual_recommendation": "Kinetic typography, each card locking into place with a soft click.",
+      "b_roll_suggestions": [
+        "checklist animation",
+        "document with a stamp",
+        "hardware being racked"
+      ]
+    },
+    {
+      "duration_seconds": 25,
+      "scene_description": "Closing card with the advisory group's request and a call to review.",
+      "on_screen_text": "Default to offline for national security work",
+      "narration": "For work touching national security, the default should be fully offline deployment on government hardware, with hosted services allowed only after an explicit data protection assessment. The working group is ready to begin on approval.",
+      "visual_recommendation": "Hold on the closing card, subtle motion in the background texture.",
+      "b_roll_suggestions": [
+        "hands signing a document",
+        "flag in soft focus",
+        "sunrise over a skyline"
+      ]
+    }
+  ],
+  "full_narration": "Government teams are adopting powerful AI models faster than assurance processes can keep up. Hosted models are the most capable, but using them means sending official information to an outside provider. On-premises models keep data inside the security boundary at the cost of hardware and effort. The brief makes three asks: a central team that scores models on real government tasks, a mandate that every AI-assisted artefact carries a provenance manifest, and funding for a supported offline reference stack. For work touching national security, the default should be fully offline deployment on government hardware, with hosted services allowed only after an explicit data protection assessment. The working group is ready to begin on approval.",
+  "subtitle_hint": "Burn in white subtitles with a semi-opaque black band; break lines at natural pauses, roughly 2.6 words per second."
+}

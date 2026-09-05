@@ -1,0 +1,72 @@
+{
+  "title": "Briefing: Water Utility Ransomware Incident",
+  "confidence_notes": "Speaker notes assume a 20-minute internal briefing slot.",
+  "artefact_type": "presentation",
+  "slides": [
+    {
+      "layout": "title",
+      "title": "Ransomware at a Regional Water Utility",
+      "bullets": [
+        "Internal briefing",
+        "Incident IR-2024-0917",
+        "For Official Use Only"
+      ],
+      "speaker_notes": "Set expectations: this is a corporate-network incident with public-service consequences, not an attack on control systems."
+    },
+    {
+      "layout": "bullets",
+      "title": "What Happened",
+      "bullets": [
+        "Anomalous outbound traffic detected at 02:40",
+        "Contained within 90 minutes",
+        "Eleven servers encrypted, including billing and historian",
+        "Water treatment and distribution unaffected"
+      ],
+      "speaker_notes": "Emphasise the detection-to-containment time and that the operational impact was limited by design."
+    },
+    {
+      "layout": "bullets",
+      "title": "How They Got In",
+      "bullets": [
+        "Reused contractor credential",
+        "No multi-factor authentication",
+        "Not rotated in 14 months",
+        "Eight-day dwell time before escalation"
+      ],
+      "speaker_notes": "This is the single most important slide. Every remediation flows from the identity failure."
+    },
+    {
+      "layout": "two_column",
+      "title": "Impact and Recovery",
+      "bullets": [
+        "Billing restored in 4 days",
+        "Historian data restored in 9 days",
+        "Online backups deleted by attacker",
+        "Offline backups at separate site intact"
+      ],
+      "speaker_notes": "Contrast the two backup outcomes to motivate the backup-isolation recommendation."
+    },
+    {
+      "layout": "bullets",
+      "title": "What We Are Changing",
+      "bullets": [
+        "Rotate all contractor credentials, enforce MFA",
+        "Isolate backup infrastructure from domain admins",
+        "Deploy EDR to servers and engineering workstations",
+        "Tabletop the corporate/OT decoupling scenario"
+      ],
+      "speaker_notes": "Give each item an owner and a date when presenting live."
+    },
+    {
+      "layout": "closing",
+      "title": "Takeaway",
+      "bullets": [
+        "Segmentation protected the water supply",
+        "Identity hygiene is the weak point",
+        "Questions to security@utility.example"
+      ],
+      "speaker_notes": "Close on the positive: the design worked. Then pivot to the identity work that still needs funding."
+    }
+  ],
+  "deck_summary": "A six-slide internal briefing on the September 2024 ransomware intrusion, its limited operational impact, and the four remediation workstreams now underway."
+}

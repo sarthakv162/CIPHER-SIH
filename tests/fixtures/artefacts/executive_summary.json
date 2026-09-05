@@ -1,0 +1,26 @@
+{
+  "title": "Ransomware Intrusion at a Regional Water Utility",
+  "confidence_notes": "Attribution and dwell-time figures are drawn from the internal report and not independently verified.",
+  "artefact_type": "executive_summary",
+  "headline": "Corporate ransomware forced protective shutdowns but did not affect water supply",
+  "key_points": [
+    "An attacker used a contractor credential without multi-factor authentication to reach the corporate network.",
+    "File-encrypting malware hit eleven servers, including billing and the historian database.",
+    "Operational technology controlling treatment and distribution was segmented and unaffected.",
+    "Offline backups at a separate site made recovery possible after online backups were deleted.",
+    "Billing was restored in four days; historian data took nine days."
+  ],
+  "context": "The utility detected anomalous outbound traffic at 02:40 and contained the intrusion within ninety minutes, but encryption had already spread across core corporate systems.",
+  "implications": [
+    "A purely corporate compromise can still degrade public service by forcing network decoupling.",
+    "Unrotated third-party credentials remain the highest-value target for intrusion.",
+    "Backup isolation is now a board-level resilience question, not only an IT control."
+  ],
+  "recommended_actions": [
+    "Rotate every contractor credential and enforce multi-factor authentication on all remote access.",
+    "Isolate backup infrastructure so domain administrator accounts cannot reach it.",
+    "Deploy endpoint detection and response to all servers and engineering workstations.",
+    "Run a tabletop exercise on decoupling corporate and operational networks under time pressure."
+  ],
+  "one_line_takeaway": "Segmentation saved the water supply; weak contractor identity hygiene nearly lost the business."
+}

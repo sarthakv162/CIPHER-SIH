@@ -1,0 +1,7 @@
+# Runtime dependencies for Rupantar. Pinned loosely here; the exact resolved set
+# for the air-gapped laptop lives in requirements-lock.txt.
+pydantic>=2.7
+pydantic-settings>=2.2
+PyYAML>=6.0
+typer>=0.12
+aiosqlite>=0.20

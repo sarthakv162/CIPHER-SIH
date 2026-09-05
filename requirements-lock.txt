@@ -1,0 +1,2 @@
+# Generated on the online-prep machine by scripts/vendor_wheels.sh; do not hand-edit.
+# Populated in a later phase once the wheel set for the air-gapped laptop is vendored.

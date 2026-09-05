@@ -1,0 +1,48 @@
+{
+  "title": "Infographic Spec: Anatomy of the Water Utility Ransomware Incident",
+  "confidence_notes": "",
+  "artefact_type": "infographic_spec",
+  "headline": "90 Minutes to Contain, 9 Days to Fully Recover",
+  "subhead": "How a contractor password became a regional water utility's worst week of 2024",
+  "sections": [
+    {
+      "heading": "Dwell Time",
+      "stat_value": "8 days",
+      "stat_label": "attacker foothold before escalation",
+      "body": "The intruder authenticated on 4 September and stayed low-profile until 12 September."
+    },
+    {
+      "heading": "Blast Radius",
+      "stat_value": "11",
+      "stat_label": "servers encrypted",
+      "body": "Billing and the historian database were hit; control systems were segmented and spared."
+    },
+    {
+      "heading": "Recovery",
+      "stat_value": "9 days",
+      "stat_label": "to restore historian data",
+      "body": "Billing came back in four days from offline backups held at a separate site."
+    },
+    {
+      "heading": "Root Cause",
+      "stat_value": "0",
+      "stat_label": "MFA on the contractor account",
+      "body": "The credential had also gone 14 months without rotation."
+    }
+  ],
+  "key_messages": [
+    "Network segmentation kept a cyber incident from becoming a public health incident.",
+    "Third-party identity hygiene is the highest-leverage control for utilities.",
+    "Backups only help if attackers with domain admin cannot delete them."
+  ],
+  "layout_recommendation": "timeline",
+  "colour_intent": "Cool blues for the utility and its defences, a single alert red for the attacker path and the root-cause figure.",
+  "icon_suggestions": [
+    "padlock",
+    "server stack",
+    "water droplet",
+    "clock",
+    "shield"
+  ],
+  "footer": "Source: internal incident report IR-2024-0917. For Official Use Only."
+}

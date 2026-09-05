@@ -1,0 +1,8 @@
+max_heavy_resident: 1
+idle_ttl_seconds: 120
+acquire_timeout_seconds: 180
+port_range: [8100, 8199]
+context_length: 8192
+health_poll_interval: 0.5
+health_timeout_seconds: 120
+prewarm_on_startup: brain

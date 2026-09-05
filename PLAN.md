@@ -45,7 +45,7 @@ These are architectural laws. Each has a test file. Breaking one is a build fail
 
 | Concern | Choice | Why |
 |---|---|---|
-| Language | Python 3.11 | Ecosystem for renderers + converters |
+| Language | Python 3.11 exactly (`uv python install 3.11`, pinned in `.python-version`) | Renderer + converter ecosystem; 3.11 wheels for ctranslate2 / pyarrow / onnxruntime are the ones vendored for the air-gapped laptop |
 | API | FastAPI + uvicorn (single worker) | Async, OpenAPI docs for free |
 | LLM/VLM runtime | `llama.cpp` `llama-server` subprocess, GGUF Q4_K_M | mmap load, guaranteed unload by SIGTERM, CPU-viable |
 | ASR | `faster-whisper` in a worker subprocess | int8, small footprint |
@@ -71,8 +71,11 @@ rupantar/
 ├── MEMORY.md                     # rolling project memory — read at start, update at end
 ├── PLAN.md                       # this file
 ├── README.md
+├── .python-version               # 3.11, enforced by selfcheck
 ├── requirements.txt
 ├── requirements-lock.txt         # pip freeze, for air-gapped wheel vendoring
+├── docs/
+│   └── SCHEMAS.md                # frozen contracts — the artefact + request models
 ├── .claude/
 │   └── agents/
 │       ├── builder.md            # task-scoped implementer subagent
@@ -161,10 +164,11 @@ rupantar/
 ## 4. Core data flow
 
 ```
-Operator request
-   │  {source: file|text|url-free, outputs: [...], params: {audience, tone, language, detail, objective, style}}
+Operator request  ──►  TransformRequest
+   │  {sources: [SourceInput...], output_types: [ArtefactType...], params: {audience, tone, language, detail, objective, style}}
+   │  One request == one Transform (the batch). See docs/SCHEMAS.md for every field.
    ▼
-Planner            → list[Job]
+Planner            → list[Job]        (one Job per requested artefact)
    ▼
 Scheduler          → jobs reordered, grouped by required model_key
    ▼
@@ -218,28 +222,31 @@ Each phase: implement → run its verify command → have the `verifier` subagen
 ### Phase 0 — Scaffold and contracts *(no models)*
 
 **Build**
-- Repo layout above, `pyproject.toml`/`requirements.txt`, ruff + mypy config
-- `core/schemas.py`: `SourceDossier`, `Job`, `JobStatus`, `TransformRequest`, `GenerationParams`
-- `core/artefacts.py`: Pydantic model for **all seven** artefact types (see `docs/SCHEMAS.md`)
-- `core/store.py`: SQLite schema + CRUD for dossiers and jobs
-- `cli/main.py` skeleton with `selfcheck`, `models`, `transform`, `convert` stubs
-- `tests/fixtures/` with 2 sample articles, 1 image, 1 30-second video
+- Repo layout above, `pyproject.toml` + `requirements.txt` (src layout, `pip install -e .`), `.python-version` (3.11), ruff + mypy config (mypy with the `pydantic.mypy` plugin), `Makefile`
+- `core/errors.py`: typed exception hierarchy (`RupantarError` and subclasses)
+- `core/config.py`: **minimal** — locate `configs/`, load `models.yaml` + `policy.yaml`, resolve active profile (env override → `models.yaml:active_profile`), expose the SQLite path. Grows in Phase 1.
+- `core/schemas.py`: `SourceInput`, `TransformRequest`, `ArtefactType`, `JobStatus`, `Job`, `GenerationParams`, `SourceDossier` (see `docs/SCHEMAS.md`)
+- `core/artefacts.py`: Pydantic model for **all seven** artefact types with every list min/max and char limit enforced in `field_validator`s (see `docs/SCHEMAS.md`)
+- `core/store.py`: SQLite schema + **async** CRUD (`aiosqlite`, JSON columns) for dossiers and jobs
+- `cli/main.py` + `cli/__main__.py`: Typer skeleton — `transform`, `convert`, `selfcheck` commands plus a `models` sub-app, all stubs
+- `tests/inv/`: all eight invariant test files as `pytest.skip("implemented in phase N")` skeletons
+- `tests/fixtures/`: 2 sample articles, 1 image, 1 ~30-second video, 7 hand-written artefact example JSONs. `scripts/make_fixtures.sh` regenerates the image + video with `ffmpeg` (run once). Parivartan fixtures (CSV, Sigma, CEF) arrive in Phase 5; the advisory PDF in Phase 6.
 
 **Definition of done**
-- `pytest tests/unit -q` passes
-- `python -m rupantar.cli --help` lists 4 commands
-- Every artefact Pydantic model round-trips a hand-written example fixture
+- `python -m rupantar.cli --help` lists 4 commands (`transform`, `convert`, `selfcheck`, `models`)
+- Every artefact Pydantic model round-trips its hand-written example fixture
+- `make check` passes green
 
-**Verify:** `make check` → ruff + mypy + `pytest tests/unit`
+**Verify:** `make check` → `ruff check` + `ruff format --check` + `mypy src` + `pytest tests/unit` + `pytest tests/inv`
 
-> Freeze `core/artefacts.py` at the end of this phase. Everything downstream depends on it. Changes after this require a `MEMORY.md` entry explaining why.
+> Freeze `core/artefacts.py` **and `core/schemas.py`** at the end of this phase, and treat `docs/SCHEMAS.md` as their locked spec. Everything downstream depends on them. Changes after this require a `MEMORY.md` deviation entry explaining why.
 
 ---
 
 ### Phase 1 — Model Manager *(critical path)*
 
 **Build**
-- `models/registry.py` — parse `models.yaml`, resolve active profile, verify each model file exists, record size + SHA-256. Missing file → clear actionable error naming `scripts/fetch_models.sh`.
+- `models/registry.py` — parse `models.yaml`, resolve active profile, verify each model file exists, record size + SHA-256. Missing file → clear actionable error naming `scripts/fetch_models.sh`. **Skip file-existence and SHA-256 checks for any entry whose `runtime` is `stub`.**
 - `models/runtime_base.py` — ABC: `start()`, `stop()`, `is_healthy()`, `endpoint`, `class_` (`heavy|light|transient`), `pid`, `rss_bytes`.
 - `models/runtime_llama.py` — spawn `llama-server -m <gguf> --port <p> --ctx-size N --host 127.0.0.1`, poll `/health`, `stop()` sends SIGTERM then SIGKILL after 10 s grace.
 - `models/runtime_stub.py` — an HTTP echo server; lets the whole system be tested with **zero model files**.
@@ -291,7 +298,7 @@ Each config declares: `model_key`, `system_prompt`, `user_template`, `schema` (c
 Also build:
 - `orchestrator/planner.py` — request → job list, dedup, dependency edges (e.g. `video_package` may consume `executive_summary` output if present)
 - `orchestrator/scheduler.py` — group by `model_key`, order to minimise swaps, stable within group
-- `api/routes/jobs.py` — `POST /jobs`, `GET /jobs/{id}`, `GET /jobs/{id}/artefacts`
+- `api/routes/transforms.py` — `POST /transforms`, `GET /transforms/{id}`, `GET /transforms/{id}/artefacts`; `api/routes/jobs.py` — `GET /jobs/{id}` (a Transform is the batch, a Job is one artefact)
 
 **Definition of done**
 - One request selecting all seven outputs causes **exactly one** `brain` load and zero re-loads (assert on manager events)
@@ -382,7 +389,7 @@ Also build:
   - monitor: psutil scan of our process tree's connections; any non-loopback remote → log `EGRESS_VIOLATION` and expose on `GET /health/egress`
   - `--strict-airgap` flag: violation aborts the job
 - `audit/selfcheck.py` — the system checker. Produces a table + JSON report + non-zero exit on failure:
-  1. Python version, platform, free RAM, free disk
+  1. Python version (**assert `sys.version_info[:2] == (3, 11)`, fail loudly otherwise**), platform, free RAM, free disk
   2. `ffmpeg`, `llama-server`, `piper` on PATH with versions
   3. Every model file in the active profile: exists, size, SHA-256 matches registry
   4. Ports in range are free
@@ -413,11 +420,12 @@ Dashboard with source input, output-type checkboxes, generation parameter contro
 - **Unit** — pure functions, schemas, converters, grammar generation, scheduler ordering. No models. Must run in under 20 s.
 - **Invariant** (`tests/inv/`) — the eight laws. Run on every phase completion. Use `runtime_stub` where possible.
 - **Integration** — full paths with `runtime_stub` by default; `-m slow` for the real-model runs.
-- **Fixtures** — a source article, an advisory PDF, one image, one 30-second video, one messy CSV, one Sigma rule, one CEF log sample.
+- **Fixtures** — one canonical set under `tests/fixtures/`; `data/samples/` holds **copies** (not symlinks — Windows and `git archive`), refreshed by `make fixtures`. The set accumulates by phase: Phase 0 ships 2 articles, 1 image, 1 ~30-second video, 7 artefact example JSONs; Phase 5 adds a messy CSV, a Sigma rule, a CEF log sample; Phase 6 adds an advisory PDF.
 
-`make check` = ruff + mypy + unit + inv.
+`make check` = `ruff check` + `ruff format --check` + `mypy src` + `pytest tests/unit` + `pytest tests/inv`.
 `make check-all` = the above + integration (stub).
 `make check-real` = everything including `-m slow`.
+This is the one definition of `make check`; the Phase 0 verify line and `CLAUDE.md` must match it verbatim.
 
 ---
 
@@ -451,4 +459,4 @@ Every step must be non-interactive and complete without network.
 7. Never introduce a dependency outside `requirements.txt` without recording it.
 8. Never load a model outside `ModelManager.acquire()`.
 9. If a test is failing and you cannot fix it in three attempts, mark it `xfail` with a reason, log it in `MEMORY.md` under Blockers, and move on.
-10. Commit after each phase with message `phase-N: <summary>`.
+10. Commit after each phase on the `main` branch with message `phase-N: <summary>`. No per-phase branches — the per-phase commits are the checkpoints.

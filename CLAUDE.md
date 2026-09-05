@@ -35,6 +35,8 @@ Any code that loads a model with `transformers`, `torch`, `AutoModel`, or simila
 - No file over 400 lines. No function over 60 lines.
 - Type hints on every public function. One-line docstrings. No comments restating the code.
 - New dependency → add to `requirements.txt` AND record it in `MEMORY.md`.
+- Python 3.11 exactly. Managed with `uv` (`uv python install 3.11`), pinned in `.python-version`. Do not run or test under any other version — vendored wheels for the air-gapped laptop are built for 3.11.
+- `core/artefacts.py` and `core/schemas.py` are frozen after Phase 0; `docs/SCHEMAS.md` is their locked spec. Read it before touching either. Changing a frozen contract requires a `MEMORY.md` deviation entry.
 - Stuck after three attempts → `xfail` the test with a reason, log a blocker in `MEMORY.md`, move on. Do not burn a session on one bug.
 - Never invent a workaround for a plan requirement. Record the deviation.
 
@@ -45,12 +47,14 @@ Knowledge graph, Neo4j, vector RAG, embeddings, re-rankers, ChromaDB, video RAG,
 ## Commands
 
 ```bash
-make check        # ruff + mypy + unit + invariant tests
+make check        # ruff check + ruff format --check + mypy src + pytest tests/unit + pytest tests/inv
 make check-all    # + integration tests with stub runtime
 make check-real   # + slow tests that need real model files
 python -m rupantar.cli selfcheck        # full system health report
 python -m rupantar.cli models status    # resident models and memory
 ```
+
+`make check` has exactly one definition, shared verbatim by `PLAN.md` §7 and the Phase 0 verify line.
 
 ## Offline discipline
 

@@ -1,6 +1,8 @@
 # Model registry. Sizes are approximate placeholders.
 # registry.py MUST read the real file size and SHA-256 at startup and use those in provenance manifests.
 # Filenames must be confirmed against the actual GGUF builds fetched by scripts/fetch_models.sh.
+# approx_bytes must be plain digits: YAML does not parse underscore digit grouping.
+# registry.py skips file-existence and SHA-256 checks for any entry whose runtime is "stub".
 
 active_profile: laptop-16gb
 
@@ -21,7 +23,7 @@ profiles:
       class: heavy
       runtime: llama
       path: models/brain/Qwen3-4B-Instruct-Q4_K_M.gguf
-      approx_bytes: 2_600_000_000
+      approx_bytes: 2600000000
       args: ["--ctx-size", "8192", "--threads", "6", "--n-gpu-layers", "0"]
       notes: "Set --n-gpu-layers > 0 only after confirming free VRAM on the demo machine."
 
@@ -30,14 +32,14 @@ profiles:
       runtime: llama
       path: models/vlm/Qwen2.5-VL-3B-Instruct-Q4_K_M.gguf
       mmproj: models/vlm/mmproj-Qwen2.5-VL-3B-f16.gguf
-      approx_bytes: 3_100_000_000
+      approx_bytes: 3100000000
       args: ["--ctx-size", "4096", "--threads", "6"]
 
     asr:
       class: light
       runtime: whisper
       path: models/asr/faster-whisper-small.en-int8
-      approx_bytes: 500_000_000
+      approx_bytes: 500000000
       args: {compute_type: int8, beam_size: 1}
 
     tts:
@@ -45,14 +47,14 @@ profiles:
       runtime: piper
       path: models/tts/en_US-lessac-medium.onnx
       config: models/tts/en_US-lessac-medium.onnx.json
-      approx_bytes: 65_000_000
+      approx_bytes: 65000000
 
   titan-24gb:
     brain:
       class: heavy
       runtime: llama
       path: models/brain/Qwen2.5-14B-Instruct-Q4_K_M.gguf
-      approx_bytes: 9_000_000_000
+      approx_bytes: 9000000000
       args: ["--ctx-size", "16384", "--n-gpu-layers", "99"]
 
     vlm:
@@ -60,14 +62,14 @@ profiles:
       runtime: llama
       path: models/vlm/Qwen2.5-VL-7B-Instruct-Q4_K_M.gguf
       mmproj: models/vlm/mmproj-Qwen2.5-VL-7B-f16.gguf
-      approx_bytes: 5_500_000_000
+      approx_bytes: 5500000000
       args: ["--ctx-size", "8192", "--n-gpu-layers", "99"]
 
     asr:
       class: light
       runtime: whisper
       path: models/asr/faster-whisper-medium.en-int8
-      approx_bytes: 1_500_000_000
+      approx_bytes: 1500000000
       args: {compute_type: int8, beam_size: 5}
 
     tts:
@@ -75,7 +77,7 @@ profiles:
       runtime: piper
       path: models/tts/en_US-lessac-medium.onnx
       config: models/tts/en_US-lessac-medium.onnx.json
-      approx_bytes: 65_000_000
+      approx_bytes: 65000000
 
   test-stub:
     brain:  {class: heavy, runtime: stub}

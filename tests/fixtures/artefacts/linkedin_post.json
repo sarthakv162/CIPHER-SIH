@@ -1,0 +1,15 @@
+{
+  "title": "LinkedIn: Lessons from the Water Utility Ransomware Incident",
+  "confidence_notes": "",
+  "artefact_type": "linkedin_post",
+  "body": "A regional water utility was hit by ransomware last month. Eleven servers encrypted, billing down for four days, historian data down for nine.\n\nHere is the part that matters: the water kept flowing.\n\nThe treatment and distribution systems were segmented from the corporate network, so the malware never reached them. The intrusion started with a maintenance contractor's password that had not been changed in over a year and had no multi-factor authentication.\n\nThree things every operator can do this week:\n1. Rotate every third-party credential and turn on MFA for remote access.\n2. Put your backups somewhere your domain admins cannot reach.\n3. Practice the scenario where you have to cut the corporate and operational networks apart in a hurry.\n\nSegmentation is not glamorous work. It is the reason this was a bad week instead of a public health emergency.",
+  "hook": "A regional water utility was hit by ransomware last month.\nHere is the part that matters: the water kept flowing.",
+  "hashtags": [
+    "OTSecurity",
+    "CriticalInfrastructure",
+    "IncidentResponse",
+    "Ransomware"
+  ],
+  "call_to_action": "What does your decoupling plan look like? Share how your team practices it.",
+  "suggested_image_brief": "A simple network diagram showing a corporate zone and an isolated operational-technology zone with a firewall between them, the corporate side shaded red."
+}

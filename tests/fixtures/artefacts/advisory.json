@@ -1,0 +1,65 @@
+{
+  "title": "Advisory: Contractor Credential Abuse Leading to Ransomware",
+  "confidence_notes": "",
+  "artefact_type": "advisory",
+  "advisory_id": "ADV-2024-0917",
+  "severity": "high",
+  "issued_for": "Water and wastewater utilities and their managed service providers",
+  "summary": "A regional water utility suffered a ransomware intrusion that began with a reused third-party maintenance credential lacking multi-factor authentication.",
+  "background": "The attacker authenticated to an internet-facing remote access portal on 4 September 2024 and maintained a low-profile foothold for eight days before escalating to domain administrator and deploying file-encrypting malware across eleven servers.",
+  "technical_details": [
+    {
+      "heading": "Initial access",
+      "body": "A contractor credential unused for rotation in fourteen months and not protected by multi-factor authentication was used against an internet-facing remote access portal."
+    },
+    {
+      "heading": "Lateral movement",
+      "body": "A common open-source post-exploitation framework was used to reach a domain controller, where two rogue administrator accounts were created and network-share backups were deleted before encryption."
+    }
+  ],
+  "affected_entities": [
+    "Corporate billing platform",
+    "Historian database",
+    "Nine additional Windows servers"
+  ],
+  "indicators": [
+    {
+      "type": "domain",
+      "value": "update-svc-sync.net",
+      "note": "Command-and-control domain"
+    },
+    {
+      "type": "ipv4",
+      "value": "185.220.101.47",
+      "note": "Attacker source address"
+    },
+    {
+      "type": "sha256",
+      "value": "9f2c4e1a7b6d8c3f5a0e2d4b6c8a1f3e5d7c9b0a2e4f6d8c0b2a4e6f8d0c2b4a6",
+      "note": "Dropped payload"
+    },
+    {
+      "type": "filename",
+      "value": "RESTORE-FILES-NOW.txt",
+      "note": "Ransom note"
+    }
+  ],
+  "recommended_actions": [
+    {
+      "priority": "immediate",
+      "action": "Rotate all contractor and third-party credentials and enforce multi-factor authentication on every remote access path."
+    },
+    {
+      "priority": "high",
+      "action": "Isolate backup infrastructure so that domain administrator accounts cannot reach or delete it."
+    },
+    {
+      "priority": "medium",
+      "action": "Deploy endpoint detection and response agents across all servers and engineering workstations."
+    }
+  ],
+  "references": [
+    "Internal incident report IR-2024-0917"
+  ],
+  "handling_caveat": "For Official Use Only. Do not distribute outside partner utility security teams without originator approval."
+}
