@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 from pathlib import Path
 from types import TracebackType
+from typing import Any
 
 import aiosqlite
 
@@ -31,6 +33,15 @@ CREATE TABLE IF NOT EXISTS jobs (
     data_json     TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_jobs_transform ON jobs (transform_id);
+CREATE TABLE IF NOT EXISTS events (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts          TEXT NOT NULL,
+    kind        TEXT NOT NULL,
+    model_key   TEXT,
+    pid         INTEGER,
+    detail_json TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_events_kind ON events (kind);
 """
 
 
@@ -152,6 +163,58 @@ class Store:
         await self.connection.commit()
         if cursor.rowcount == 0:
             raise StoreError("cannot update unknown job", entity="jobs", row_id=job.id)
+
+    async def append_event(
+        self,
+        *,
+        kind: str,
+        model_key: str | None = None,
+        pid: int | None = None,
+        ts: str | None = None,
+        detail: dict[str, Any] | None = None,
+    ) -> None:
+        """Append one model-manager or runtime event row."""
+        await self.connection.execute(
+            "INSERT INTO events (ts, kind, model_key, pid, detail_json) VALUES (?, ?, ?, ?, ?)",
+            (
+                ts or datetime.now(UTC).isoformat(),
+                kind,
+                model_key,
+                pid,
+                json.dumps(detail or {}),
+            ),
+        )
+        await self.connection.commit()
+
+    async def list_events(
+        self, *, kind: str | None = None, model_key: str | None = None
+    ) -> list[dict[str, Any]]:
+        """Return event rows filtered by kind and/or model_key, oldest first."""
+        clauses: list[str] = []
+        params: list[str] = []
+        if kind is not None:
+            clauses.append("kind = ?")
+            params.append(kind)
+        if model_key is not None:
+            clauses.append("model_key = ?")
+            params.append(model_key)
+        where = f" WHERE {' AND '.join(clauses)}" if clauses else ""
+        async with self.connection.execute(
+            f"SELECT id, ts, kind, model_key, pid, detail_json FROM events{where} ORDER BY id",
+            params,
+        ) as cursor:
+            rows = await cursor.fetchall()
+        return [
+            {
+                "id": row["id"],
+                "ts": row["ts"],
+                "kind": row["kind"],
+                "model_key": row["model_key"],
+                "pid": row["pid"],
+                "detail": json.loads(row["detail_json"]),
+            }
+            for row in rows
+        ]
 
     async def list_jobs_for_transform(self, transform_id: str) -> list[Job]:
         """Return every job belonging to a Transform, in insertion order."""

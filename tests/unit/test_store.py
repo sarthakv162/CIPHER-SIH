@@ -89,6 +89,25 @@ async def test_dossier_round_trip(db_path: Path) -> None:
         assert await store.get_dossier("nope") is None
 
 
+async def test_events_append_and_filter(db_path: Path) -> None:
+    async with Store(db_path) as store:
+        await store.append_event(
+            kind="LOAD_START", model_key="brain", pid=111, detail={"port": 8100}
+        )
+        await store.append_event(kind="LOAD_READY", model_key="brain", pid=111)
+        await store.append_event(kind="LOAD_START", model_key="vlm", pid=222)
+
+        brain_events = await store.list_events(model_key="brain")
+        assert [e["kind"] for e in brain_events] == ["LOAD_START", "LOAD_READY"]
+        assert brain_events[0]["detail"]["port"] == 8100
+        assert brain_events[0]["pid"] == 111
+
+        starts = await store.list_events(kind="LOAD_START")
+        assert {e["model_key"] for e in starts} == {"brain", "vlm"}
+
+        assert len(await store.list_events()) == 3
+
+
 async def test_connection_before_connect_raises(db_path: Path) -> None:
     store = Store(db_path)
     with pytest.raises(StoreError):

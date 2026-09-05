@@ -23,7 +23,6 @@ def test_help_lists_exactly_four_commands() -> None:
         (["transform"], "phase 2"),
         (["convert"], "phase 5"),
         (["selfcheck"], "phase 8"),
-        (["models", "status"], "phase 1"),
     ],
 )
 def test_stub_commands_exit_zero(args: list[str], needle: str) -> None:
@@ -31,3 +30,12 @@ def test_stub_commands_exit_zero(args: list[str], needle: str) -> None:
     assert result.exit_code == 0
     assert needle in result.output
     assert "not implemented" in result.output
+
+
+def test_models_status_prints_the_residency_table() -> None:
+    result = runner.invoke(app, ["models", "status"])
+    assert result.exit_code == 0
+    assert "KEY" in result.output
+    assert "STATE" in result.output
+    assert "brain" in result.output
+    assert "NOT_LOADED" in result.output

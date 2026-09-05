@@ -47,3 +47,33 @@ class StoreError(RupantarError):
 
 class NotAvailableYetError(RupantarError):
     """A capability exists as a stub and lands in a later phase."""
+
+
+class ModelError(RupantarError):
+    """Base class for model registry, runtime, and manager failures."""
+
+
+class UnknownModelError(ModelError):
+    """A model key is not defined in the active profile."""
+
+
+class ModelFileMissingError(ModelError):
+    """A model file named in models.yaml is not on disk; fix by running scripts/fetch_models.sh."""
+
+    def __init__(self, message: str, *, key: str | None = None, path: str | None = None) -> None:
+        """Record the model key and the missing path alongside the message."""
+        self.key = key
+        self.path = path
+        super().__init__(message)
+
+
+class RuntimeStartError(ModelError):
+    """A model child process failed to start or never reported healthy."""
+
+
+class NoFreePortError(ModelError):
+    """No free TCP port was available in policy.yaml:port_range."""
+
+
+class AcquireTimeoutError(ModelError):
+    """A model lease could not be acquired within policy.yaml:acquire_timeout_seconds."""

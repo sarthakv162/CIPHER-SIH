@@ -37,10 +37,28 @@ def selfcheck() -> None:
     _stub("selfcheck", 8)
 
 
+def _fmt(value: object) -> str:
+    """Render a table cell, showing a dash for missing values."""
+    return "-" if value is None else str(value)
+
+
 @models_app.command("status")
 def models_status() -> None:
-    """Show resident models and their memory use (phase 1)."""
-    _stub("models status", 1)
+    """Show every registered model and its residency state in this process."""
+    from rupantar.core.config import load_config
+    from rupantar.models.manager import ModelManager
+    from rupantar.models.registry import Registry
+
+    config = load_config()
+    manager = ModelManager(Registry.from_config(config, verify=False), policy=config.policy)
+    header = f"{'KEY':<8} {'STATE':<12} {'PID':>8} {'PORT':>6} {'RSS_MB':>8} {'REF':>4}"
+    typer.echo(header)
+    typer.echo("-" * len(header))
+    for row in manager.status():
+        typer.echo(
+            f"{row['key']:<8} {row['state']:<12} {_fmt(row['pid']):>8} "
+            f"{_fmt(row['port']):>6} {_fmt(row['rss_mb']):>8} {row['refcount']:>4}"
+        )
 
 
 if __name__ == "__main__":
