@@ -13,8 +13,8 @@
 |---|---|
 | Current phase | **3 — All artefact agents (not started)** |
 | Last session | 2026-09-06 — grammar-cost investigation + switch to `response_format:json_schema` |
-| Last commit | `chore: grammar-cost investigation` (+ a json_schema switch commit) |
-| `make check` status | **green** (ruff + format 53 files + mypy 25 files + 99 unit + 8 inv / 3 inv skeleton; slow lane `pytest -m slow` → 2 pass) |
+| Last commit | `phase-2: switch schema enforcement to response_format json_schema` |
+| `make check` status | **green** (ruff + format + mypy 24 files + 95 unit + 8 inv / 3 inv skeleton; slow lane `pytest -m slow` → 2 pass) |
 | Active hardware profile | `laptop-16gb` |
 | Models present on disk | **brain** only — `models/brain/Qwen3-4B-Instruct-2507-Q4_K_M.gguf` (2.5 GB, sha `3605803b…`); vlm/asr/tts absent |
 | Python | 3.11.15, uv-managed, `.venv/`, pinned in `.python-version` |
