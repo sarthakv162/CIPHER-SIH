@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import re
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from datetime import datetime
+from pathlib import Path
 from types import TracebackType
 from typing import Any
 
@@ -26,6 +28,15 @@ from rupantar.models._support import (
 )
 from rupantar.models.registry import ModelEntry, Registry
 from rupantar.models.runtime_base import Runtime
+
+_QUANT_RE = re.compile(r"I?Q\d[A-Za-z0-9_]*")
+
+
+def _parse_quant(path: Path) -> str:
+    """Best-effort GGUF quant tag parsed from a model filename, else 'unknown'."""
+    match = _QUANT_RE.search(path.stem)
+    return match.group(0) if match else "unknown"
+
 
 __all__ = [
     "Event",
@@ -133,6 +144,18 @@ class ModelManager:
                 ):
                     await self._evict(entry, reason="idle_ttl")
             self._cond.notify_all()
+
+    def model_meta(self, key: str) -> dict[str, Any]:
+        """Provenance metadata for a model key: key, path, sha256, quant."""
+        entry = self._registry.entry(key)
+        if entry.is_stub:
+            return {"key": key, "path": None, "sha256": None, "quant": "stub"}
+        return {
+            "key": key,
+            "path": str(entry.path) if entry.path else None,
+            "sha256": entry.sha256 or entry.declared_sha256,
+            "quant": _parse_quant(entry.path) if entry.path else "unknown",
+        }
 
     def status(self) -> list[dict[str, Any]]:
         """Snapshot of every registry model and its residency state."""

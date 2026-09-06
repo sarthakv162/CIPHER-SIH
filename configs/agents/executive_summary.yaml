@@ -1,4 +1,5 @@
 # Executive summary agent: a decision-maker's one-page read of the source.
+prompt_version: "1"
 artefact_type: executive_summary
 model_key: brain
 schema: rupantar.core.artefacts:ExecutiveSummary

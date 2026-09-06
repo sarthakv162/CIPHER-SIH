@@ -1,4 +1,5 @@
 # LinkedIn post agent: one professional post with a hook, body, hashtags, and CTA.
+prompt_version: "1"
 artefact_type: linkedin_post
 model_key: brain
 schema: rupantar.core.artefacts:LinkedInPost

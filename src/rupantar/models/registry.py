@@ -27,6 +27,7 @@ class ModelEntry:
     extra: dict[str, Any] = field(default_factory=dict)
     size_bytes: int | None = None
     sha256: str | None = None
+    declared_sha256: str | None = None
 
     @property
     def is_stub(self) -> bool:
@@ -87,6 +88,7 @@ class Registry:
         raw_path = spec.get("path")
         path = Path(raw_path) if raw_path else None
         extra = {k: v for k, v in spec.items() if k not in _RESERVED_KEYS}
+        declared = spec.get("sha256")
         size = sha = None
         if runtime != _STUB_RUNTIME and verify:
             size, sha = cls._verify_files(key, path, extra, hasher)
@@ -99,6 +101,7 @@ class Registry:
             extra=extra,
             size_bytes=size,
             sha256=sha,
+            declared_sha256=str(declared) if declared else None,
         )
 
     @staticmethod

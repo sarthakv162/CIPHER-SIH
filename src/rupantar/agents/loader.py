@@ -41,6 +41,7 @@ def load_agent(path: Path) -> ArtefactAgent:
         max_tokens=int(raw["max_tokens"]),
         temperature=float(raw["temperature"]),
         param_hints=_coerce_hints(raw.get("param_hints", {})),
+        prompt_version=str(raw.get("prompt_version", "1")),
     )
 
 

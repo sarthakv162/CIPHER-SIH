@@ -1,4 +1,5 @@
 # Presentation agent: a briefing deck with speaker notes.
+prompt_version: "1"
 artefact_type: presentation
 model_key: brain
 schema: rupantar.core.artefacts:Presentation

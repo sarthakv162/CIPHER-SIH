@@ -1,4 +1,5 @@
 # Advisory agent: a security or policy advisory with indicators and prioritised actions.
+prompt_version: "1"
 artefact_type: advisory
 model_key: brain
 schema: rupantar.core.artefacts:Advisory

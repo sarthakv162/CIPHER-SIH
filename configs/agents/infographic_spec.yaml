@@ -1,4 +1,5 @@
 # Infographic spec agent: layout-and-copy brief for a designer to build an infographic.
+prompt_version: "1"
 artefact_type: infographic_spec
 model_key: brain
 schema: rupantar.core.artefacts:InfographicSpec

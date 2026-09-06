@@ -5,10 +5,13 @@ from __future__ import annotations
 import hashlib
 import uuid
 from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
+from rupantar import __version__
 from rupantar.agents.base import ArtefactAgent
+from rupantar.audit.provenance import Manifest, write_manifest
 from rupantar.core.artefacts import ArtefactBase
 from rupantar.core.errors import AgentError, ConfigError
 from rupantar.core.schemas import (
@@ -25,6 +28,9 @@ from rupantar.models.client import LlamaClient
 from rupantar.models.manager import ModelManager
 from rupantar.orchestrator.planner import plan
 from rupantar.orchestrator.scheduler import schedule
+from rupantar.render.base import FORMATS, render
+
+_DEFAULT_OPERATOR = "operator"
 
 
 def _utcnow() -> datetime:
@@ -35,6 +41,22 @@ def _utcnow() -> datetime:
 def _uuid() -> str:
     """A fresh hex identifier."""
     return uuid.uuid4().hex
+
+
+@dataclass(frozen=True)
+class _RunContext:
+    """Everything a single job needs beyond its own row and the model client."""
+
+    agents: Mapping[str, ArtefactAgent]
+    dossier_text: str
+    dossier_sha: str
+    request: TransformRequest
+    store: Store
+    out_root: Path
+    manager: ModelManager
+    operator: str
+    clock: Callable[[], datetime]
+    stream: bool
 
 
 async def prepare(
@@ -64,6 +86,7 @@ async def execute(
     store: Store,
     out_root: Path,
     stream: bool = False,
+    operator: str = _DEFAULT_OPERATOR,
     clock: Callable[[], datetime] = _utcnow,
 ) -> list[Job]:
     """Run every persisted job of a Transform under modality-grouped leases; return final jobs."""
@@ -71,16 +94,26 @@ async def execute(
     request = await store.get_transform_request(transform_id)
     if not jobs or request is None:
         raise ConfigError(f"transform {transform_id!r} has no persisted jobs; call prepare() first")
-    dossier_text = _build_dossier(request.sources[0], clock=clock, new_id=_uuid).to_prompt_text()
+    dossier = _build_dossier(request.sources[0], clock=clock, new_id=_uuid)
+    ctx = _RunContext(
+        agents=agents,
+        dossier_text=dossier.to_prompt_text(),
+        dossier_sha=dossier.sha256,
+        request=request,
+        store=store,
+        out_root=out_root,
+        manager=manager,
+        operator=operator,
+        clock=clock,
+        stream=stream,
+    )
 
     for group in _consecutive_runs(schedule(jobs)):
         async with manager.acquire(group[0].model_key) as lease:
             client = LlamaClient(lease.endpoint)
             try:
                 for job in group:
-                    await _run_job(
-                        job, agents, dossier_text, request, client, store, out_root, clock, stream
-                    )
+                    await _run_job(job, ctx, client)
             finally:
                 await client.aclose()
     return await store.list_jobs_for_transform(transform_id)
@@ -94,6 +127,7 @@ async def run_batch(
     store: Store,
     out_root: Path,
     stream: bool = False,
+    operator: str = _DEFAULT_OPERATOR,
     clock: Callable[[], datetime] = _utcnow,
     new_id: Callable[[], str] = _uuid,
 ) -> list[Job]:
@@ -106,6 +140,7 @@ async def run_batch(
         store=store,
         out_root=out_root,
         stream=stream,
+        operator=operator,
         clock=clock,
     )
 
@@ -118,6 +153,7 @@ async def run_single(
     store: Store,
     out_root: Path,
     stream: bool = False,
+    operator: str = _DEFAULT_OPERATOR,
     clock: Callable[[], datetime] = _utcnow,
     new_id: Callable[[], str] = _uuid,
 ) -> Job:
@@ -129,6 +165,7 @@ async def run_single(
         store=store,
         out_root=out_root,
         stream=stream,
+        operator=operator,
         clock=clock,
         new_id=new_id,
     )
@@ -146,28 +183,46 @@ def _consecutive_runs(jobs: list[Job]) -> list[list[Job]]:
     return runs
 
 
-async def _run_job(
-    job: Job,
-    agents: Mapping[str, ArtefactAgent],
-    dossier_text: str,
-    request: TransformRequest,
-    client: LlamaClient,
-    store: Store,
-    out_root: Path,
-    clock: Callable[[], datetime],
-    stream: bool,
-) -> None:
-    """Generate one artefact, writing it and marking the job SUCCEEDED, or FAILED on AgentError."""
-    agent = agents[job.artefact_type.value]
-    await _transition(store, job, JobStatus.RUNNING, clock)
+async def _run_job(job: Job, ctx: _RunContext, client: LlamaClient) -> None:
+    """Generate one artefact, render it, write manifests, and mark the job SUCCEEDED or FAILED."""
+    agent = ctx.agents[job.artefact_type.value]
+    await _transition(ctx.store, job, JobStatus.RUNNING, ctx.clock)
     try:
-        artefact = await agent.run(dossier_text, request.params, client, stream=stream)
+        artefact = await agent.run(ctx.dossier_text, ctx.request.params, client, stream=ctx.stream)
     except AgentError as exc:
         job.error = str(exc)
-        await _transition(store, job, JobStatus.FAILED, clock)
+        await _transition(ctx.store, job, JobStatus.FAILED, ctx.clock)
         return
-    job.artefact_path = _write_artefact(out_root / job.id, agent.artefact_type, artefact)
-    await _transition(store, job, JobStatus.SUCCEEDED, clock)
+    job_dir = ctx.out_root / job.id
+    json_path = Path(_write_artefact(job_dir, agent.artefact_type, artefact))
+    rendered = render(artefact, job_dir, formats=FORMATS.get(agent.artefact_type, ()))
+    _emit_manifests([json_path, *rendered], job=job, agent=agent, ctx=ctx)
+    job.artefact_path = str(json_path)
+    await _transition(ctx.store, job, JobStatus.SUCCEEDED, ctx.clock)
+
+
+def _emit_manifests(paths: list[Path], *, job: Job, agent: ArtefactAgent, ctx: _RunContext) -> None:
+    """Write a provenance manifest beside every produced file."""
+    meta = ctx.manager.model_meta(job.model_key)
+    params = ctx.request.params.model_dump(mode="json")
+    for path in paths:
+        manifest = Manifest(
+            source_sha256=ctx.dossier_sha,
+            artefact_type=agent.artefact_type,
+            artefact_format=path.suffix.lstrip("."),
+            model_key=job.model_key,
+            model_sha256=meta.get("sha256"),
+            model_quant=str(meta.get("quant", "unknown")),
+            prompt_version=agent.prompt_version,
+            generation_params=params,
+            created_at=job.created_at.isoformat(),
+            rendered_at=ctx.clock().isoformat(),
+            operator=ctx.operator,
+            app_version=__version__,
+            job_id=job.id,
+            transform_id=job.transform_id,
+        )
+        write_manifest(path, manifest)
 
 
 async def _transition(

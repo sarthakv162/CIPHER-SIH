@@ -1,4 +1,5 @@
 # X thread agent: a short, self-contained thread of posts.
+prompt_version: "1"
 artefact_type: x_thread
 model_key: brain
 schema: rupantar.core.artefacts:XThread

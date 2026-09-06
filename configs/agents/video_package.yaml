@@ -1,4 +1,5 @@
 # Video package agent: a short-video plan with scenes, narration, and subtitle guidance.
+prompt_version: "1"
 artefact_type: video_package
 model_key: brain
 schema: rupantar.core.artefacts:VideoPackage

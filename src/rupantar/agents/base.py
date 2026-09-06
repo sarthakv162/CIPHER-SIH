@@ -67,6 +67,7 @@ class ArtefactAgent:
     max_tokens: int
     temperature: float
     param_hints: dict[str, dict[str, str]] = field(default_factory=dict)
+    prompt_version: str = "1"
     _response_format: dict[str, Any] = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
