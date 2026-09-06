@@ -11,12 +11,12 @@
 
 | Field | Value |
 |---|---|
-| Current phase | **8 — Air-gap, audit, selfcheck (not started)** |
-| Last session | 2026-09-06 — Phase 7 + evidence model (evidence IDs, video timeline, PyMuPDF) |
+| Current phase | **8 — Air-gap, audit, selfcheck (IN PROGRESS)** |
+| Last session | 2026-09-06 — piper 1.8 invocation fix + narrated video confirmed; starting Phase 8 |
 | Last commit | `phase-7: video assembly + evidence model` |
 | `make check` status | **green** (ruff + format + mypy 58 files + 190 unit + 12 inv / 1 inv skeleton; slow lane `pytest -m slow` → 4 pass, ~5 min) |
 | Active hardware profile | **auto-detected** — `apple-metal` on this M4 Air. `RUPANTAR_PROFILE` overrides. |
-| Models present on disk | **brain + vlm + asr.** vlm: `Qwen2.5-VL-3B-Instruct-Q4_K_M.gguf` (1.93 GB) + `mmproj-F16.gguf` (1.34 GB). asr: `models/asr/faster-whisper-small.en-int8/` (CT2 dir, `model.bin` 483 MB, sha `62b2a45b…`). **tts still absent** (Phase 7). |
+| Models present on disk | **brain + vlm + asr + tts** (all four). vlm: `Qwen2.5-VL-3B-Instruct-Q4_K_M.gguf` (1.93 GB) + `mmproj-F16.gguf` (1.34 GB). asr: `models/asr/faster-whisper-small.en-int8/` (CT2 dir, `model.bin` 483 MB, sha `62b2a45b…`). tts: `models/tts/en_US-lessac-medium.onnx` (63 MB, sha `5efe09e6…`) + `.onnx.json`. |
 | Python | 3.11.15, uv-managed, `.venv/`, pinned in `.python-version` |
 
 ---
@@ -141,7 +141,7 @@ Things that are broken or unfinished and need attention. Include the file and th
 
 - **RESOLVED (Phase 2):** `runtime_llama.py` real path is now verified — `tests/integration/test_runtime_llama_real.py` (slow) boots a real `llama-server` on the brain GGUF, health-checks, SIGTERMs, and asserts the pid is gone. Real end-to-end text path also exercised by `tests/integration/test_text_path_real.py`.
 - **RESOLVED 2026-09-06:** asr fetched; the full Phase 6 real-model DoD is **verified** — `test_multimodal.py` passes (real whisper worker + `local_files_only` + real transcription + real vlm captions + `vlm→evict→asr→evict` sequence + peak RSS < 10 GB). A full image+video+text→executive_summary run also confirmed the `→ brain` half (§8). `registry.py` now handles the whisper directory model under `verify=True`.
-- **`tts` still absent** (`models/tts/en_US-lessac-medium.onnx` + `piper` binary) — Phase 7's real `test_video_package.py` skips until both land.
+- **RESOLVED 2026-09-06:** `tts` landed. `models/tts/en_US-lessac-medium.onnx` (+ `.onnx.json`) on disk; piper installed as the `piper-tts` 1.8.0 Python package. `render/video_render.py` updated for the 1.8 flags (`-f`, `--data-dir`, `python -m piper` fallback). Narrated `video_package.mp4` confirmed (§8). `test_video_package.py` real narration tests now run and pass; `configs/models.yaml` tts entry gained `model_bin_sha256`.
 - `make check-all` runs `pytest tests/integration` with **no `-m "not slow"` filter**, so on a machine with the brain GGUF it executes **3** real-model tests (`test_text_path_real`, `test_multi_artefact_real`, `test_runtime_llama_real`) — ~15–16 min on the loaded dev box (the 7-artefact one alone is ~13 min). `make check` (the phase gate) stays fast and model-free. See Open Questions.
 - `requirements-lock.txt` is still an empty placeholder. Everything added Phase 2–6 (`httpx`, `fastapi`, `uvicorn`, `starlette`, `python-docx`, `python-pptx`, `fpdf2`, `jinja2`, `openpyxl`, **`pyarrow`**, `pypdf`, `selectolax`, **`faster-whisper` → `ctranslate2` + `onnxruntime` + `av` + `numpy` + `tokenizers` + `huggingface-hub` + `hf-xet`**, `lxml`, `Pillow` + transitives) must be captured by `scripts/vendor_wheels.sh` for macOS arm64 py3.11 before air-gapping. `ctranslate2` + `onnxruntime` + `av` are the ones that need platform-specific wheels.
 
@@ -173,10 +173,12 @@ Measured, not assumed. Update whenever you measure something new.
 | Dev machine = demo machine | **MacBook Air M4** (`Mac16,12`), 10 cores (4 P + 6 E), **fanless**, 16 GB, macOS 15.3 (Darwin 25.3). ~120 GB/s memory bandwidth (M4 non-Pro). | 2026-09-06 |
 | Python | 3.11.15 (uv-managed), `.venv/` | 2026-09-06 |
 | `uv` version | 0.11.29 | 2026-09-06 |
-| `ffmpeg` version | 9.0.1 (`/opt/homebrew/bin/ffmpeg`) — **regular Homebrew formula, NO libass** → the `subtitles` burn-in filter is unavailable. `render_video` falls back to a selectable `mov_text` subtitle track. For hard-burned subs the demo machine needs a libass build (`brew install homebrew-ffmpeg/ffmpeg/ffmpeg`). | 2026-09-06 |
+| `ffmpeg` version | 9.0.1 (`/opt/homebrew/bin/ffmpeg`) — see the subtitle burn-in limitation row below. | 2026-09-06 |
 | `llama-server` on PATH | **present** — v0.4.0 build 10809 (AppleClang, Darwin arm64, Metal), `/opt/homebrew/bin/llama-server` | 2026-09-06 |
 | LibreOffice | installed on the dev machine (`/Applications/LibreOffice.app/.../soffice`) purely as an independent strict OOXML validator for the pptx tests — NOT a project dependency; the test skips when it's absent | 2026-09-06 |
-| `piper` on PATH | **absent** + `models/tts/en_US-lessac-medium.onnx` absent → `render_video` produces a silent video + a `render_warnings` entry. Fetch both for narrated video (Phase 8 `scripts/fetch_models.sh` + `brew install piper-tts` or the release binary). | 2026-09-06 |
+| `piper` — **installed as the Python package `piper-tts` 1.8.0**, NOT a Homebrew binary | `shutil.which("piper")` finds the venv console-script; `render/video_render._piper_base()` falls back to `[sys.executable, "-m", "piper"]` so it works venv-active or not. **Flags changed in 1.8:** output is `-f OUT.wav` (was `--output_file`). Always pass `--data-dir models/tts` so piper never attempts a voice download at runtime (air-gap — same rule as faster-whisper `local_files_only=True`). | 2026-09-06 |
+| **Narrated video confirmed** — `video_package.json` fixture through `render_video` | `narration.wav` 1 815 118 B / **41.16 s** (4 scenes, piper `en_US-lessac-medium`); `video_package.mp4` = h264 video + **aac audio** + `mov_text` subtitle track, **90.08 s** (full planned scene time — narration plays from 0:00, tail is silent). Only warning: the soft-subs fallback below. | 2026-09-06 |
+| `ffmpeg` subtitle burn-in — **known limitation, NOT being fixed** | Homebrew `ffmpeg` 9.0.1 has no libass → the `subtitles` burn-in filter is unavailable. `render_video` falls back to a selectable `mov_text` track + the `.srt` sidecar and records a `render_warnings` entry. Building ffmpeg from source for one demo is not worth it; document it. A libass build (`brew install homebrew-ffmpeg/ffmpeg/ffmpeg`) enables the burn-in path automatically. | 2026-09-06 |
 | `git` version | 2.51.2 | 2026-09-06 |
 | `asyncio.Condition()` outside a running loop | constructs fine on 3.11 (used in sync CLI path) | 2026-09-06 |
 | Stub runtime child | `python -m rupantar.models.runtime_stub --port N`, stdlib `http.server`, real PID, SIGKILL grace 3s | 2026-09-06 |
@@ -221,6 +223,11 @@ Changed in this file:
 Next session should start with:
 -
 ```
+
+### 2026-09-06 — piper 1.8 invocation fix + narrated video confirmed
+Did: `render/video_render.py` — `_piper_base()` (`shutil.which("piper")` → else `[sys.executable, "-m", "piper"]`); `_write_narration` gates on the voice `.onnx` file (not the binary), builds `piper -m … -c … --data-dir models/tts -f _nar_NN.wav` (1.8 flags), enriched failure warning with stderr tail. Removed `-shortest` from `_VideoPlan.command()` so panels run full planned time and the `.srt` stays in sync. `configs/models.yaml` tts += `model_bin_sha256` (5efe09e6…), real `approx_bytes`. `test_registry.py::test_missing_real_file_names_fetch_script` rewritten to use a synthetic missing-path config (all four models are now on this disk, so the old "verify apple-metal raises" premise was dead). Updated `test_video_render.py` + `test_video_package.py` (`_HAS_VOICE = _TTS_MODEL.is_file()`; two new muxed-narration / missing-voice tests).
+Verified: `make check` green (190 unit + 12 inv / 1 skeleton, mypy 58). Manual render of the `video_package.json` fixture → `narration.wav` 41.16 s, `video_package.mp4` h264 + **aac** + mov_text, 90.08 s. §8 updated.
+Next: Phase 8 — air-gap / audit / selfcheck (builder). Do NOT start 8.5.
 
 ### 2026-09-06 — Phase 7 — video assembly + evidence model
 Did: **lead** — frozen-contract additions (`schemas.py`/`artefacts.py`/`docs/SCHEMAS.md`): evidence IDs on dossier units, `VideoEvent`, `ArtefactBase.sources`, `to_prompt_text()` rewrite (§5 deviation). Added PLAN.md **Phase 8.5** (cross-artefact verification). **builder 1** — `assemble_dossier` assigns `E1..En`; 7 agent prompts cite `sources`; `keyframes()` → `(path, t)`; video source → `VideoEvent`s; `ingest/text.py extract_blocks()` with PyMuPDF page/heading. **builder 2** — `render/video_render.py` (storyboard.json + Pillow panels always; narration.wav if piper; mp4 if ffmpeg; graceful `render_warnings` + `warnings.txt`, never raises); `render/base.py` renderers may return `list[Path]`.
@@ -282,5 +289,6 @@ Recorded per CLAUDE.md. Also in `requirements.txt` / `pyproject.toml`.
 - **Phase 5 added `openpyxl>=3.1`, `pyarrow>=17`** (3.1.5 / 25.0.1; `pyarrow` is a ~40 MB wheel — has macOS arm64 py3.11 wheels; `openpyxl` pulls `et-xmlfile`). Used only in `parivartan/_readers.py` + `_writers.py`, **inside functions** (INV-3). No pandas, no `stix2` (would pull `requests`).
 - **Post-Phase-5 added `pypdf>=5`** (6.17.0) — the strengthened PDF renderer test opens the output with `PdfReader`. Also the Phase 6 `ingest/text.py` PDF path. Now in the INV-3 `_HEAVY` set → imported inside functions.
 - **Phase 6 added `selectolax>=0.3`, `faster-whisper>=1.1`** (0.4.11 / 1.2.1). `faster-whisper` pulls `ctranslate2` 4.8.2, `onnxruntime` 1.29, `av` 18.1, `numpy` 2.4, `tokenizers` 0.23, `huggingface-hub` 1.30, `hf-xet`, `tqdm`. `faster_whisper`/`ctranslate2` only imported inside the whisper worker (`__main__`); `selectolax`/`av`/`numpy` only inside `ingest/*` functions (INV-1 + INV-3 both cover them).
-- **Phase 7 added `pymupdf>=1.24`** (1.28.2 — `import pymupdf`, mac arm64 wheel). Used only inside `ingest/text.py._from_pdf` (INV-3 `_HEAVY` += `pymupdf`). `Pillow` (already present via `python-pptx`) is now also used by `render/video_render.py` — INV-3 `_HEAVY` += `PIL`. No new dep for TTS/video — `piper` and `ffmpeg` are CLIs.
+- **Phase 7 added `pymupdf>=1.24`** (1.28.2 — `import pymupdf`, mac arm64 wheel). Used only inside `ingest/text.py._from_pdf` (INV-3 `_HEAVY` += `pymupdf`). `Pillow` (already present via `python-pptx`) is now also used by `render/video_render.py` — INV-3 `_HEAVY` += `PIL`.
+- **`piper-tts` 1.8.0** — TTS CLI, invoked as a subprocess (never imported), so not an INV-3/INV-1 concern. Pulls `onnxruntime` (already present via faster-whisper), `piper-phonemize-cross`, `espeak-phonemizer` equivalents. Must be in `vendor_wheels.sh`. `ffmpeg` stays an OS-level CLI, not vendored. | 2026-09-06 |
 - **No Phase 2–5 dep is in `requirements-lock.txt` yet** — see blocker §6 for the full list.

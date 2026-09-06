@@ -48,7 +48,8 @@ defaults:
     runtime: piper
     path: models/tts/en_US-lessac-medium.onnx
     config: models/tts/en_US-lessac-medium.onnx.json
-    approx_bytes: 65000000
+    model_bin_sha256: 5efe09e69902187827af646e1a6e9d269dee769f9877d17b16b1b46eeaaf019f
+    approx_bytes: 63201294
 
 profiles:
 

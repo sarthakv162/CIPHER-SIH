@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+import sys
 import textwrap
 from dataclasses import dataclass
 from pathlib import Path
@@ -22,7 +23,10 @@ _BG = (11, 31, 51)
 _FG = (255, 255, 255)
 _ACCENT = (224, 52, 45)
 _MUTED = (159, 194, 224)
-_TTS_MODEL = Path("models/tts/en_US-lessac-medium.onnx")  # matches configs/models.yaml tts.path
+# matches configs/models.yaml tts.path / tts.config
+_TTS_MODEL = Path("models/tts/en_US-lessac-medium.onnx")
+_TTS_CONFIG = Path("models/tts/en_US-lessac-medium.onnx.json")
+_TTS_DATA_DIR = Path("models/tts")
 _NO_PIPER = "piper (or its voice model) not available — video has no narration"
 _SOFT_SUBS = "subtitles muxed as a selectable track (ffmpeg build lacks the burn-in filter)"
 _NO_SUBS = "subtitles not embedded (ffmpeg lacks subtitle support) — use the .srt sidecar"
@@ -143,17 +147,35 @@ def _write_panels(out_dir: Path, artefact: Any, warnings: list[str]) -> list[Pat
     return panels
 
 
+def _piper_base() -> list[str]:
+    """piper invocation: a PATH binary when present, else `python -m piper` (works venv or not)."""
+    binary = shutil.which("piper")
+    return [binary] if binary else [sys.executable, "-m", "piper"]
+
+
 def _write_narration(out_dir: Path, artefact: Any, warnings: list[str]) -> Path | None:
     """Synthesise per-scene narration with piper and concat to narration.wav, or warn and skip."""
-    if shutil.which("piper") is None or not _TTS_MODEL.is_file():
+    if not _TTS_MODEL.is_file():
         warnings.append(_NO_PIPER)
         return None
+    base = _piper_base()
+    config = ["-c", str(_TTS_CONFIG.resolve())] if _TTS_CONFIG.is_file() else []
     scene_wavs: list[Path] = []
     try:
         for index, scene in enumerate(artefact.scenes, 1):
             wav = out_dir / f"_nar_{index:02d}.wav"
             subprocess.run(
-                ["piper", "--model", str(_TTS_MODEL.resolve()), "--output_file", wav.name],
+                # piper 1.8: -f (not --output_file); --data-dir keeps it offline (no voice download)
+                [
+                    *base,
+                    "-m",
+                    str(_TTS_MODEL.resolve()),
+                    *config,
+                    "--data-dir",
+                    str(_TTS_DATA_DIR.resolve()),
+                    "-f",
+                    wav.name,
+                ],
                 input=scene.narration.encode("utf-8"),
                 cwd=out_dir,
                 capture_output=True,
@@ -182,7 +204,14 @@ def _write_narration(out_dir: Path, artefact: Any, warnings: list[str]) -> Path 
             check=True,
         )
     except Exception as exc:  # noqa: BLE001 - degrade, never crash the job
-        warnings.append(f"piper/ffmpeg narration failed ({type(exc).__name__}) — {_NO_PIPER}")
+        detail = (
+            exc.stderr.decode("utf-8", "replace")[-200:]
+            if isinstance(exc, subprocess.CalledProcessError) and exc.stderr
+            else ""
+        )
+        warnings.append(
+            f"piper/ffmpeg narration failed ({type(exc).__name__}: {detail}) — {_NO_PIPER}"
+        )
         return None
     return target if target.is_file() else None
 
@@ -244,7 +273,9 @@ class _VideoPlan:
             fg = f"{chain}concat=n={self.count}:v=1:a=0[vs]"
         cmd += ["-filter_complex", fg, "-map", "[vs]"]
         if self.narration is not None:
-            cmd += ["-map", f"{self.count}:a", "-shortest"]
+            # No -shortest: panels run their full planned time (so the .srt stays in sync);
+            # narration plays from the start and the tail is silent if piper was quicker.
+            cmd += ["-map", f"{self.count}:a"]
         if mode == "soft":
             subs_index = self.count + (1 if self.narration is not None else 0)
             cmd += ["-map", f"{subs_index}:s", "-c:s", "mov_text"]

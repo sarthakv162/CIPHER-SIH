@@ -38,10 +38,12 @@ def test_scene_timeline_is_cumulative() -> None:
     ]
 
 
-def test_no_ffmpeg_and_no_piper_still_writes_storyboard(
+def test_no_ffmpeg_and_no_voice_model_still_writes_storyboard(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(video_render.shutil, "which", lambda _name: None)
+    # piper falls back to `python -m piper`, so the voice model absence is what disables narration
+    monkeypatch.setattr(video_render, "_TTS_MODEL", tmp_path / "no-such-voice.onnx")
     paths = render_video(_Package([4, 4, 4, 4]), tmp_path / "video_package.video")
     board = json.loads((tmp_path / "storyboard.json").read_text())
     warnings = board["render_warnings"]

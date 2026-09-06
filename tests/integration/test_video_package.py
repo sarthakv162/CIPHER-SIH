@@ -11,10 +11,10 @@ import pytest
 
 from rupantar.core.artefacts import VideoPackage
 from rupantar.render.base import FORMATS, render
-from rupantar.render.video_render import render_video
+from rupantar.render.video_render import _TTS_MODEL, render_video
 
 _HAS_FFMPEG = shutil.which("ffmpeg") is not None
-_HAS_PIPER = shutil.which("piper") is not None
+_HAS_VOICE = _TTS_MODEL.is_file()  # piper always works via `python -m piper`; the voice model gates
 
 
 def _load(artefacts_dir: Path) -> VideoPackage:
@@ -93,14 +93,42 @@ def test_mp4_built_with_expected_duration(artefacts_dir: Path, tmp_path: Path) -
     )
     info = json.loads(probe.stdout)
     assert any(stream["codec_type"] == "video" for stream in info["streams"])
+    # panels run their full planned time regardless of narration length
     expected = sum(scene.duration_seconds for scene in artefact.scenes)
     assert abs(float(info["format"]["duration"]) - expected) <= 2.0
 
 
-@pytest.mark.skipif(_HAS_PIPER, reason="piper present on this machine")
-def test_piper_absent_degrades_gracefully(artefacts_dir: Path, tmp_path: Path) -> None:
+@pytest.mark.skipif(not (_HAS_FFMPEG and _HAS_VOICE), reason="needs ffmpeg + the piper voice model")
+def test_narration_is_synthesised_and_muxed(artefacts_dir: Path, tmp_path: Path) -> None:
     artefact = _load(artefacts_dir)
     paths = render_video(artefact, tmp_path / "video_package.video")
+    wav = tmp_path / "narration.wav"
+    assert wav.is_file() and wav in paths and wav.stat().st_size > 10_000
+    streams = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "stream=codec_type",
+            "-of",
+            "csv=p=0",
+            str(tmp_path / "video_package.mp4"),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    assert "audio" in streams
+
+
+def test_missing_voice_model_degrades_gracefully(
+    artefacts_dir: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import rupantar.render.video_render as vr
+
+    monkeypatch.setattr(vr, "_TTS_MODEL", tmp_path / "no-such-voice.onnx")
+    paths = render_video(_load(artefacts_dir), tmp_path / "video_package.video")
     assert not (tmp_path / "narration.wav").exists()
     board = json.loads((tmp_path / "storyboard.json").read_text())
     assert any("piper" in warning for warning in board["render_warnings"])

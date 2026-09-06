@@ -33,9 +33,22 @@ def test_unknown_key_raises() -> None:
         registry.entry("nope")
 
 
-def test_missing_real_file_names_fetch_script() -> None:
+def test_missing_real_file_names_fetch_script(tmp_path: Path) -> None:
+    brain = {"class": "heavy", "runtime": "llama", "path": "models/brain/absent.gguf"}
+    models = {
+        "runtimes": {"llama": {"binary": "llama-server"}},
+        "profiles": {"p": {"brain": brain}},
+    }
+    config = AppConfig(
+        configs_dir=tmp_path,
+        active_profile="p",
+        profile_source="test",
+        models=models,
+        policy={},
+        db_path=tmp_path / "x.db",
+    )
     with pytest.raises(ModelFileMissingError) as excinfo:
-        Registry.from_config(_config("apple-metal"), verify=True)
+        Registry.from_config(config, verify=True)
     assert "scripts/fetch_models.sh" in str(excinfo.value)
 
 
