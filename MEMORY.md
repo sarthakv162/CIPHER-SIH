@@ -125,15 +125,15 @@ Things that are broken or unfinished and need attention. Include the file and th
 
 Decisions you could not make on your own. Do not guess — list them here and continue with the safest default.
 
-- Exact GGUF builds and quantisation for `brain` and `vlm` on the demo laptop, **and the laptop's OS/arch** (needed for `requirements-lock.txt` / wheel vendoring — the dev machine is macOS arm64, the demo laptop may not be). Needs a one-time online fetch + benchmark.
+- Demo hardware is **confirmed = this dev machine, a fanless MacBook Air M4** (macOS arm64, 16 GB). So `requirements-lock.txt` / wheel vendoring target macOS arm64 py3.11. Still open: whether the demo can instead run on an M4 **Pro/Max** (would fix the latency targets — see the demo-latency item below).
+- `vlm` GGUF quant/build still unverified (file not on disk yet — Phase 6).
 - Which three cyber formats matter most to the evaluators for Parivartan. Current default: IOC CSV ↔ STIX 2.1, Sigma YAML → JSON, CEF/syslog → JSONL.
 - Whether the recorded demo video uses the `laptop-16gb` or `titan-24gb` profile.
 - `GenerationParams.language`: field kept, brain honours it best-effort; ASR/TTS are en-only and emit a `language_limitation` manifest warning (Phase 6). Tested values `en`, `hi`; others accepted as best-effort. Confirm `hi` is actually a demo requirement.
 - Should `make check-all` deselect `-m slow`? It currently runs the real-model integration tests when models are on disk. Fixing it touches the `Makefile` **and** `PLAN.md` §7 (the single shared `make check` / `check-all` definition) and `CLAUDE.md`. Left as-is for now; `make check` itself is unaffected.
 - ~~Schema-enforcement mechanism~~ **RESOLVED 2026-09-06.** Human chose native `response_format: json_schema`; `agents/grammar.py` deleted. See §4 / §5 / §9. Speed was a wash across all options; the call was made on maintenance + guarantee strength for the 6 remaining Phase 3 schemas.
 - **Untested for Phase 3:** unconstrained/constrained *validation failure rate* was only measured for `ExecutiveSummary` (0/32). Advisory / Presentation / VideoPackage are structurally harder (nested models, enums, int fields). If the retry-once path fires often on those, revisit temperature or prompt, not the constraint mechanism.
-- **Demo latency target — PARTLY OPEN.** `-ngl 0 → 99` fix landed (root cause of the 765 s; was CPU-only). Clean idle measurement: 7-artefact **304 s** (target < 240), demo-4 **~150 s** (target < 90). This machine tops out at ~14.4 tok/s; demo-4 needs ~21. IQ4_XS quant tried and **rejected (8 % slower)**. Human ruled out prompt-trimming. **Awaiting human decision** between: (a) demo-3 (drop `advisory`) ≈ 95 s; (b) speculative decoding (0.6 B draft, `--model-draft`, real work); (c) confirm/upgrade demo hardware — M3/M4 Pro would clear both targets; (d) accept ~150 s with streaming. Until then, Phase 4 can proceed; the perf number is not a Phase 4 blocker.
-- Exact demo hardware still unpinned (was already here). Now load-bearing: at ~14 tok/s neither latency target is met; at ~28 tok/s both are. `--threads` (6 used of 6 P + 4 E cores) untested for tuning.
+- **Demo latency target — OPEN, needs a human call.** Diagnosis complete: 7-artefact **304 s** (target < 240), demo-4 **~150 s** (target < 90) on the demo machine (**MacBook Air M4, fanless, this laptop**). The ~14.5 tok/s is a **real memory-bandwidth ceiling, not thermal** (5× back-to-back flat) and not a config bug (`-ngl`/`--parallel`/`--threads` all now optimal). IQ4_XS quant **rejected (8 % slower)**. Human ruled out prompt-trimming. The four ways forward, all costed: **(a)** demo-3 — drop `advisory` (slowest) → ~95 s; **(b)** speculative decoding, 0.6 B draft + `--model-draft` (~1.3–1.8×, real runtime work, +0.5 GB); **(c)** run the demo on an M4 **Pro/Max** — 2–3× bandwidth → both targets clear with zero code; **(d)** accept ~150 s with token streaming (built) so progress is visible. Phase 4 is NOT blocked by this.
 
 ---
 
@@ -143,7 +143,7 @@ Measured, not assumed. Update whenever you measure something new.
 
 | Fact | Value | Measured on |
 |---|---|---|
-| Dev machine | macOS 15.3 (Darwin 25.3), Apple Silicon, 16 GB RAM — matches target profile | 2026-09-06 |
+| Dev machine = demo machine | **MacBook Air M4** (`Mac16,12`), 10 cores (4 P + 6 E), **fanless**, 16 GB, macOS 15.3 (Darwin 25.3). ~120 GB/s memory bandwidth (M4 non-Pro). | 2026-09-06 |
 | Python | 3.11.15 (uv-managed), `.venv/` | 2026-09-06 |
 | `uv` version | 0.11.29 | 2026-09-06 |
 | `ffmpeg` version | 8.1.2 (`/opt/homebrew/bin/ffmpeg`) | 2026-09-06 |
@@ -158,7 +158,7 @@ Measured, not assumed. Update whenever you measure something new.
 | **CLEAN PERF BASELINE** — the rows below are **idle machine, `sudo purge`d page cache**, `-ngl 99 --parallel 1 --ctx-size 8192 --threads 6`. Earlier contended/`-ngl 0` figures were deleted as misleading. | ↓ | 2026-09-06 |
 | brain cold boot → healthy | **2.47 s** (from a purged page cache) | 2026-09-06 |
 | brain warm boot → healthy | **1.03 s** | 2026-09-06 |
-| brain generation, real artefacts | **~14.4 tok/s** — median across the 7 agents, ctx 8192, `json_schema` constraint, temp 0.3–0.45. Flat across agents (14.2–14.6). NOT contended — this is what this machine does. `llama-bench`'s ~37 tok/s is a tiny-context synthetic and does not reflect real use. | 2026-09-06 |
+| brain generation, real artefacts | **~14.5 tok/s** — median across the 7 agents, ctx 8192, `json_schema` constraint. **This is a genuine hardware ceiling, NOT thermal throttling** — `executive_summary` run 5× back-to-back from a cool start held 14.6→14.5 tok/s over 184 s of sustained load (flat; thermal would decay). Memory-bandwidth-bound: `--threads 4` (M4 Air has 4 P-cores) is perf-identical to `--threads 6`. `llama-bench`'s ~37 tok/s is a tiny-context synthetic. An M4 Pro/Max (273/410 GB/s) would do ~2–3×. | 2026-09-06 |
 | brain prompt eval | first agent pays the full ~750-tok dossier eval (folded into its ~40 s wall); agents 2–7 hit ~556 cached tok (byte-identical dossier prefix) and evaluate only 200–350 new. Total prompt-eval across a 7-run ≈ 18 s. | 2026-09-06 |
 | **7-artefact run, one request** (`ai_policy_brief.md`, fresh server) | **304 s wall**, 4133 generated tokens, 1 brain `LOAD_START`, 0.7 s dead time. Per-agent gen tok / wall s: exec 503/40.4 · advisory 639/46.8 · linkedin 433/31.2 · x_thread 322/23.6 · presentation 764/55.1 · infographic 434/32.0 · video 1038/74.9. | 2026-09-06 |
 | **demo-4 subset** (exec, linkedin, x_thread, advisory), fresh server | **~143–156 s wall** (two idle runs; ~9 % run-to-run variance), ~2000 gen tok — **MISSES the < 90 s target** (needs ~21 tok/s; this machine does ~14.4). | 2026-09-06 |
@@ -206,8 +206,9 @@ Did: `models.yaml` — laptop-16gb brain+vlm `-ngl 0/none → -ngl 99 --parallel
 - peak RSS (brain, Metal, 8192 ctx): **4.89 GB** — one-model thesis holds easily
 - gen ~**14.4 tok/s flat** — this machine's real ceiling; `llama-bench`'s 37 is a tiny-context synthetic
 - **IQ4_XS quant: 8 % SLOWER** (169 vs 156 s) despite being 9 % smaller — rejected, kept Q4_K_M, file deleted
-Conclusion: the fix roughly halves the earlier 765 s but this machine at 14 tok/s **cannot do 4 artefacts in 90 s** — demo-4 needs ~21 tok/s. Prompt-trimming was ruled out by the human. Remaining levers, all costed: (a) demo-3 not demo-4 (drop `advisory`, the slowest → ~95 s); (b) speculative decoding with a 0.6 B draft model (`--model-draft`, ~1.3–1.8× on JSON, real work, +0.5 GB); (c) confirm the actual demo hardware — an M3/M4 Pro would do 25–35 tok/s and the problem vanishes (§7 already flags demo HW as unknown); (d) accept ~150 s with token streaming (already implemented) so progress is visible.
-Next: **human decision on the demo-4 target** (a/b/c/d above), then Phase 4 (renderers). `-ngl 99` fix stands regardless.
+- **Thermal check: NOT thermal.** Hardware is a **fanless MacBook Air M4**. `executive_summary` ×5 back-to-back from a cool start: 14.6 → 14.6 → 14.6 → 14.5 → 14.5 tok/s over 184 s (flat; throttling would decay). `--threads 4` (= P-core count) perf-identical to `--threads 6` → decode is memory-bandwidth-bound, not compute-bound. `sudo powermetrics` unavailable in-session (needs password). Set `models.yaml` `--threads 6 → 4` (perf-neutral, correct for the HW).
+Conclusion: the `-ngl` fix roughly halves the earlier 765 s, but **~14.5 tok/s is the M4 Air's real ceiling** (bandwidth ~120 GB/s) — not thermal, not a config bug. demo-4 needs ~21 tok/s. Prompt-trimming ruled out by the human. Levers, all costed: (a) demo-3 not demo-4 (drop `advisory` → ~95 s); (b) speculative decoding, 0.6 B draft (`--model-draft`, ~1.3–1.8×, real work, +0.5 GB); (c) run the demo on an M4 Pro/Max (2–3× bandwidth, both targets clear, zero code); (d) accept ~150 s with streaming.
+Next: **human decision on the demo-4 target** (a/b/c/d above), then Phase 4 (renderers). `-ngl 99` + `--threads 4` + `--parallel 1` stand regardless.
 
 ### 2026-09-06 — Phase 3 — artefact agents + orchestration + `api/` shipped
 Did (two builder subagents + lead coordination):
