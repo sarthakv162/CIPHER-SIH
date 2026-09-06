@@ -1,0 +1,25 @@
+title: Suspicious PowerShell Encoded Command
+id: 6e3f1b52-0c9a-4c2e-9c1d-2b7a9f0e1a34
+status: experimental
+description: Detects PowerShell invoked with an encoded command payload
+author: Rupantar Test
+date: 2024/01/15
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection:
+        Image|endswith: '\powershell.exe'
+        CommandLine|contains:
+            - '-enc '
+            - '-EncodedCommand '
+    condition: selection
+fields:
+    - CommandLine
+    - ParentImage
+falsepositives:
+    - Administrative scripts
+level: high
+tags:
+    - attack.execution
+    - attack.t1059.001

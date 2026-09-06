@@ -1,0 +1,6 @@
+CEF:0|Security|threatmanager|1.0|100|worm successfully stopped|10|src=10.0.0.1 dst=2.1.2.2 spt=1232
+CEF:0|NV|NVFW|2.4|IDS-1|Port scan detected|6|src=192.168.1.5 dst=192.168.1.1 proto=TCP
+<134>Sep  6 12:14:05 gateway CEF:0|Cisco|ASA|9.8|302013|Built connection|3|src=10.1.1.2 dst=8.8.8.8 act=allow
+2024-01-15T08:22:11Z fw01 CEF:0|Palo Alto|PAN-OS|10.1|end|SESSION END|5|src=172.16.0.9 dst=172.16.0.1 app=ssl
+CEF:0|Acme|AV|3.1|SIG-9|Malware quarantined|8|fname=bad.exe msg=Detected as Trojan\|Generic act=Trojan\=Win32
+this line is just plain text, not CEF at all

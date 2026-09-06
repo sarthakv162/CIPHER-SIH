@@ -1,0 +1,8 @@
+type,value,note
+ipv4,198.51.100.23,c2 node
+domain,evil.example.com,phishing
+sha256,e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855,dropper
+md5,d41d8cd98f00b204e9800998ecf8427e,packer
+url,http://evil.example.com/a,payload
+email,attacker@evil.example.com,sender
+weirdtype,some-value,unmapped

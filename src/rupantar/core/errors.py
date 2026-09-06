@@ -85,6 +85,10 @@ class RenderError(RupantarError):
     """No renderer is registered for an (artefact type, format) pair; fix render/base.py FORMATS."""
 
 
+class ConversionError(RupantarError):
+    """No Parivartan converter exists for a (src, dst) pair; see parivartan.list_conversions()."""
+
+
 class RuntimeStartError(ModelError):
     """A model child process failed to start or never reported healthy."""
 

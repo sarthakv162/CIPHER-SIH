@@ -1,0 +1,8 @@
+﻿name,role,note
+Alice,Engineer,"Works on, maintains, and documents the pipeline"
+Bob,Analyst,"First line
+second line"
+
+Carol,Manager
+Dave,Intern,extra-a,extra-b
+Eve,Lead,"Quote ""inside"" the value"

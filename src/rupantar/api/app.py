@@ -70,10 +70,11 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     app.state.agents = agents
     app.state.tasks = set()
 
-    from rupantar.api.routes import health, jobs, models, transforms
+    from rupantar.api.routes import convert, health, jobs, models, transforms
 
     app.include_router(health.router)
     app.include_router(transforms.router)
     app.include_router(jobs.router)
     app.include_router(models.router)
+    app.include_router(convert.router)
     return app

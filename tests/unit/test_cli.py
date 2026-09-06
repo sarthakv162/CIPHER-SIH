@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-import pytest
+from pathlib import Path
+
 from typer.testing import CliRunner
 
 from rupantar.cli.main import app
@@ -17,18 +18,34 @@ def test_help_lists_exactly_four_commands() -> None:
         assert command in result.output
 
 
-@pytest.mark.parametrize(
-    ("args", "needle"),
-    [
-        (["convert"], "phase 5"),
-        (["selfcheck"], "phase 8"),
-    ],
-)
-def test_stub_commands_exit_zero(args: list[str], needle: str) -> None:
-    result = runner.invoke(app, args)
+def test_selfcheck_is_still_a_stub() -> None:
+    result = runner.invoke(app, ["selfcheck"])
     assert result.exit_code == 0
-    assert needle in result.output
+    assert "phase 8" in result.output
     assert "not implemented" in result.output
+
+
+def test_convert_runs_a_conversion(tmp_path: Path) -> None:
+    source = tmp_path / "in.csv"
+    source.write_text("a,b\n1,2\n", encoding="utf-8")
+    out = tmp_path / "out.json"
+    result = runner.invoke(app, ["convert", str(source), "--to", "json", "--out", str(out)])
+    assert result.exit_code == 0
+    assert "1 rows ->" in result.output
+    assert out.is_file()
+
+
+def test_convert_missing_input_exits_one(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["convert", str(tmp_path / "nope.csv"), "--to", "json"])
+    assert result.exit_code == 1
+
+
+def test_convert_unknown_pair_exits_one(tmp_path: Path) -> None:
+    source = tmp_path / "in.csv"
+    source.write_text("a,b\n1,2\n", encoding="utf-8")
+    result = runner.invoke(app, ["convert", str(source), "--to", "sigma-json"])
+    assert result.exit_code == 1
+    assert "no converter" in result.output
 
 
 def test_transform_help_shows_the_new_options() -> None:

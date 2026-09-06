@@ -108,10 +108,74 @@ async def _transform(
         await store.close()
 
 
+_EXT_TO_FORMAT: dict[str, str] = {
+    ".csv": "csv",
+    ".tsv": "tsv",
+    ".json": "json",
+    ".jsonl": "jsonl",
+    ".ndjson": "jsonl",
+    ".xlsx": "xlsx",
+    ".xml": "xml",
+    ".yml": "yaml",
+    ".yaml": "yaml",
+    ".parquet": "parquet",
+    ".log": "cef",
+    ".cef": "cef",
+}
+_FORMAT_TO_EXT: dict[str, str] = {
+    "stix21": "json",
+    "sigma-json": "json",
+    "ioc-csv": "csv",
+    "cef": "jsonl",
+}
+
+
+def _parse_opts(pairs: list[str]) -> dict[str, str]:
+    """Turn --opt k=v flags into a dict."""
+    parsed: dict[str, str] = {}
+    for pair in pairs:
+        key, _, value = pair.partition("=")
+        parsed[key.strip()] = value.strip()
+    return parsed
+
+
 @app.command()
-def convert() -> None:
-    """Convert between data and cyber formats via Parivartan (phase 5)."""
-    _stub("convert", 5)
+def convert(
+    source: Annotated[
+        Path, typer.Argument(exists=False, dir_okay=False, help="Source file to convert.")
+    ],
+    to: Annotated[str, typer.Option("--to", help="Destination format.")],
+    from_: Annotated[
+        str | None, typer.Option("--from", help="Source format; inferred from the extension.")
+    ] = None,
+    out: Annotated[Path | None, typer.Option("--out", help="Output file path.")] = None,
+    opt: Annotated[
+        list[str] | None, typer.Option("--opt", help="Converter option as k=v (repeatable).")
+    ] = None,
+) -> None:
+    """Convert between data and cyber formats via Parivartan."""
+    from rupantar.core.errors import ConversionError
+    from rupantar.parivartan.registry import convert as run_convert
+
+    src = from_ or _EXT_TO_FORMAT.get(source.suffix.lower())
+    if src is None:
+        typer.echo(f"cannot infer --from for suffix {source.suffix!r}; pass --from explicitly")
+        raise typer.Exit(1)
+    destination = (
+        out or Path("data/outputs/conversions") / f"{source.stem}.{_FORMAT_TO_EXT.get(to, to)}"
+    )
+    try:
+        report = run_convert(source, src, to, destination, _parse_opts(opt or []))
+    except ConversionError as exc:
+        typer.echo(str(exc))
+        raise typer.Exit(1) from exc
+    if not report.ok and any(w.startswith("input not found") for w in report.warnings):
+        for warning in report.warnings:
+            typer.echo(f"warning: {warning}")
+        raise typer.Exit(1)
+    typer.echo(f"{report.rows} rows -> {report.output_path or destination}")
+    for warning in report.warnings:
+        typer.echo(f"warning: {warning}")
 
 
 @app.command()
