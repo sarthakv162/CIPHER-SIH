@@ -434,7 +434,7 @@ This is the one definition of `make check`; the Phase 0 verify line and `CLAUDE.
 ```
 scripts/demo.sh
   1. selfcheck                                → green table, egress zero
-  2. transform sample_article.txt \
+  2. transform --text tests/fixtures/articles/ai_policy_brief.md \
        --output executive_summary,advisory,linkedin_post,x_thread,presentation
                                               → one brain load, five artefacts, five manifests
   3. transform sample_with_image/             → visible vlm load → evict → brain load

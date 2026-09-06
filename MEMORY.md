@@ -12,8 +12,9 @@
 | Field | Value |
 |---|---|
 | Current phase | **3 — All artefact agents (not started)** |
-| Last session | 2026-09-06 — Phase 2 shipped |
+| Last session | 2026-09-06 — grammar-cost investigation (Phase 2 shipped prior) |
 | Last commit | `phase-2: text generation path` |
+| Blocking Phase 3 | human call on schema-enforcement mechanism — see §7 |
 | `make check` status | **green** (ruff + format 53 files + mypy 25 files + 99 unit + 8 inv / 3 inv skeleton; slow lane `pytest -m slow` → 2 pass) |
 | Active hardware profile | `laptop-16gb` |
 | Models present on disk | **brain** only — `models/brain/Qwen3-4B-Instruct-2507-Q4_K_M.gguf` (2.5 GB, sha `3605803b…`); vlm/asr/tts absent |
@@ -122,7 +123,7 @@ Decisions you could not make on your own. Do not guess — list them here and co
 - Whether the recorded demo video uses the `laptop-16gb` or `titan-24gb` profile.
 - `GenerationParams.language`: field kept, brain honours it best-effort; ASR/TTS are en-only and emit a `language_limitation` manifest warning (Phase 6). Tested values `en`, `hi`; others accepted as best-effort. Confirm `hi` is actually a demo requirement.
 - Should `make check-all` deselect `-m slow`? It currently runs the real-model integration tests when models are on disk. Fixing it touches the `Makefile` **and** `PLAN.md` §7 (the single shared `make check` / `check-all` definition) and `CLAUDE.md`. Left as-is for now; `make check` itself is unaffected.
-- GBNF-constrained generation runs at ~17 tok/s vs ~37 tok/s unconstrained on this machine (see §8). If prompt-eval + grammar cost becomes the demo bottleneck for a 7-artefact run, consider dropping the grammar for artefacts whose schema is simple and relying on the Pydantic validator + retry alone.
+- **Schema-enforcement mechanism for the agents (GBNF vs `response_format:json_schema` vs none).** Investigation 2026-09-06 (session log §9) found the mechanism has ~no measurable cost or benefit here: all four modes generate at the same tok/s and unconstrained had 0/16 validation failures on `ExecutiveSummary`. The user's stated switch trigger ("materially faster") is not met, so on that rule GBNF stays. Open recommendation the other way: adopt native `response_format:json_schema` and delete `agents/grammar.py` (+ its test) — speed-neutral, a stronger structural guarantee than our converter, and ~150 fewer lines to extend/debug across the 6 nested schemas in Phase 3. **Awaiting a human call before Phase 3.**
 
 ---
 
@@ -145,10 +146,11 @@ Measured, not assumed. Update whenever you measure something new.
 | Free RAM | ~1 GB free+inactive under load (not a clean idle measure) | 2026-09-06 |
 | brain GGUF | `models/brain/Qwen3-4B-Instruct-2507-Q4_K_M.gguf`, 2 497 281 120 B, sha256 `3605803b982cb64aead44f6c1b2ae36e3acdb41d8e46c8a94c6533bc4c67e597` | 2026-09-06 |
 | brain llama-server boot → healthy | ~7.5 s first, ~4.0 s warm (GGUF page-cache hot; no true cold-disk figure — `purge` needs sudo) | 2026-09-06 |
-| brain prompt eval | ~40 tok/s (752-tok dossier prompt) | 2026-09-06 |
-| brain generation, **GBNF-constrained** | **~17 tok/s** (521 tok in 30.6 s, `--ctx-size 8192 --threads 6`) — grammar sampling is the cost | 2026-09-06 |
-| brain generation, unconstrained (`llama-bench`, user) | ~36.6–36.8 tok/s | 2026-09-06 |
-| One `executive_summary` end-to-end (CLI, laptop-16gb) | **~53 s wall** (`ai_policy_brief.md`; 752 prompt + 521 completion tok). DoD is < 90 s. | 2026-09-06 |
+| brain prompt eval | ~40 tok/s (752-tok dossier prompt); with `cache_prompt` a repeat prompt is ~0 | 2026-09-06 |
+| brain generation — **constraint mechanism is NOT the cost** | GBNF, `response_format:json_object`, `response_format:json_schema`, and *no constraint* all measured **within noise of each other** (see grammar-investigation block in §9). Interleaved: 6.9 / 6.9 / 6.9 tok/s. First (staggered) run: 6.6 / 7.7 / 7.8 / 7.2. GBNF is at most ~10 % slower; json_schema == unconstrained. | 2026-09-06 |
+| brain generation, absolute tok/s | **swings 2–3× with machine load** — 17 tok/s (single gen, quieter moment) down to ~7 tok/s (sustained, dev box running node/vite servers + a 54 %-CPU `python@3.14`). `llama-bench` (synthetic, tiny prompt) ~37 tok/s. **Re-measure on the real demo hardware, quiet.** | 2026-09-06 |
+| `ExecutiveSummary` JSON validity, temp 0.3 | **0 failures in 32 runs** across all four constraint modes incl. *unconstrained* — Qwen3-4B-2507 emits schema-valid JSON on its own for this schema. Harder schemas (Advisory, Presentation, VideoPackage) untested. | 2026-09-06 |
+| One `executive_summary` end-to-end (CLI, laptop-16gb) | ~53 s wall when measured 2026-09-06 morning; ~70 s under later dev-box load. DoD is < 90 s. | 2026-09-06 |
 | `--n-gpu-layers 99` vs `0`, Apple Silicon | no measurable difference — llama.cpp uses Metal by default. Flag kept only for titan-24gb / Linux-CUDA. | 2026-09-06 |
 | llama-server prefix caching | per-slot; `cache_prompt: true` reuses the longest common token prefix across requests to the same slot. Agents put the identical dossier first so agents 2–7 skip re-evaluating it. | 2026-09-06 |
 | Peak RSS, full multimodal run | unknown | — |
@@ -171,6 +173,19 @@ Changed in this file:
 Next session should start with:
 -
 ```
+
+### 2026-09-06 — Investigation — GBNF sampling cost (pre-Phase-3)
+Premise to test: "GBNF is costing >half our throughput (37→17 tok/s), ×7 in Phase 3."
+Method: `executive_summary` agent, `ai_policy_brief.md`, one warm llama-server, raw httpx for full `timings`. Two runs: (1) 4 modes × 8 seeds staggered; (2) cold single-shot + 4 interleaved rounds × 3 modes. Each output run through `ExecutiveSummary.model_validate`. Scripts in scratchpad (not committed).
+Findings:
+- **The premise is wrong.** GBNF / `response_format:json_object` / `response_format:json_schema` / no-constraint all generate at the same tok/s. Interleaved: 6.9/6.9/6.9. Staggered: 6.6/7.7/7.8/7.2 (GBNF ran first/coolest and was still slowest → its ~10 % gap is real but tiny). `json_schema` output was **token-identical** to unconstrained for every seed — the constraint never fires.
+- The 37→17→7 drop is **context size + sustained load + a busy dev box** (node/vite servers, a 54 %-CPU `python@3.14`), not grammar. Absolute tok/s here is unreliable; must be re-measured on quiet demo hardware.
+- **0 validation failures in 32 runs**, unconstrained included, for `ExecutiveSummary`. Retry-once path would rarely fire for this schema.
+- Generated GBNF for `ExecutiveSummary` inspected: 11 rules, 1079 chars, canonical JSON `string` rule, no unbounded-alternation traps. Our GBNF does **not** encode the Pydantic count validators (`key_points` 3–6 etc.) — neither would `json_schema` as generated from the frozen models (bounds live in `field_validator`s, not `Field(...)`).
+- Noted but not changed: `agents/base.py` calls `gbnf_for(self.schema)` once per `run()` (per artefact), not cached on the agent. Cheap (~1 ms) but should be memoised whichever mechanism wins.
+Decision: **deferred to the human** — speed says "keep GBNF", maintenance/robustness says "switch to `response_format:json_schema` + delete `grammar.py`". No code changed. See §7.
+Also did: fixed the stale `sample_article.txt` → `--text tests/fixtures/articles/ai_policy_brief.md` in `PLAN.md` §8 demo path.
+Next: get the human's call on the mechanism, then start Phase 3.
 
 ### 2026-09-06 — Phase 2 — Text generation path shipped, INV-6 real, real brain measured
 Did:
