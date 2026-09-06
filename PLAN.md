@@ -272,9 +272,9 @@ Each phase: implement → run its verify command → have the `verifier` subagen
 ### Phase 2 — Text generation path
 
 **Build**
-- `models/client.py` — async OpenAI-compatible client (`/v1/chat/completions`) against `lease.endpoint`, with `grammar` passthrough, retry-once on connection reset, streaming optional
-- `agents/grammar.py` — Pydantic model → JSON Schema → GBNF string. Support: object, array, string, integer, enum, `maxItems`, `minItems`.
-- `agents/base.py` — `ArtefactAgent`: renders system+user prompt from template, calls client with grammar, parses JSON, validates against Pydantic model, retries once with the validation error appended on failure, then fails the job cleanly.
+- `models/client.py` — async OpenAI-compatible client (`/v1/chat/completions`) against `lease.endpoint`, with `grammar` and `response_format` passthrough, retry-once on connection reset, streaming optional
+- ~~`agents/grammar.py` — Pydantic → GBNF~~ **Dropped** (investigation 2026-09-06, `MEMORY.md` §9): a hand-rolled GBNF converter, `response_format: json_object`, `response_format: json_schema`, and *no constraint at all* all generate at the same tok/s, and `ExecutiveSummary` had 0 validation failures unconstrained. `agents/base.py` uses llama-server's native `response_format: json_schema` (built once per agent from `schema.model_json_schema()`); the validate-and-retry-once path covers the Pydantic count/length `field_validator`s that no schema constraint encodes.
+- `agents/base.py` — `ArtefactAgent`: renders system+user prompt from template, calls client with a `json_schema` constraint, parses JSON, validates against the Pydantic model, retries once with the validation error appended on failure, then fails the job cleanly.
 - `configs/agents/executive_summary.yaml` + its prompt template
 - `orchestrator/runner.py` (single-job version)
 - `cli`: `rupantar transform --text FILE --output executive_summary`

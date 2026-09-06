@@ -4,7 +4,8 @@ Every type here is a Pydantic v2 model in `src/rupantar/core/`. Request/job type
 `core/schemas.py`; artefact types live in `core/artefacts.py`. **Both files are frozen at the end
 of Phase 0.** Any change after that requires a `MEMORY.md` deviation entry explaining why.
 
-Each artefact model gets a GBNF grammar generated from its JSON Schema, so keep them shallow:
+Each artefact model's JSON Schema is handed to llama-server as a `response_format: json_schema`
+constraint (see `MEMORY.md` §9, 2026-09-06 grammar investigation), so keep them shallow:
 objects, arrays of objects, strings, ints, enums. No unions, no optionals-of-objects, no recursion.
 
 Grammar-constrained small models get numeric sequences wrong often enough that each wrong value

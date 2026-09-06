@@ -100,6 +100,18 @@ async def test_grammar_is_forwarded_in_the_request_body(server: str) -> None:
     assert _State.bodies[-1]["grammar"] == 'root ::= "x"'
 
 
+async def test_response_format_is_forwarded_in_the_request_body(server: str) -> None:
+    fmt = {"type": "json_schema", "json_schema": {"name": "x", "schema": {"type": "object"}}}
+    async with LlamaClient(server) as client:
+        await client.complete(
+            [{"role": "user", "content": "x"}],
+            response_format=fmt,
+            max_tokens=8,
+            temperature=0.0,
+        )
+    assert _State.bodies[-1]["response_format"] == fmt
+
+
 async def test_retries_once_on_connection_reset(server: str) -> None:
     _State.reset_budget = 1
     async with LlamaClient(server) as client:

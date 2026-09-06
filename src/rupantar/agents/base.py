@@ -12,7 +12,6 @@ from typing import Any, Protocol
 
 from pydantic import ValidationError
 
-from rupantar.agents.grammar import gbnf_for
 from rupantar.core.artefacts import ArtefactBase
 from rupantar.core.errors import AgentError
 from rupantar.core.schemas import GenerationParams
@@ -37,7 +36,7 @@ class _Client(Protocol):
         self,
         messages: list[dict[str, str]],
         *,
-        grammar: str | None,
+        response_format: dict[str, Any] | None,
         max_tokens: int,
         temperature: float,
         extra: dict[str, Any] | None = None,
@@ -48,7 +47,7 @@ class _Client(Protocol):
         self,
         messages: list[dict[str, str]],
         *,
-        grammar: str | None,
+        response_format: dict[str, Any] | None,
         max_tokens: int,
         temperature: float,
         extra: dict[str, Any] | None = None,
@@ -68,6 +67,14 @@ class ArtefactAgent:
     max_tokens: int
     temperature: float
     param_hints: dict[str, dict[str, str]] = field(default_factory=dict)
+    _response_format: dict[str, Any] = field(init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        """Compile the schema into a reusable `response_format` (json_schema) constraint."""
+        self._response_format = {
+            "type": "json_schema",
+            "json_schema": {"name": self.artefact_type, "schema": self.schema.model_json_schema()},
+        }
 
     def build_messages(self, dossier_text: str, params: GenerationParams) -> list[dict[str, str]]:
         """Render the system+user messages, dossier first for prefix-cache reuse."""
@@ -92,10 +99,9 @@ class ArtefactAgent:
     ) -> ArtefactBase:
         """Generate one artefact and return it only after `schema.model_validate` passes."""
         messages = self.build_messages(dossier_text, params)
-        grammar = gbnf_for(self.schema)
         last: Exception | None = None
         for _ in range(2):
-            raw = await self._generate(client, messages, grammar, stream)
+            raw = await self._generate(client, messages, stream)
             try:
                 return self.schema.model_validate(_loads(raw))
             except (ValueError, ValidationError) as exc:
@@ -129,21 +135,20 @@ class ArtefactAgent:
         self,
         client: _Client,
         messages: list[dict[str, str]],
-        grammar: str,
         stream: bool,
     ) -> str:
         """Call the client, streaming deltas to stdout when `stream` is set."""
         if not stream:
             return await client.complete(
                 messages,
-                grammar=grammar,
+                response_format=self._response_format,
                 max_tokens=self.max_tokens,
                 temperature=self.temperature,
             )
         parts: list[str] = []
         async for delta in client.stream(
             messages,
-            grammar=grammar,
+            response_format=self._response_format,
             max_tokens=self.max_tokens,
             temperature=self.temperature,
         ):

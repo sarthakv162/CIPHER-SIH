@@ -61,12 +61,15 @@ class LlamaClient:
         messages: list[dict[str, str]],
         *,
         grammar: str | None = None,
+        response_format: dict[str, Any] | None = None,
         max_tokens: int,
         temperature: float,
         extra: dict[str, Any] | None = None,
     ) -> str:
         """POST one chat completion and return `choices[0].message.content`."""
-        body = self._body(messages, grammar, max_tokens, temperature, extra, stream=False)
+        body = self._body(
+            messages, grammar, response_format, max_tokens, temperature, extra, stream=False
+        )
         for attempt in range(2):
             try:
                 response = await self._client.post(_PATH, json=body)
@@ -82,12 +85,15 @@ class LlamaClient:
         messages: list[dict[str, str]],
         *,
         grammar: str | None = None,
+        response_format: dict[str, Any] | None = None,
         max_tokens: int,
         temperature: float,
         extra: dict[str, Any] | None = None,
     ) -> AsyncIterator[str]:
         """POST a streaming chat completion, yielding content deltas as they arrive."""
-        body = self._body(messages, grammar, max_tokens, temperature, extra, stream=True)
+        body = self._body(
+            messages, grammar, response_format, max_tokens, temperature, extra, stream=True
+        )
         for attempt in range(2):
             produced = False
             try:
@@ -113,6 +119,7 @@ class LlamaClient:
         self,
         messages: list[dict[str, str]],
         grammar: str | None,
+        response_format: dict[str, Any] | None,
         max_tokens: int,
         temperature: float,
         extra: dict[str, Any] | None,
@@ -128,6 +135,8 @@ class LlamaClient:
         }
         if grammar is not None:
             payload["grammar"] = grammar
+        if response_format is not None:
+            payload["response_format"] = response_format
         if extra:
             payload.update(extra)
         return payload
