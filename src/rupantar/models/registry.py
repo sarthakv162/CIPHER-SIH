@@ -118,6 +118,16 @@ class Registry:
                 "scripts/fetch_models.sh while online",
                 key=key,
             )
+        if path.is_dir():
+            weights = path / "model.bin"
+            if not weights.is_file():
+                raise ModelFileMissingError(
+                    f"model directory for {key!r} at {path} has no model.bin; run "
+                    "scripts/fetch_models.sh while online",
+                    key=key,
+                    path=str(path),
+                )
+            return weights.stat().st_size, hasher(weights)
         candidates = [path, *(_sibling(extra, name) for name in ("mmproj", "config"))]
         for candidate in candidates:
             if candidate is not None and not candidate.is_file():

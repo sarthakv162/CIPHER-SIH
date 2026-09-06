@@ -12,11 +12,11 @@
 | Field | Value |
 |---|---|
 | Current phase | **7 — Video assembly (not started)** |
-| Last session | 2026-09-06 — Phase 6 shipped (multimodal ingestion) |
-| Last commit | `phase-6: multimodal ingestion` |
-| `make check` status | **green** (ruff + format + mypy 57 files + 179 unit + 12 inv / 1 inv skeleton; slow lane `pytest -m slow` → 3 pass, `test_multimodal.py` skips — asr absent) |
+| Last session | 2026-09-06 — Phase 6 + real multimodal verification (asr fetched) |
+| Last commit | `phase-6: real asr path verified` |
+| `make check` status | **green** (ruff + format + mypy 57 files + 179 unit + 12 inv / 1 inv skeleton; slow lane `pytest -m slow` → **4 pass** incl. real `test_multimodal.py`, 9.5 min) |
 | Active hardware profile | **auto-detected** — `apple-metal` on this M4 Air. `RUPANTAR_PROFILE` overrides. |
-| Models present on disk | **brain** + **vlm** — `models/vlm/Qwen2.5-VL-3B-Instruct-Q4_K_M.gguf` (1.93 GB, sha `c47e8c1f…`) + `mmproj-F16.gguf` (1.34 GB, sha `4c1240f5…`). **asr + tts still absent.** |
+| Models present on disk | **brain + vlm + asr.** vlm: `Qwen2.5-VL-3B-Instruct-Q4_K_M.gguf` (1.93 GB) + `mmproj-F16.gguf` (1.34 GB). asr: `models/asr/faster-whisper-small.en-int8/` (CT2 dir, `model.bin` 483 MB, sha `62b2a45b…`). **tts still absent** (Phase 7). |
 | Python | 3.11.15, uv-managed, `.venv/`, pinned in `.python-version` |
 
 ---
@@ -130,7 +130,8 @@ Anything you did differently from the plan, and why. One line each. Empty is fin
 Things that are broken or unfinished and need attention. Include the file and the symptom.
 
 - **RESOLVED (Phase 2):** `runtime_llama.py` real path is now verified — `tests/integration/test_runtime_llama_real.py` (slow) boots a real `llama-server` on the brain GGUF, health-checks, SIGTERMs, and asserts the pid is gone. Real end-to-end text path also exercised by `tests/integration/test_text_path_real.py`.
-- **brain + vlm on disk; `asr` + `tts` absent.** `Registry.from_config(verify=True)` on a GPU profile now raises on `asr` (a directory). `models status`/`transform`/`run_single`/`api` use `verify=False`. **The Phase 6 real-model DoD is unproven** — `test_multimodal.py` (real vlm→asr→brain swap + peak-RSS-<10GB via `_RssPoller`, the real whisper worker boot + `local_files_only` load + real transcription) skips until `models/asr/faster-whisper-small.en-int8/` exists. The lead verified the vlm *half* by hand (caption → valid `ImageInsight`, vlm RSS ~3.5 GB, clean LOAD/EVICT). Fetch asr + tts before Phase 7's real test and before the demo.
+- **RESOLVED 2026-09-06:** asr fetched; the full Phase 6 real-model DoD is **verified** — `test_multimodal.py` passes (real whisper worker + `local_files_only` + real transcription + real vlm captions + `vlm→evict→asr→evict` sequence + peak RSS < 10 GB). A full image+video+text→executive_summary run also confirmed the `→ brain` half (§8). `registry.py` now handles the whisper directory model under `verify=True`.
+- **`tts` still absent** (`models/tts/en_US-lessac-medium.onnx` + `piper` binary) — Phase 7's real `test_video_package.py` skips until both land.
 - `make check-all` runs `pytest tests/integration` with **no `-m "not slow"` filter**, so on a machine with the brain GGUF it executes **3** real-model tests (`test_text_path_real`, `test_multi_artefact_real`, `test_runtime_llama_real`) — ~15–16 min on the loaded dev box (the 7-artefact one alone is ~13 min). `make check` (the phase gate) stays fast and model-free. See Open Questions.
 - `requirements-lock.txt` is still an empty placeholder. Everything added Phase 2–6 (`httpx`, `fastapi`, `uvicorn`, `starlette`, `python-docx`, `python-pptx`, `fpdf2`, `jinja2`, `openpyxl`, **`pyarrow`**, `pypdf`, `selectolax`, **`faster-whisper` → `ctranslate2` + `onnxruntime` + `av` + `numpy` + `tokenizers` + `huggingface-hub` + `hf-xet`**, `lxml`, `Pillow` + transitives) must be captured by `scripts/vendor_wheels.sh` for macOS arm64 py3.11 before air-gapping. `ctranslate2` + `onnxruntime` + `av` are the ones that need platform-specific wheels.
 
@@ -175,7 +176,10 @@ Measured, not assumed. Update whenever you measure something new.
 | **CLEAN PERF BASELINE** — the rows below are **idle machine, `sudo purge`d page cache**, `-ngl 99 --parallel 1 --ctx-size 8192 --threads 6`. Earlier contended/`-ngl 0` figures were deleted as misleading. | ↓ | 2026-09-06 |
 | brain cold boot → healthy | **2.47 s** (from a purged page cache) | 2026-09-06 |
 | brain warm boot → healthy | **1.03 s** | 2026-09-06 |
-| vlm (Qwen2.5-VL-3B Q4_K_M + mmproj-F16) | boot→healthy ~5.5 s; **RSS ~3.5 GB** resident (Metal); one image caption ~10 s → valid `ImageInsight`. Clean LOAD/EVICT swap. peak-RSS math: vlm 3.5 + brain 4.9 + asr ~1, never stacked (`assemble_dossier` evicts between phases) → peak ≈ 5.5 GB, well under the 10 GB ceiling. **asr RSS unmeasured (model absent).** | 2026-09-06 |
+| vlm (Qwen2.5-VL-3B Q4_K_M + mmproj-F16) | boot→healthy ~5.5 s; `ps` RSS ~3.5 GB (Metal — `ps -o rss` likely undercounts GPU-resident weights); one image caption ~10 s → valid `ImageInsight`. | 2026-09-06 |
+| asr (faster-whisper small.en int8) | `models/asr/faster-whisper-small.en-int8/`, `model.bin` 483 545 366 B sha256 `62b2a45b05ee59acb4a5341b33ee35e041395d378d418a18acfe4c9e768ee37a`. Worker boot + `local_files_only=True` load + 30 s clip transcription: **136 s** for the bare video-dossier test. (`sample_clip.mp4` is synthetic → whisper returns "You", a non-speech artifact — fine for the fixture.) | 2026-09-06 |
+| **Full multimodal run** — image + 30 s video + text → executive_summary (`apple-metal`, real vlm+asr+brain) | **210 s wall**, job SUCCEEDED. Manager events EXACTLY `vlm LOAD→READY→EVICT×2 · asr LOAD→READY→EVICT×2 · brain LOAD→READY` — **the single-heavy-residency claim proven for real**. Dossier: 1 text block, **6 keyframe captions**, 1 transcript. | 2026-09-06 |
+| **Peak process-tree RSS, full multimodal run** | **3.39 GB** (`_RssPoller` polling `pgrep -P` + `ps -o rss` every 0.75 s; `test_multimodal.py` asserts < 10 GB). Even doubling for Metal undercount → ~7 GB. The real guarantee is the eviction discipline, not the number. | 2026-09-06 |
 | brain generation, real artefacts | **~14.5 tok/s** — median across the 7 agents, ctx 8192, `json_schema` constraint. **This is a genuine hardware ceiling, NOT thermal throttling** — `executive_summary` run 5× back-to-back from a cool start held 14.6→14.5 tok/s over 184 s of sustained load (flat; thermal would decay). Memory-bandwidth-bound: `--threads 4` (M4 Air has 4 P-cores) is perf-identical to `--threads 6`. `llama-bench`'s ~37 tok/s is a tiny-context synthetic. An M4 Pro/Max (273/410 GB/s) would do ~2–3×. | 2026-09-06 |
 | brain prompt eval | first agent pays the full ~750-tok dossier eval (folded into its ~40 s wall); agents 2–7 hit ~556 cached tok (byte-identical dossier prefix) and evaluate only 200–350 new. Total prompt-eval across a 7-run ≈ 18 s. | 2026-09-06 |
 | **7-artefact run, one request** (`ai_policy_brief.md`, fresh server) | **304 s wall**, 4133 generated tokens, 1 brain `LOAD_START`, 0.7 s dead time. Per-agent gen tok / wall s: exec 503/40.4 · advisory 639/46.8 · linkedin 433/31.2 · x_thread 322/23.6 · presentation 764/55.1 · infographic 434/32.0 · video 1038/74.9. | 2026-09-06 |
@@ -211,7 +215,7 @@ Next session should start with:
 ### 2026-09-06 — Phase 6 — multimodal ingestion shipped
 Did (builder + lead): `models/runtime_whisper.py` (WhisperRuntime + stdlib worker, `faster_whisper` inside `_serve`, `local_files_only=True`), `ingest/{text,image,audio,video,dossier}.py`, `_support` whisper factory branch, `runtime_stub` `/transcribe`, `runner.execute()` → `assemble_dossier` (text → acquire vlm caption → evict → acquire asr transcribe → evict → then brain loop). Scene-change keyframes with even-spread fallback. INV-1/3/7 handled + tests. Lead: updated `models.yaml` vlm (real filenames + SHAs — anchor had a wrong mmproj name); added `tests/unit/test_ingest_image.py` (retry branches — verifier flagged the gap); **ran the real vlm caption path by hand — valid `ImageInsight`, 3.5 GB RSS, clean swap.**
 Verified: `make check` green (179 unit + 12 inv / 1 skeleton, mypy 57). `test_multimodal_stub.py` asserts the exact 10-event vlm→evict→asr→evict→brain sequence + `{vlm,brain}` never both READY. `pytest -m slow` → 3 pass, `test_multimodal.py` **skips** (asr absent — the real swap + peak-RSS-<10GB check is the one unproven DoD). arch-guard CLEAN. verifier PASS w/ warnings.
-Blocker: `models/asr/` not on disk → real audio path (whisper worker boot, real transcription, `_RssPoller`) unverified. §6.
+Blocker: `models/asr/` not on disk → real audio path unverified. **[Resolved same day — asr fetched; `test_multimodal.py` passes; full image+video+text→exec-summary run: 210 s, exact vlm→evict→asr→evict→brain sequence, peak RSS 3.39 GB. `models.yaml` asr `model_bin_sha256`; `registry.py` handles the whisper dir under `verify=True`; whisper worker handles SIGTERM cleanly (was leaking a CT2 semaphore on SIGKILL). §8.]**
 Next: Phase 7 — video assembly. Needs `piper` + tts model (both absent).
 
 ### 2026-09-06 — Fix — `presentation.pptx` rejected by Keynote (2 rounds)

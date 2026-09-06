@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import contextlib
 import json
+import signal
 import subprocess
 import sys
 from collections.abc import Callable
@@ -171,11 +173,17 @@ def _serve(port: int, model_dir: str, compute_type: str, beam_size: int) -> None
     """Load the model from a local directory only, then serve until the process is killed."""
     from faster_whisper import WhisperModel
 
+    # SIGTERM (the manager's first stop signal) -> clean exit so CTranslate2's worker
+    # pool releases its semaphores instead of leaking on the SIGKILL that follows.
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
+
     _STATE["model"] = WhisperModel(
         model_dir, device="cpu", compute_type=compute_type, local_files_only=True
     )
     _STATE["beam_size"] = beam_size
-    HTTPServer(("127.0.0.1", port), _Handler).serve_forever()
+    server = HTTPServer(("127.0.0.1", port), _Handler)
+    with contextlib.suppress(SystemExit):
+        server.serve_forever()
 
 
 def _main(argv: list[str] | None = None) -> None:

@@ -40,7 +40,8 @@ defaults:
     # faster-whisper CTranslate2 model DIRECTORY (model.bin + config.json + tokenizer).
     # Load with local_files_only=True — never touch a HuggingFace cache.
     path: models/asr/faster-whisper-small.en-int8
-    approx_bytes: 500000000
+    model_bin_sha256: 62b2a45b05ee59acb4a5341b33ee35e041395d378d418a18acfe4c9e768ee37a
+    approx_bytes: 486000000
     args: {compute_type: int8, beam_size: 1}
   tts_lessac: &tts_lessac
     class: transient
