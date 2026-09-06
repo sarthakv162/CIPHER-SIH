@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 import re
+import shutil
+import subprocess
 import xml.etree.ElementTree as ET
 import zipfile
 from pathlib import Path
+
+import pytest
 
 from rupantar.core.artefacts import Advisory, ExecutiveSummary, InfographicSpec, Presentation
 from rupantar.render.docx_render import render_docx
@@ -62,7 +66,7 @@ def test_docx_executive_summary_opens_with_headings(artefacts_dir: Path, tmp_pat
 
 def test_pptx_structure_matches_the_deck(artefacts_dir: Path, tmp_path: Path) -> None:
     """Open with python-pptx: one content slide per Slide + a title slide, each with a title,
-    at least one bullet, and speaker notes; the package metadata matches the slide count."""
+    at least one bullet, and speaker notes; presentation.xml declares its notes master."""
     import pptx
 
     deck = _load(Presentation, artefacts_dir, "presentation")
@@ -85,10 +89,15 @@ def test_pptx_structure_matches_the_deck(artefacts_dir: Path, tmp_path: Path) ->
         assert rendered.notes_slide.notes_text_frame.text.strip() == spec.speaker_notes.strip()
 
     with zipfile.ZipFile(path) as archive:
-        names = archive.namelist()
-        app_xml = archive.read("docProps/app.xml").decode("utf-8")
-    assert re.search(r"<Slides>(\d+)</Slides>", app_xml).group(1) == str(len(opened.slides))
-    assert not any("thumbnail" in n or "printerSettings" in n for n in names)
+        presentation = archive.read("ppt/presentation.xml").decode("utf-8")
+        rels = archive.read("ppt/_rels/presentation.xml.rels").decode("utf-8")
+
+    # python-pptx omits <p:notesMasterIdLst>, which makes Keynote reject the file outright.
+    notes_rid = re.search(r'Id="(rId\d+)"[^>]*/notesMaster"', rels).group(1)
+    assert f'<p:notesMasterId r:id="{notes_rid}"/>' in presentation
+    order = re.findall(r"<p:(sldMasterIdLst|notesMasterIdLst|sldIdLst|sldSz)\b", presentation)
+    assert order == ["sldMasterIdLst", "notesMasterIdLst", "sldIdLst", "sldSz"]
+    assert re.search(r"<p:sldSz\b[^>]*\btype=", presentation) is None
 
 
 def test_pptx_layouts_never_use_the_title_slide_layout(artefacts_dir: Path, tmp_path: Path) -> None:
@@ -102,6 +111,25 @@ def test_pptx_layouts_never_use_the_title_slide_layout(artefacts_dir: Path, tmp_
     title_layout = opened.slide_masters[0].slide_layouts[0]
     for rendered in list(opened.slides)[1:]:
         assert rendered.slide_layout != title_layout
+
+
+def test_pptx_parses_in_libreoffice_if_available(artefacts_dir: Path, tmp_path: Path) -> None:
+    """An independent strict OOXML parser (LibreOffice) accepts the deck, when installed."""
+    soffice = shutil.which("soffice") or "/Applications/LibreOffice.app/Contents/MacOS/soffice"
+    if not Path(soffice).exists():
+        pytest.skip("LibreOffice not installed")
+
+    deck = _load(Presentation, artefacts_dir, "presentation")
+    path = tmp_path / "presentation.pptx"
+    render_pptx(deck, path)
+    result = subprocess.run(
+        [soffice, "--headless", "--convert-to", "pdf", "--outdir", str(tmp_path), str(path)],
+        capture_output=True,
+        timeout=120,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr.decode("utf-8", "replace")
+    assert (tmp_path / "presentation.pdf").stat().st_size > 0
 
 
 def test_pdf_advisory_opens_and_has_text(artefacts_dir: Path, tmp_path: Path) -> None:

@@ -12,9 +12,9 @@
 | Field | Value |
 |---|---|
 | Current phase | **6 — Multimodal ingestion (not started)** |
-| Last session | 2026-09-06 — Phase 5 + pptx-render fix (Keynote rejection) |
-| Last commit | `fix: pptx would not open in Keynote; strengthen renderer tests` |
-| `make check` status | **green** (ruff + format + mypy 50 files + 156 unit + 12 inv / 1 inv skeleton; slow lane `pytest -m slow` → 3 pass) |
+| Last session | 2026-09-06 — Phase 5 + pptx Keynote fix (round 2 — `notesMasterIdLst`) |
+| Last commit | `fix: pptx presentation.xml missing notesMasterIdLst (Keynote)` |
+| `make check` status | **green** (ruff + format + mypy 50 files + 157 unit + 12 inv / 1 inv skeleton; slow lane `pytest -m slow` → 3 pass) |
 | Active hardware profile | **auto-detected** — `apple-metal` on this M4 Air. `RUPANTAR_PROFILE` overrides. |
 | Models present on disk | **brain** only — `models/brain/Qwen3-4B-Instruct-2507-Q4_K_M.gguf` (2.5 GB, sha `3605803b…`); vlm/asr/tts absent |
 | Python | 3.11.15, uv-managed, `.venv/`, pinned in `.python-version` |
@@ -117,7 +117,7 @@ Anything you did differently from the plan, and why. One line each. Empty is fin
 - **Phase 5: STIX 2.1 hand-built, no `stix2` library.** `stix2` pulls `requests` — wrong for an air-gapped project. A STIX bundle is just JSON; `cyber._pattern_for` maps `IocType` → a STIX pattern and `_PATTERN_RE` reverses it. Stable ids via `uuid5(NAMESPACE_URL, value)` + a fixed `2020-01-01` timestamp so round-trip is byte-stable.
 - **Phase 5: bespoke registry holds 4 registrations for 3 converters** (ioc-csv↔stix21 is bidirectional). `sigma→sigma-json` and `cef→jsonl` are one-way.
 - **Phase 5: +2 fixtures beyond the plan** — `clean.csv` (round-trip property test needs a quirk-free input) and `iocs.csv` (STIX round-trip input). +`tests/integration/test_convert_api.py`. `test_cli.py`'s "convert/selfcheck are stubs" parametrized test split — `selfcheck` keeps the stub assertion.
-- **Post-Phase-5 fix (2026-09-06): `presentation.pptx` would not open in Keynote** ("file format is invalid"), though python-pptx / PowerPoint / LibreOffice accepted it. Two causes: (1) python-pptx leaves `docProps/app.xml` saying `<Slides>0</Slides>` regardless of actual slide count — Keynote's strict importer rejects the mismatch; (2) the bundled default template carries `docProps/thumbnail.jpeg` + `ppt/printerSettings/printerSettings1.bin`, both non-portable. `render/pptx_render.py` gained `_repair_ooxml()` — a post-save zip rewrite that strips those two parts (+ their content-type / rel entries) and patches `app.xml` `<Slides>`/`<Notes>`/`TitlesOfParts` to reality. Also fixed a real bug: `_LAYOUT_INDEX["title"]` was `0` → a *content* slide rendered onto the Title Slide layout, dumping bullets into a subtitle. Now `{title:2 (Section Header), bullets:1, two_column:3, quote:1, closing:2}`. The Phase-4 test was too weak (it opened the file with python-pptx, which trivially succeeds on python-pptx's own output) — `test_renderers_binary.py` + `test_renderers.py` now assert per-content-slide title/bullets/notes, the app.xml slide count, no thumbnail/printer parts, and open the PDF with `pypdf`. **Keynote itself still unverified in-session (no Keynote); the two fixes target its documented rejection triggers.**
+- **Post-Phase-5 fix (2026-09-06): `presentation.pptx` "file format is invalid" in Keynote** — python-pptx / PowerPoint / LibreOffice / macOS Spotlight all accept the file; only Keynote's strict importer bails. **Root cause (confirmed by diffing against LibreOffice's Keynote-friendly re-save):** python-pptx **never writes `<p:notesMasterIdLst>` into `ppt/presentation.xml`** even though it adds a notes master part + rel + notes slides — a real OOXML reference-integrity defect (notes slides point at a notesMaster the presentation never declares). Also writes the deprecated `<p:sldSz type="screen4x3">` attr. `render/pptx_render.py._repair_ooxml()` now post-save patches only `presentation.xml`: inserts `<p:notesMasterIdLst><p:notesMasterId r:id="<notesMaster rId>"/></p:notesMasterIdLst>` in schema position (after `sldMasterIdLst`), strips `sldSz type`. *(An earlier attempt patched `app.xml` counts + stripped thumbnail/printerSettings — that did NOT fix Keynote; reverted.)* Separately fixed a real bug: `_LAYOUT_INDEX["title"]` was `0` → a *content* slide rendered onto the Title Slide layout, bullets dumped into a subtitle. Now `{title:2, bullets:1, two_column:3, quote:1, closing:2}`. Tests: `test_renderers_binary.py`/`test_renderers.py` now assert per-content-slide title/bullets/notes, that `presentation.xml` declares its notes master + correct element order + no `sldSz type`, open the PDF with `pypdf`, and — when LibreOffice is installed — convert the deck through it as an independent strict-parser check. **Keynote itself not testable in-session — but this is a documented python-pptx↔Keynote bug and the fix is verified structurally + against LibreOffice.**
 
 ---
 
@@ -158,8 +158,9 @@ Measured, not assumed. Update whenever you measure something new.
 | Dev machine = demo machine | **MacBook Air M4** (`Mac16,12`), 10 cores (4 P + 6 E), **fanless**, 16 GB, macOS 15.3 (Darwin 25.3). ~120 GB/s memory bandwidth (M4 non-Pro). | 2026-09-06 |
 | Python | 3.11.15 (uv-managed), `.venv/` | 2026-09-06 |
 | `uv` version | 0.11.29 | 2026-09-06 |
-| `ffmpeg` version | 8.1.2 (`/opt/homebrew/bin/ffmpeg`) | 2026-09-06 |
+| `ffmpeg` version | 9.0.1 (`/opt/homebrew/bin/ffmpeg`) | 2026-09-06 |
 | `llama-server` on PATH | **present** — v0.4.0 build 10809 (AppleClang, Darwin arm64, Metal), `/opt/homebrew/bin/llama-server` | 2026-09-06 |
+| LibreOffice | installed on the dev machine (`/Applications/LibreOffice.app/.../soffice`) purely as an independent strict OOXML validator for the pptx tests — NOT a project dependency; the test skips when it's absent | 2026-09-06 |
 | `piper` on PATH | **absent** — needed Phase 7 | 2026-09-06 |
 | `git` version | 2.51.2 | 2026-09-06 |
 | `asyncio.Condition()` outside a running loop | constructs fine on 3.11 (used in sync CLI path) | 2026-09-06 |
@@ -202,8 +203,8 @@ Next session should start with:
 -
 ```
 
-### 2026-09-06 — Fix — `presentation.pptx` rejected by Keynote
-User hit "file format is invalid" opening a generated `presentation.pptx` in Keynote (python-pptx / PowerPoint / LibreOffice all accepted it). Root causes: python-pptx never updates `docProps/app.xml` (`<Slides>0</Slides>` vs 7 actual) and the default template ships `docProps/thumbnail.jpeg` + `ppt/printerSettings/printerSettings1.bin`. Added `render/pptx_render.py._repair_ooxml()` (post-save zip rewrite: strip those parts + fix app.xml). Also fixed `_LAYOUT_INDEX["title"] = 0` (content slide was landing on the Title Slide layout → bullets in a subtitle) → `{title:2, bullets:1, two_column:3, quote:1, closing:2}`. Strengthened `test_renderers_binary.py` + `test_renderers.py`: per-content-slide title/bullets/notes, app.xml slide count, no thumbnail/printer parts, PDF opened with `pypdf`. +`pypdf>=5`. **Keynote itself not verifiable in-session** — fixes target its documented triggers. `make check` green (156 unit). See §5.
+### 2026-09-06 — Fix — `presentation.pptx` rejected by Keynote (2 rounds)
+Round 1 (wrong): patched `app.xml` counts + stripped thumbnail/printerSettings → user re-tested, **still failed**. Round 2 (right): installed LibreOffice as an independent strict OOXML parser, diffed its Keynote-friendly re-save against python-pptx → python-pptx **omits `<p:notesMasterIdLst>` from `presentation.xml`** (notes slides reference a notesMaster the presentation never declares — a reference-integrity defect Keynote hard-rejects). `_repair_ooxml()` rewritten to inject that element + strip `<p:sldSz type>`. Also fixed `_LAYOUT_INDEX["title"] = 0` bug. +`pypdf>=5`. Tests assert the notesMaster declaration + element order + LibreOffice conversion. `make check` green (157 unit). Sent the user a regenerated file to confirm in Keynote. See §5.
 
 ### 2026-09-06 — Phase 5 — Parivartan converters shipped
 Did (builder + lead): `parivartan/` — `registry.py` (`ConversionReport`, `@register`, `list_conversions`, `convert` with the missing-input/bespoke/general/error dispatch), `general.py`+`_readers.py`+`_writers.py` (8×8 tabular matrix over `list[dict]`), `cyber.py` (ioc-csv↔stix21 hand-built, sigma→json, cef→jsonl). `cli convert` + `api/routes/convert.py` (`GET /conversions`, `POST /convert`). `core/errors.py` +`ConversionError`. Fixtures `messy.csv`/`sigma_rule.yml`/`cef.log` (+`clean.csv`/`iocs.csv`). INV-3 scan now covers `parivartan/`.
