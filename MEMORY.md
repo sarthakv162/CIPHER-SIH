@@ -12,9 +12,9 @@
 | Field | Value |
 |---|---|
 | Current phase | **6 — Multimodal ingestion (not started)** |
-| Last session | 2026-09-06 — Phase 5 shipped (Parivartan converters) |
-| Last commit | `phase-5: parivartan converters` |
-| `make check` status | **green** (ruff + format + mypy 50 files + 154 unit + 12 inv / 1 inv skeleton; slow lane `pytest -m slow` → 3 pass) |
+| Last session | 2026-09-06 — Phase 5 + pptx-render fix (Keynote rejection) |
+| Last commit | `fix: pptx would not open in Keynote; strengthen renderer tests` |
+| `make check` status | **green** (ruff + format + mypy 50 files + 156 unit + 12 inv / 1 inv skeleton; slow lane `pytest -m slow` → 3 pass) |
 | Active hardware profile | **auto-detected** — `apple-metal` on this M4 Air. `RUPANTAR_PROFILE` overrides. |
 | Models present on disk | **brain** only — `models/brain/Qwen3-4B-Instruct-2507-Q4_K_M.gguf` (2.5 GB, sha `3605803b…`); vlm/asr/tts absent |
 | Python | 3.11.15, uv-managed, `.venv/`, pinned in `.python-version` |
@@ -117,6 +117,7 @@ Anything you did differently from the plan, and why. One line each. Empty is fin
 - **Phase 5: STIX 2.1 hand-built, no `stix2` library.** `stix2` pulls `requests` — wrong for an air-gapped project. A STIX bundle is just JSON; `cyber._pattern_for` maps `IocType` → a STIX pattern and `_PATTERN_RE` reverses it. Stable ids via `uuid5(NAMESPACE_URL, value)` + a fixed `2020-01-01` timestamp so round-trip is byte-stable.
 - **Phase 5: bespoke registry holds 4 registrations for 3 converters** (ioc-csv↔stix21 is bidirectional). `sigma→sigma-json` and `cef→jsonl` are one-way.
 - **Phase 5: +2 fixtures beyond the plan** — `clean.csv` (round-trip property test needs a quirk-free input) and `iocs.csv` (STIX round-trip input). +`tests/integration/test_convert_api.py`. `test_cli.py`'s "convert/selfcheck are stubs" parametrized test split — `selfcheck` keeps the stub assertion.
+- **Post-Phase-5 fix (2026-09-06): `presentation.pptx` would not open in Keynote** ("file format is invalid"), though python-pptx / PowerPoint / LibreOffice accepted it. Two causes: (1) python-pptx leaves `docProps/app.xml` saying `<Slides>0</Slides>` regardless of actual slide count — Keynote's strict importer rejects the mismatch; (2) the bundled default template carries `docProps/thumbnail.jpeg` + `ppt/printerSettings/printerSettings1.bin`, both non-portable. `render/pptx_render.py` gained `_repair_ooxml()` — a post-save zip rewrite that strips those two parts (+ their content-type / rel entries) and patches `app.xml` `<Slides>`/`<Notes>`/`TitlesOfParts` to reality. Also fixed a real bug: `_LAYOUT_INDEX["title"]` was `0` → a *content* slide rendered onto the Title Slide layout, dumping bullets into a subtitle. Now `{title:2 (Section Header), bullets:1, two_column:3, quote:1, closing:2}`. The Phase-4 test was too weak (it opened the file with python-pptx, which trivially succeeds on python-pptx's own output) — `test_renderers_binary.py` + `test_renderers.py` now assert per-content-slide title/bullets/notes, the app.xml slide count, no thumbnail/printer parts, and open the PDF with `pypdf`. **Keynote itself still unverified in-session (no Keynote); the two fixes target its documented rejection triggers.**
 
 ---
 
@@ -127,7 +128,7 @@ Things that are broken or unfinished and need attention. Include the file and th
 - **RESOLVED (Phase 2):** `runtime_llama.py` real path is now verified — `tests/integration/test_runtime_llama_real.py` (slow) boots a real `llama-server` on the brain GGUF, health-checks, SIGTERMs, and asserts the pid is gone. Real end-to-end text path also exercised by `tests/integration/test_text_path_real.py`.
 - **brain only** on disk (`Qwen3-4B-Instruct-2507-Q4_K_M.gguf`, shared by `apple-metal`/`nvidia-cuda`/`cpu-only`). `vlm`/`asr`/`tts` absent → `Registry.from_config(verify=True)` on a full GPU profile raises `ModelFileMissingError` (on `vlm`). `models status`/`transform`/`run_single`/`api` all use `verify=False`. Fetch vlm/asr/tts before Phase 6.
 - `make check-all` runs `pytest tests/integration` with **no `-m "not slow"` filter**, so on a machine with the brain GGUF it executes **3** real-model tests (`test_text_path_real`, `test_multi_artefact_real`, `test_runtime_llama_real`) — ~15–16 min on the loaded dev box (the 7-artefact one alone is ~13 min). `make check` (the phase gate) stays fast and model-free. See Open Questions.
-- `requirements-lock.txt` is still an empty placeholder. Everything added Phase 2–5 (`httpx`, `fastapi`, `uvicorn`, `starlette`, `python-docx`, `python-pptx`, `fpdf2`, `jinja2`, `openpyxl`, **`pyarrow` — ~40 MB wheel**, `lxml`, `Pillow` + transitives) must be captured by `scripts/vendor_wheels.sh` for macOS arm64 py3.11 before air-gapping.
+- `requirements-lock.txt` is still an empty placeholder. Everything added Phase 2–5 (`httpx`, `fastapi`, `uvicorn`, `starlette`, `python-docx`, `python-pptx`, `fpdf2`, `jinja2`, `openpyxl`, **`pyarrow` — ~40 MB wheel**, `pypdf`, `lxml`, `Pillow` + transitives) must be captured by `scripts/vendor_wheels.sh` for macOS arm64 py3.11 before air-gapping.
 
 ---
 
@@ -200,6 +201,9 @@ Next session should start with:
 -
 ```
 
+### 2026-09-06 — Fix — `presentation.pptx` rejected by Keynote
+User hit "file format is invalid" opening a generated `presentation.pptx` in Keynote (python-pptx / PowerPoint / LibreOffice all accepted it). Root causes: python-pptx never updates `docProps/app.xml` (`<Slides>0</Slides>` vs 7 actual) and the default template ships `docProps/thumbnail.jpeg` + `ppt/printerSettings/printerSettings1.bin`. Added `render/pptx_render.py._repair_ooxml()` (post-save zip rewrite: strip those parts + fix app.xml). Also fixed `_LAYOUT_INDEX["title"] = 0` (content slide was landing on the Title Slide layout → bullets in a subtitle) → `{title:2, bullets:1, two_column:3, quote:1, closing:2}`. Strengthened `test_renderers_binary.py` + `test_renderers.py`: per-content-slide title/bullets/notes, app.xml slide count, no thumbnail/printer parts, PDF opened with `pypdf`. +`pypdf>=5`. **Keynote itself not verifiable in-session** — fixes target its documented triggers. `make check` green (156 unit). See §5.
+
 ### 2026-09-06 — Phase 5 — Parivartan converters shipped
 Did (builder + lead): `parivartan/` — `registry.py` (`ConversionReport`, `@register`, `list_conversions`, `convert` with the missing-input/bespoke/general/error dispatch), `general.py`+`_readers.py`+`_writers.py` (8×8 tabular matrix over `list[dict]`), `cyber.py` (ioc-csv↔stix21 hand-built, sigma→json, cef→jsonl). `cli convert` + `api/routes/convert.py` (`GET /conversions`, `POST /convert`). `core/errors.py` +`ConversionError`. Fixtures `messy.csv`/`sigma_rule.yml`/`cef.log` (+`clean.csv`/`iocs.csv`). INV-3 scan now covers `parivartan/`.
 Verified: `make check` green (mypy 50, 154 unit, 12 inv / 1 skeleton); `test_parivartan*.py` 21 passed; integration (non-slow) 23 passed; `pytest -m slow` 3 passed. csv→json→csv byte-identical round-trip; IOC CSV→stix21→CSV preserves (type,value); `messy.csv→json` → `ok=True` + 2 warnings, no traceback; missing input → clean exit-1, no traceback. verifier + arch-guard [running at commit].
@@ -257,4 +261,5 @@ Recorded per CLAUDE.md. Also in `requirements.txt` / `pyproject.toml`.
 - **Phase 3 added `fastapi>=0.115,<0.128`** (0.127.1; pulls `starlette` 0.50.0) **and `uvicorn>=0.30`** (0.52.4; pulls `click`). Upper pin: starlette ≥1.6 deprecates `httpx` for `TestClient`. Used only in `src/rupantar/api/`.
 - **Phase 4 added `python-docx>=1.1`, `python-pptx>=1.0`, `fpdf2>=2.8`, `jinja2>=3.1`** (1.2.0 / 1.0.2 / 2.8.8 / 3.1.6; pull `lxml`, `Pillow`, `fonttools`, `xlsxwriter`, `defusedxml`, `markupsafe`). `fpdf2` over `reportlab` for a smaller air-gap footprint. Used only in `src/rupantar/render/`, all imported **inside functions** (INV-3).
 - **Phase 5 added `openpyxl>=3.1`, `pyarrow>=17`** (3.1.5 / 25.0.1; `pyarrow` is a ~40 MB wheel — has macOS arm64 py3.11 wheels; `openpyxl` pulls `et-xmlfile`). Used only in `parivartan/_readers.py` + `_writers.py`, **inside functions** (INV-3). No pandas, no `stix2` (would pull `requests`).
+- **Post-Phase-5 added `pypdf>=5`** (6.17.0) — the strengthened PDF renderer test opens the output with `PdfReader`. Also the Phase 6 `ingest/text.py` PDF path. Not "heavy" (pure-Python), fine at module scope; the test imports it lazily anyway.
 - **No Phase 2–5 dep is in `requirements-lock.txt` yet** — see blocker §6 for the full list.

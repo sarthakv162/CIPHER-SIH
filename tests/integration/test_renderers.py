@@ -32,8 +32,9 @@ def test_all_declared_formats_are_written(
 
 
 def test_advisory_binaries_open(artefacts_dir: Path, tmp_path: Path) -> None:
-    """The advisory docx and pdf open and carry its indicators and actions."""
+    """The advisory docx and pdf open through their libraries and carry the advisory content."""
     import docx
+    from pypdf import PdfReader
 
     advisory = _load("advisory", artefacts_dir)
     render(advisory, tmp_path)
@@ -43,8 +44,11 @@ def test_advisory_binaries_open(artefacts_dir: Path, tmp_path: Path) -> None:
     assert advisory.indicators[0].value in text
     assert advisory.recommended_actions[0].action in text
 
-    pdf = (tmp_path / "advisory.pdf").read_bytes()
-    assert pdf.startswith(b"%PDF") and pdf.rstrip().endswith(b"%%EOF")
+    pdf_bytes = (tmp_path / "advisory.pdf").read_bytes()
+    assert pdf_bytes.startswith(b"%PDF") and pdf_bytes.rstrip().endswith(b"%%EOF")
+    reader = PdfReader(str(tmp_path / "advisory.pdf"))
+    assert len(reader.pages) >= 1
+    assert advisory.advisory_id in "".join(page.extract_text() for page in reader.pages)
 
 
 def test_executive_summary_docx_opens(artefacts_dir: Path, tmp_path: Path) -> None:
@@ -58,17 +62,22 @@ def test_executive_summary_docx_opens(artefacts_dir: Path, tmp_path: Path) -> No
 
 
 def test_presentation_pptx_slides_and_notes(artefacts_dir: Path, tmp_path: Path) -> None:
-    """The pptx has slides + 1 and notes text is present."""
+    """The pptx opens: title slide + one per Slide, each content slide titled, bulleted, noted."""
     import pptx
+
+    from rupantar.render.pptx_render import _body_placeholder
 
     deck = _load("presentation", artefacts_dir)
     render(deck, tmp_path)
     opened = pptx.Presentation(str(tmp_path / "presentation.pptx"))
-    assert len(opened.slides) == len(deck.slides) + 1
-    notes = " ".join(
-        s.notes_slide.notes_text_frame.text for s in opened.slides if s.has_notes_slide
-    )
-    assert deck.slides[0].speaker_notes in notes
+    slides = list(opened.slides)
+    assert len(slides) == len(deck.slides) + 1
+    for rendered, spec in zip(slides[1:], deck.slides, strict=True):
+        assert rendered.shapes.title is not None and rendered.shapes.title.text == spec.title
+        body = _body_placeholder(rendered)
+        assert body is not None
+        assert any(p.text.strip() for p in body.text_frame.paragraphs)
+        assert rendered.notes_slide.notes_text_frame.text.strip() == spec.speaker_notes.strip()
 
 
 def test_infographic_svg_is_xml(artefacts_dir: Path, tmp_path: Path) -> None:
