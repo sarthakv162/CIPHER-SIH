@@ -12,7 +12,7 @@ from pathlib import Path
 
 _REPO = Path(__file__).resolve().parents[2]
 _SRC = _REPO / "src" / "rupantar"
-_SCAN_DIRS = ("render", "parivartan")
+_SCAN_DIRS = ("render", "parivartan", "ingest")
 
 _HEAVY = {
     "docx",
@@ -25,6 +25,10 @@ _HEAVY = {
     "pandas",
     "openpyxl",
     "pyarrow",
+    "pypdf",
+    "selectolax",
+    "av",
+    "numpy",
 }
 
 

@@ -30,11 +30,15 @@ defaults:
     class: heavy
     runtime: llama
     path: models/vlm/Qwen2.5-VL-3B-Instruct-Q4_K_M.gguf
-    mmproj: models/vlm/mmproj-Qwen2.5-VL-3B-f16.gguf
-    approx_bytes: 3100000000
+    sha256: c47e8c1f6fb3e8cff6ec58909baff16dbeffb64a5bb3b746b96e05e6334c129f
+    approx_bytes: 1929901408
+    mmproj: models/vlm/mmproj-F16.gguf
+    mmproj_sha256: 4c1240f514de94c81b70709b0f9a80c7e3297598ea7c83f39dc00b18ee5be60c
   asr_small: &asr_small
     class: light
     runtime: whisper
+    # faster-whisper CTranslate2 model DIRECTORY (model.bin + config.json + tokenizer).
+    # Load with local_files_only=True — never touch a HuggingFace cache.
     path: models/asr/faster-whisper-small.en-int8
     approx_bytes: 500000000
     args: {compute_type: int8, beam_size: 1}

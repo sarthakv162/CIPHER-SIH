@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import uuid
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
@@ -20,10 +19,10 @@ from rupantar.core.schemas import (
     SourceDossier,
     SourceInput,
     SourceKind,
-    TextBlock,
     TransformRequest,
 )
 from rupantar.core.store import Store
+from rupantar.ingest.dossier import assemble_dossier
 from rupantar.models.client import LlamaClient
 from rupantar.models.manager import ModelManager
 from rupantar.orchestrator.planner import plan
@@ -69,12 +68,12 @@ async def prepare(
 ) -> tuple[str, list[Job]]:
     """Plan the Transform, persist it plus every PENDING job and the dossier, return their ids."""
     jobs = plan(request, agents, new_id=new_id, clock=clock)
-    dossier = _build_dossier(request.sources[0], clock=clock, new_id=new_id)
     transform_id = jobs[0].transform_id
+    _validate_sources(request.sources)
     await store.create_transform(transform_id, request)
     for job in jobs:
         await store.create_job(job)
-    await store.save_dossier(dossier)
+    await store.save_dossier(SourceDossier(id=transform_id, created_at=clock(), sha256=""))
     return transform_id, jobs
 
 
@@ -94,7 +93,15 @@ async def execute(
     request = await store.get_transform_request(transform_id)
     if not jobs or request is None:
         raise ConfigError(f"transform {transform_id!r} has no persisted jobs; call prepare() first")
-    dossier = _build_dossier(request.sources[0], clock=clock, new_id=_uuid)
+    dossier, _warnings = await assemble_dossier(
+        request.sources,
+        manager=manager,
+        out_dir=out_root / transform_id / "_ingest",
+        new_id=lambda: transform_id,
+        clock=clock,
+        language=request.params.language,
+    )
+    await store.save_dossier(dossier)
     ctx = _RunContext(
         agents=agents,
         dossier_text=dossier.to_prompt_text(),
@@ -242,26 +249,8 @@ def _write_artefact(out_dir: Path, artefact_type: str, artefact: ArtefactBase) -
     return str(path)
 
 
-def _build_dossier(
-    source: SourceInput,
-    *,
-    clock: Callable[[], datetime],
-    new_id: Callable[[], str],
-) -> SourceDossier:
-    """Assemble a minimal single-block dossier from one text or file source."""
-    if source.kind is SourceKind.file:
-        path = Path(source.path or "")
-        if not path.is_file():
-            raise ConfigError(f"source file not found: {path}", path=str(path))
-        text = path.read_text(encoding="utf-8")
-        name = path.name
-    else:
-        text = source.text or ""
-        name = "inline"
-    digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
-    return SourceDossier(
-        id=new_id(),
-        created_at=clock(),
-        sha256=digest,
-        text_blocks=[TextBlock(source_name=name, text=text)],
-    )
+def _validate_sources(sources: list[SourceInput]) -> None:
+    """Raise ConfigError naming the first file source whose path is not on disk."""
+    for source in sources:
+        if source.kind is SourceKind.file and not Path(source.path or "").is_file():
+            raise ConfigError(f"source file not found: {source.path}", path=str(source.path))

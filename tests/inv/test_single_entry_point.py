@@ -1,7 +1,10 @@
 """INV-7: ModelManager.acquire() is the only code path that starts a model process.
 
-Process spawning must be confined to src/rupantar/models/runtime_*.py. Every other module
-under src/rupantar/ is scanned for subprocess / os.spawn / create_subprocess / multiprocessing.
+Model process spawning must be confined to src/rupantar/models/runtime_*.py. Every other
+module under src/rupantar/ is scanned for subprocess / os.spawn / create_subprocess /
+multiprocessing. `ingest/video.py` is exempt for the bare `subprocess` name only: it shells
+out to ffmpeg/ffprobe for keyframes and audio extraction, which are media tools, not models
+(see MEMORY.md Phase 6 deviation). It still must not use Popen / os.spawn / multiprocessing.
 """
 
 from __future__ import annotations
@@ -10,9 +13,11 @@ import re
 from pathlib import Path
 
 _SRC = Path(__file__).resolve().parents[2] / "src" / "rupantar"
+_MEDIA_TOOL_MODULES = {"ingest/video.py"}
+_SUBPROCESS_NAME = re.compile(r"\bsubprocess\b")
 
 _FORBIDDEN = [
-    re.compile(r"\bsubprocess\b"),
+    _SUBPROCESS_NAME,
     re.compile(r"\bPopen\b"),
     re.compile(r"\bos\.spawn"),
     re.compile(r"\bos\.posix_spawn"),
@@ -31,9 +36,12 @@ def test_only_runtime_modules_spawn_processes() -> None:
         if _is_runtime_module(path):
             continue
         text = path.read_text(encoding="utf-8")
+        rel = path.relative_to(_SRC).as_posix()
         for pattern in _FORBIDDEN:
+            if pattern is _SUBPROCESS_NAME and rel in _MEDIA_TOOL_MODULES:
+                continue
             if pattern.search(text):
-                offenders.append(f"{path.relative_to(_SRC)} :: /{pattern.pattern}/")
+                offenders.append(f"{rel} :: /{pattern.pattern}/")
     assert not offenders, f"process spawning found outside runtime_*.py: {offenders}"
 
 

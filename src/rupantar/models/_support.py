@@ -127,6 +127,15 @@ def default_runtime_factory(
                 health_timeout=poll * 40 + 5,
                 health_interval=poll,
             )
+        if entry.runtime == "whisper":
+            from rupantar.models.runtime_whisper import WhisperRuntime
+
+            return WhisperRuntime(
+                entry=entry,
+                port=port,
+                health_timeout=float(policy.get("health_timeout_seconds", 120)),
+                health_interval=poll,
+            )
         from rupantar.models.runtime_llama import LlamaRuntime
 
         llama = registry.runtime_spec("llama")

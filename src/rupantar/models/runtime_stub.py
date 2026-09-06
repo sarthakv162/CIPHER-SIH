@@ -57,6 +57,22 @@ def _schema_name(body: dict[str, object]) -> str:
     return ""
 
 
+def _stub_transcript() -> str:
+    """Canned transcript text: env override (literal or @file), else a fixed sentence."""
+    spec = os.environ.get("RUPANTAR_STUB_TRANSCRIPT")
+    if spec:
+        if spec.startswith("@"):
+            return Path(spec[1:]).read_text(encoding="utf-8")
+        return spec
+    return "This is a stub transcript of the source audio."
+
+
+def _transcript_payload() -> dict[str, object]:
+    """A canned transcription response shaped like the whisper worker's."""
+    text = _stub_transcript().strip()
+    return {"text": text, "segments": [{"start": 0.0, "end": 2.5, "text": text}]}
+
+
 def _echo(body: dict[str, object]) -> str:
     """Echo the last user message, the stub's default when no fixture is configured."""
     messages = body.get("messages")
@@ -109,7 +125,11 @@ class _Handler(BaseHTTPRequestHandler):
             body = json.loads(raw or b"{}")
         except json.JSONDecodeError:
             body = {}
-        if self.path.split("?", 1)[0] != "/v1/chat/completions":
+        path = self.path.split("?", 1)[0]
+        if path == "/transcribe":
+            self._json(200, _transcript_payload())
+            return
+        if path != "/v1/chat/completions":
             self._json(404, {"error": "not found"})
             return
         content = _completion_text(body)

@@ -1,0 +1,5 @@
+Plain text source fixture.
+
+The ingestion layer reads this file as UTF-8 and returns it unchanged. It exists so the
+text extractor has a trivial no-parser path to exercise alongside the pdf, docx, and html
+cases.
