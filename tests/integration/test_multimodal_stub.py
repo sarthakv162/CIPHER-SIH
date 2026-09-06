@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import shutil
 from pathlib import Path
 
@@ -105,8 +106,12 @@ async def test_dossier_merges_every_modality(
     finally:
         await store.close()
     assert dossier is not None
-    assert dossier.text_blocks and dossier.image_insights and dossier.transcripts
+    assert dossier.text_blocks and dossier.image_insights and dossier.video_events
+    assert not dossier.transcripts, "a video source must yield video_events, not a loose transcript"
+    assert all(event.evidence_id for event in dossier.video_events)
 
     prompt_text = dossier.to_prompt_text()
     assert "modern data centre aisle" in prompt_text
     assert _STUB_TRANSCRIPT in prompt_text
+    assert re.search(r"\[E\d+\]", prompt_text)
+    assert re.search(r"\d:\d\d\u2013\d:\d\d", prompt_text)

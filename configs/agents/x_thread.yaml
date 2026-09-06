@@ -22,6 +22,9 @@ user_template: |
   - tweets: 3 to 8 objects, each {text}, where text is at most 275 characters
   - hashtags: 1 to 3 topical tags as plain words WITHOUT a leading '#'
   - confidence_notes: caveats about reliability, or an empty string
+  - sources: the [En] evidence IDs (e.g. ["E1","E3"]) of the dossier blocks this
+    content is drawn from. Cite every block you used; use [] only if the artefact
+    genuinely draws on none.
 
 param_hints:
   audience:

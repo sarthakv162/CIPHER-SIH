@@ -25,10 +25,14 @@ def test_all_declared_formats_are_written(
     """render() produces one non-empty file per format in FORMATS."""
     artefact = _load(artefact_type, artefacts_dir)
     paths = render(artefact, tmp_path)
-    suffixes = {p.suffix.lstrip(".") for p in paths}
-    assert suffixes == set(FORMATS[artefact_type])
     for path in paths:
         assert path.is_file() and path.stat().st_size > 0
+    suffixes = {p.suffix.lstrip(".") for p in paths}
+    if artefact_type == "video_package":
+        assert {"md", "srt"} <= suffixes
+        assert (tmp_path / "storyboard.json").is_file()
+    else:
+        assert suffixes == set(FORMATS[artefact_type])
 
 
 def test_advisory_binaries_open(artefacts_dir: Path, tmp_path: Path) -> None:

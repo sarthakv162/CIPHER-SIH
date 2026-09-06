@@ -4,7 +4,9 @@ Model process spawning must be confined to src/rupantar/models/runtime_*.py. Eve
 module under src/rupantar/ is scanned for subprocess / os.spawn / create_subprocess /
 multiprocessing. `ingest/video.py` is exempt for the bare `subprocess` name only: it shells
 out to ffmpeg/ffprobe for keyframes and audio extraction, which are media tools, not models
-(see MEMORY.md Phase 6 deviation). It still must not use Popen / os.spawn / multiprocessing.
+(see MEMORY.md Phase 6 deviation). `render/video_render.py` is exempt on the same grounds: it
+shells out to ffmpeg/piper to assemble the video package. Both still must not use Popen /
+os.spawn / multiprocessing.
 """
 
 from __future__ import annotations
@@ -13,7 +15,7 @@ import re
 from pathlib import Path
 
 _SRC = Path(__file__).resolve().parents[2] / "src" / "rupantar"
-_MEDIA_TOOL_MODULES = {"ingest/video.py"}
+_MEDIA_TOOL_MODULES = {"ingest/video.py", "render/video_render.py"}
 _SUBPROCESS_NAME = re.compile(r"\bsubprocess\b")
 
 _FORBIDDEN = [

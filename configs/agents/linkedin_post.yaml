@@ -24,6 +24,9 @@ user_template: |
   - call_to_action: one sentence inviting a specific response
   - suggested_image_brief: one sentence describing an image to pair with the post
   - confidence_notes: caveats about reliability, or an empty string
+  - sources: the [En] evidence IDs (e.g. ["E1","E3"]) of the dossier blocks this
+    content is drawn from. Cite every block you used; use [] only if the artefact
+    genuinely draws on none.
 
 param_hints:
   audience:

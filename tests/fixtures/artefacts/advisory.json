@@ -1,6 +1,11 @@
 {
   "title": "Advisory: Contractor Credential Abuse Leading to Ransomware",
   "confidence_notes": "",
+  "sources": [
+    "E1",
+    "E2",
+    "E3"
+  ],
   "artefact_type": "advisory",
   "advisory_id": "ADV-2024-0917",
   "severity": "high",

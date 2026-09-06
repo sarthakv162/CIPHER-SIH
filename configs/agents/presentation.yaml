@@ -25,6 +25,9 @@ user_template: |
     speaker_notes is one or two sentences of spoken guidance
   - deck_summary: one or two sentences describing the deck as a whole
   - confidence_notes: caveats about reliability, or an empty string
+  - sources: the [En] evidence IDs (e.g. ["E1","E3"]) of the dossier blocks this
+    content is drawn from. Cite every block you used; use [] only if the artefact
+    genuinely draws on none.
 
   Make the first slide layout "title" and the last slide layout "closing".
 

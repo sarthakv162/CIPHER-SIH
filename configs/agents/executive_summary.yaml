@@ -25,6 +25,9 @@ user_template: |
   - recommended_actions: 0 to 5 concrete next steps
   - one_line_takeaway: a single memorable sentence
   - confidence_notes: caveats about reliability, or an empty string if none
+  - sources: the [En] evidence IDs (e.g. ["E1","E3"]) of the dossier blocks this
+    content is drawn from. Cite every block you used; use [] only if the artefact
+    genuinely draws on none.
 
 param_hints:
   audience:

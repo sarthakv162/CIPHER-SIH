@@ -1,6 +1,11 @@
 {
   "title": "Briefing: Water Utility Ransomware Incident",
   "confidence_notes": "Speaker notes assume a 20-minute internal briefing slot.",
+  "sources": [
+    "E1",
+    "E2",
+    "E3"
+  ],
   "artefact_type": "presentation",
   "slides": [
     {

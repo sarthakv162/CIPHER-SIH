@@ -370,17 +370,39 @@ Also build:
 
 ---
 
-### Phase 7 — Video assembly
+### Phase 7 — Video assembly (+ evidence-model additions from Phase 6)
 
 **Build**
 - `render/video_render.py` — piper TTS on narration segments → wav; ffmpeg concat storyboard panels (rendered as SVG→PNG) with narration + burned-in subtitles → `.mp4`
 - Fallback: if piper or ffmpeg is unavailable, emit script + storyboard + `.srt` only and record a warning in the manifest — **never crash the job**
+- **Evidence IDs (deviation from the Phase 0 freeze — see `MEMORY.md`):** every unit in `SourceDossier` (each `TextBlock`, `ImageInsight`, `TranscriptSegment`, `VideoEvent`) carries a stable `evidence_id` (`E1`, `E2`, …) assigned at dossier assembly. `to_prompt_text()` emits `[E1] …`. Each artefact model gains `sources: list[str]` (evidence IDs it draws on); agent prompts instruct the model to populate it. This is the prerequisite for Phase 8.5.
+- **Video event timeline:** `ingest/video.py` groups keyframes + transcript segments into `VideoEvent{start, end, transcript, caption, evidence_id}` instead of loose captions; a video-sourced artefact can cite `04:12–05:30`.
+- **PDF structure:** `ingest/text.py` uses **PyMuPDF** (`pymupdf`) to keep headings + page numbers — one `TextBlock` per page/section with `page: int`. No Docling / PaddleOCR — the VLM handles OCR.
 
 **Definition of done**
 - `video_package` output directory contains: `script.md`, `storyboard.json`, `narration.wav`, `subtitles.srt`, `video.mp4`, `manifest.json`
 - The mp4 plays with audio and visible subtitles
+- A dossier's blocks have `E1…En`; an artefact populates `sources`; a PDF block carries a `page`
 
 **Verify:** `pytest tests/integration/test_video_package.py -q`
+
+---
+
+### Phase 8.5 — Cross-artefact verification *(runs only after Phase 8 ships)*
+
+**Build** — `audit/verify.py`, run by the orchestrator after every artefact in a transform is generated (before/alongside manifest finalisation):
+- **Claim extraction** — one `brain` call per artefact: extract its factual claims as a list.
+- **Grounding** — for each claim, check it against the `SourceDossier` evidence (the same `[E1] …` text) → `SUPPORTED` / `UNSUPPORTED`, with the evidence IDs that support it.
+- **Cross-artefact consistency** — compare the claim sets across artefacts in the transform → pairs marked `AGREE` / `CONFLICT`.
+- Write both results into each artefact's `.manifest.json` (`verification: {claims: [...], conflicts: [...]}`).
+- Reuses the single resident `brain` (the artefact-generation lease is still warm) — **one extra brain call per artefact, no new model, no new storage**.
+
+**Definition of done**
+- Every manifest in a multi-artefact transform gains a `verification` block.
+- A deliberately contradictory pair of artefacts produces a `CONFLICT` entry.
+- An unsupported claim is flagged `UNSUPPORTED` with no evidence IDs.
+
+**Verify:** `pytest tests/integration/test_verification.py -q`
 
 ---
 

@@ -28,6 +28,9 @@ user_template: |
   - full_narration: every scene's narration joined into one continuous script
   - subtitle_hint: one sentence on subtitle styling and line breaks
   - confidence_notes: caveats about reliability, or an empty string
+  - sources: the [En] evidence IDs (e.g. ["E1","E3"]) of the dossier blocks this
+    content is drawn from. Cite every block you used; use [] only if the artefact
+    genuinely draws on none.
 
   The scene durations should add up to about runtime_seconds_target.
 

@@ -26,9 +26,11 @@ _HEAVY = {
     "openpyxl",
     "pyarrow",
     "pypdf",
+    "pymupdf",
     "selectolax",
     "av",
     "numpy",
+    "PIL",
 }
 
 

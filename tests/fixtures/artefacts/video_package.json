@@ -1,6 +1,12 @@
 {
   "title": "Video Package: Governing Foundation Models in the Public Sector",
   "confidence_notes": "Timings are targets; narration wording is a first pass for review.",
+  "sources": [
+    "E1",
+    "E2",
+    "E3",
+    "E4"
+  ],
   "artefact_type": "video_package",
   "runtime_seconds_target": 90,
   "logline": "A ninety-second explainer on why sensitive government work should default to offline AI models and what the centre must fund to make that practical.",

@@ -94,8 +94,12 @@ async def test_real_video_dossier_and_peak_rss(tmp_path: Path) -> None:
                 clock=lambda: datetime.now(UTC),
             )
 
-    assert len(dossier.image_insights) >= 2, warnings
-    assert dossier.transcripts and dossier.transcripts[0].text.strip()
+    assert len(dossier.video_events) >= 2, warnings
+    assert not dossier.image_insights, "video keyframes must become video_events, not loose images"
+    assert not dossier.transcripts, "the video's own audio must fold into video_events"
+    assert any(event.caption.strip() for event in dossier.video_events), warnings
+    assert any(event.transcript.strip() for event in dossier.video_events), warnings
+    assert all(event.evidence_id for event in dossier.video_events)
 
     order = [(e.kind, e.model_key) for e in manager.events if e.kind.startswith(("LOAD", "EVICT"))]
     assert order == [

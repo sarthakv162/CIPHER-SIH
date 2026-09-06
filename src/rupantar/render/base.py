@@ -14,6 +14,7 @@ from rupantar.render.pdf_render import render_pdf
 from rupantar.render.pptx_render import render_pptx
 from rupantar.render.subtitle import render_srt
 from rupantar.render.svg_render import render_svg
+from rupantar.render.video_render import render_video
 
 FORMATS: dict[str, tuple[str, ...]] = {
     "executive_summary": ("md", "docx"),
@@ -22,10 +23,10 @@ FORMATS: dict[str, tuple[str, ...]] = {
     "x_thread": ("md",),
     "presentation": ("md", "pptx"),
     "infographic_spec": ("md", "svg"),
-    "video_package": ("md", "srt"),
+    "video_package": ("md", "srt", "video"),
 }
 
-_Renderer = Callable[[Any, Path], None]
+_Renderer = Callable[[Any, Path], list[Path] | None]
 
 _DISPATCH: dict[tuple[str, str], _Renderer] = {
     ("*", "md"): render_md,
@@ -35,6 +36,7 @@ _DISPATCH: dict[tuple[str, str], _Renderer] = {
     ("presentation", "pptx"): render_pptx,
     ("infographic_spec", "svg"): render_svg,
     ("video_package", "srt"): render_srt,
+    ("video_package", "video"): render_video,
 }
 
 
@@ -62,6 +64,6 @@ def render(
                 "or drop the format from FORMATS"
             )
         path = out_dir / f"{atype}.{fmt}"
-        renderer(artefact, path)
-        written.append(path)
+        result = renderer(artefact, path)
+        written.extend(result or [path])
     return written

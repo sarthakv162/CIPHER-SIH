@@ -1,6 +1,10 @@
 {
   "title": "Ransomware Intrusion at a Regional Water Utility",
   "confidence_notes": "Attribution and dwell-time figures are drawn from the internal report and not independently verified.",
+  "sources": [
+    "E1",
+    "E2"
+  ],
   "artefact_type": "executive_summary",
   "headline": "Corporate ransomware forced protective shutdowns but did not affect water supply",
   "key_points": [

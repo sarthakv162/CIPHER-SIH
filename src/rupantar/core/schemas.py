@@ -155,27 +155,32 @@ class Job(BaseModel):
 
 
 class TextBlock(BaseModel):
-    """Extracted plain text from one textual source."""
+    """Extracted plain text from one textual source. `evidence_id` set at dossier assembly."""
 
     source_name: str
     text: str
+    evidence_id: str = ""
+    page: int | None = None
+    heading: str = ""
 
 
 class ImageInsight(BaseModel):
-    """What the VLM saw in one image source."""
+    """What the VLM saw in one image source. `evidence_id` set at dossier assembly."""
 
     source_name: str
     caption: str
     extracted_text: str
     notable_elements: list[str] = Field(default_factory=list)
+    evidence_id: str = ""
 
 
 class TranscriptSegment(BaseModel):
-    """One timed span of a transcript."""
+    """One timed span of a transcript. `evidence_id` set at dossier assembly."""
 
     start: float
     end: float
     text: str
+    evidence_id: str = ""
 
 
 class Transcript(BaseModel):
@@ -186,8 +191,27 @@ class Transcript(BaseModel):
     segments: list[TranscriptSegment] = Field(default_factory=list)
 
 
+class VideoEvent(BaseModel):
+    """A timestamped span of a video: a transcript slice paired with a keyframe caption."""
+
+    source_name: str
+    start: float
+    end: float
+    transcript: str = ""
+    caption: str = ""
+    evidence_id: str = ""
+
+
+def _mmss(seconds: float) -> str:
+    """Format a second offset as m:ss (or h:mm:ss past an hour)."""
+    total = int(round(seconds))
+    hours, rem = divmod(total, 3600)
+    minutes, secs = divmod(rem, 60)
+    return f"{hours}:{minutes:02d}:{secs:02d}" if hours else f"{minutes}:{secs:02d}"
+
+
 class SourceDossier(BaseModel):
-    """All ingested source material for one Transform, reduced to text."""
+    """All ingested source material for one Transform, reduced to text with evidence IDs."""
 
     id: str
     created_at: datetime
@@ -195,16 +219,48 @@ class SourceDossier(BaseModel):
     text_blocks: list[TextBlock] = Field(default_factory=list)
     image_insights: list[ImageInsight] = Field(default_factory=list)
     transcripts: list[Transcript] = Field(default_factory=list)
+    video_events: list[VideoEvent] = Field(default_factory=list)
     metadata: dict[str, str] = Field(default_factory=dict)
 
     def to_prompt_text(self) -> str:
-        """Flatten every block, caption, and transcript into one prompt-ready string."""
-        parts: list[str] = []
-        for block in self.text_blocks:
-            parts.append(f"# Source: {block.source_name}\n{block.text}")
-        for insight in self.image_insights:
-            extra = f"\nText in image: {insight.extracted_text}" if insight.extracted_text else ""
-            parts.append(f"# Image: {insight.source_name}\n{insight.caption}{extra}")
+        """Flatten every evidence unit into one prompt-ready string, each tagged `[En]`."""
+        parts: list[str] = [self._text_part(b) for b in self.text_blocks]
+        parts += [self._image_part(i) for i in self.image_insights]
+        parts += [self._video_part(e) for e in self.video_events]
         for transcript in self.transcripts:
-            parts.append(f"# Transcript: {transcript.source_name}\n{transcript.text}")
+            if transcript.segments:
+                parts += [self._audio_part(transcript.source_name, s) for s in transcript.segments]
+            else:
+                parts.append(f"Audio: {transcript.source_name}\n{transcript.text}")
         return "\n\n".join(parts)
+
+    @staticmethod
+    def _text_part(block: TextBlock) -> str:
+        """One `[En]`-tagged text block, with page and heading when known."""
+        loc = f" (p.{block.page})" if block.page else ""
+        head = f" — {block.heading}" if block.heading else ""
+        return f"[{block.evidence_id or '?'}] Source: {block.source_name}{loc}{head}\n{block.text}"
+
+    @staticmethod
+    def _image_part(insight: ImageInsight) -> str:
+        """One `[En]`-tagged image caption."""
+        extra = f"\nText in image: {insight.extracted_text}" if insight.extracted_text else ""
+        tag = insight.evidence_id or "?"
+        return f"[{tag}] Image: {insight.source_name}\n{insight.caption}{extra}"
+
+    @staticmethod
+    def _video_part(event: VideoEvent) -> str:
+        """One `[En]`-tagged video event with an m:ss–m:ss span."""
+        span = f"{_mmss(event.start)}–{_mmss(event.end)}"
+        lines = [f"[{event.evidence_id or '?'}] Video: {event.source_name} {span}"]
+        if event.transcript:
+            lines.append(f"Transcript: {event.transcript}")
+        if event.caption:
+            lines.append(f"Visual: {event.caption}")
+        return "\n".join(lines)
+
+    @staticmethod
+    def _audio_part(source_name: str, segment: TranscriptSegment) -> str:
+        """One `[En]`-tagged transcript segment with an m:ss–m:ss span."""
+        span = f"{_mmss(segment.start)}–{_mmss(segment.end)}"
+        return f"[{segment.evidence_id or '?'}] Audio: {source_name} {span}\n{segment.text}"

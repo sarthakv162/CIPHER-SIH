@@ -1,6 +1,10 @@
 {
   "title": "Infographic Spec: Anatomy of the Water Utility Ransomware Incident",
   "confidence_notes": "",
+  "sources": [
+    "E1",
+    "E2"
+  ],
   "artefact_type": "infographic_spec",
   "headline": "90 Minutes to Contain, 9 Days to Fully Recover",
   "subhead": "How a contractor password became a regional water utility's worst week of 2024",

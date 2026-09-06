@@ -33,6 +33,9 @@ user_template: |
   - references: source references as strings ([] if none)
   - handling_caveat: a distribution or handling statement
   - confidence_notes: reliability caveats, or an empty string
+  - sources: the [En] evidence IDs (e.g. ["E1","E3"]) of the dossier blocks this
+    content is drawn from. Cite every block you used; use [] only if the artefact
+    genuinely draws on none.
 
 param_hints:
   audience:

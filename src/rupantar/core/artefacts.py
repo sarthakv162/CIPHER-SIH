@@ -92,12 +92,17 @@ class InfographicLayout(Enum):
 
 
 class ArtefactBase(BaseModel):
-    """Shared head of every artefact. `confidence_notes` may be empty; nothing else may."""
+    """Shared head of every artefact. `confidence_notes` may be empty; nothing else may.
+
+    `sources` lists the dossier evidence IDs (`E1`, `E2`, …) the artefact draws on; the agent
+    populates it. Added after the Phase 0 freeze — see MEMORY.md deviations.
+    """
 
     model_config = ConfigDict(populate_by_name=True, extra="forbid")
 
     title: NonEmptyStr
     confidence_notes: str = ""
+    sources: list[str] = Field(default_factory=list)
 
 
 class ExecutiveSummary(ArtefactBase):

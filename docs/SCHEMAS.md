@@ -80,14 +80,21 @@ Tested values are `en` and `hi`; any other value is accepted and treated as best
 id: str
 created_at: datetime
 sha256: str
-text_blocks: list[{source_name: str, text: str}]
+text_blocks: list[{source_name: str, text: str,
+                   evidence_id: str = "", page: int | None = None, heading: str = ""}]
 image_insights: list[{source_name: str, caption: str, extracted_text: str,
-                      notable_elements: list[str]}]
+                      notable_elements: list[str], evidence_id: str = ""}]
 transcripts: list[{source_name: str, text: str,
-                   segments: list[{start: float, end: float, text: str}]}]
+                   segments: list[{start: float, end: float, text: str, evidence_id: str = ""}]}]
+video_events: list[{source_name: str, start: float, end: float,
+                    transcript: str = "", caption: str = "", evidence_id: str = ""}]
 metadata: dict[str, str]
 
-# method: to_prompt_text() -> str   (assembled in Phase 6)
+# method: to_prompt_text() -> str   — each evidence unit prefixed [En]; video/audio spans as m:ss–m:ss
+
+# Evidence IDs (evidence_id = E1, E2, ...) are assigned in order at dossier assembly across
+# text_blocks, image_insights, video_events and transcript segments. Added after the Phase 0
+# freeze (deviation, MEMORY.md 2026-09-06). page/heading/video_events also added then.
 ```
 
 ---
@@ -100,6 +107,9 @@ Every artefact inherits this.
 artefact_type: Literal[...]   # fixed per subclass, e.g. Literal["advisory"]
 title: str                    # required, non-empty
 confidence_notes: str = ""    # what the model could not determine from the source; may be ""
+sources: list[str] = []       # dossier evidence IDs (E1, E2, ...) the artefact draws on.
+                              # Added after the Phase 0 freeze (deviation, MEMORY.md 2026-09-06);
+                              # the agent populates it; prerequisite for Phase 8.5 verification.
 ```
 
 ---

@@ -1,6 +1,10 @@
 {
   "title": "X Thread: Water Utility Ransomware Breakdown",
   "confidence_notes": "",
+  "sources": [
+    "E1",
+    "E2"
+  ],
   "artefact_type": "x_thread",
   "tweets": [
     {
