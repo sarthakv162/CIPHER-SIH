@@ -22,10 +22,11 @@ profiles:
     brain:
       class: heavy
       runtime: llama
-      path: models/brain/Qwen3-4B-Instruct-Q4_K_M.gguf
-      approx_bytes: 2600000000
+      path: models/brain/Qwen3-4B-Instruct-2507-Q4_K_M.gguf
+      sha256: 3605803b982cb64aead44f6c1b2ae36e3acdb41d8e46c8a94c6533bc4c67e597
+      approx_bytes: 2497281120
       args: ["--ctx-size", "8192", "--threads", "6", "--n-gpu-layers", "0"]
-      notes: "Set --n-gpu-layers > 0 only after confirming free VRAM on the demo machine."
+      notes: "--n-gpu-layers is a no-op on Apple Silicon: llama.cpp uses Metal by default (36.6 vs 36.8 tok/s at 0 vs 99). Kept 0 here; the titan-24gb / Linux-CUDA profile needs 99."
 
     vlm:
       class: heavy

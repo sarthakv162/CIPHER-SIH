@@ -43,7 +43,7 @@ def test_real_profile_parses_without_verification() -> None:
     registry = Registry.from_config(_config("laptop-16gb"), verify=False)
     brain = registry.entry("brain")
     assert brain.runtime == "llama"
-    assert brain.path == Path("models/brain/Qwen3-4B-Instruct-Q4_K_M.gguf")
+    assert brain.path == Path("models/brain/Qwen3-4B-Instruct-2507-Q4_K_M.gguf")
     assert "--ctx-size" in brain.args
     assert registry.entry("vlm").extra.get("mmproj")
     assert registry.runtime_spec("llama")["binary"] == "llama-server"

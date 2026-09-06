@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-import shutil
 from pathlib import Path
-
-import pytest
 
 from rupantar.models.registry import ModelEntry
 from rupantar.models.runtime_llama import LlamaRuntime, _as_list
@@ -49,10 +46,3 @@ def test_as_list_normalises_dict_and_list() -> None:
     assert _as_list({"compute_type": "int8"}) == ["--compute_type", "int8"]
     assert _as_list(["--a", "1"]) == ["--a", "1"]
     assert _as_list(None) == []
-
-
-@pytest.mark.slow
-async def test_real_llama_server_boots_and_dies() -> None:
-    if shutil.which("llama-server") is None:
-        pytest.skip("llama-server binary not installed")
-    pytest.skip("no GGUF file on disk in phase 1")

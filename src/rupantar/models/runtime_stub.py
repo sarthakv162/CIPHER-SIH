@@ -1,14 +1,16 @@
-"""Stub runtime: a real child process running a stdlib HTTP echo server. No model files."""
+"""Stub runtime: a real child process serving an OpenAI-compatible stdlib HTTP server."""
 
 from __future__ import annotations
 
 import argparse
 import asyncio
 import json
+import os
 import subprocess
 import sys
 from collections.abc import Callable
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
 
 from rupantar.core.errors import RuntimeStartError
 from rupantar.models.runtime_base import (
@@ -21,8 +23,44 @@ from rupantar.models.runtime_base import (
 _SIGKILL_AFTER = 3.0
 
 
+def _completion_text(body: dict[str, object]) -> str:
+    """Resolve the completion: env override (literal or @file), else echo the last user turn."""
+    spec = os.environ.get("RUPANTAR_STUB_COMPLETION")
+    if spec:
+        if spec.startswith("@"):
+            return Path(spec[1:]).read_text(encoding="utf-8")
+        return spec
+    messages = body.get("messages")
+    if isinstance(messages, list):
+        for message in reversed(messages):
+            if isinstance(message, dict) and message.get("role") == "user":
+                return str(message.get("content", ""))
+    return ""
+
+
+def _envelope(content: str) -> dict[str, object]:
+    """An OpenAI-compatible non-streaming chat completion response."""
+    return {
+        "id": "stub-completion",
+        "object": "chat.completion",
+        "choices": [
+            {
+                "index": 0,
+                "message": {"role": "assistant", "content": content},
+                "finish_reason": "stop",
+            }
+        ],
+        "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+    }
+
+
+def _chunks(text: str, size: int = 24) -> list[str]:
+    """Split text into fixed-size pieces for streamed deltas."""
+    return [text[index : index + size] for index in range(0, len(text), size)]
+
+
 class _Handler(BaseHTTPRequestHandler):
-    """Answers GET /health with 200 and echoes POST /v1/chat/completions."""
+    """GET /health returns 200; POST /v1/chat/completions returns an OpenAI-style envelope."""
 
     def log_message(self, *args: object) -> None:
         """Silence the default stderr access log."""
@@ -35,14 +73,37 @@ class _Handler(BaseHTTPRequestHandler):
             self._json(404, {"error": "not found"})
 
     def do_POST(self) -> None:
-        """Echo the posted JSON body. The method name is fixed by http.server dispatch."""
+        """Answer a chat completion, streaming when asked. Method name fixed by dispatch."""
         length = int(self.headers.get("Content-Length", 0))
         raw = self.rfile.read(length) if length else b"{}"
         try:
             body = json.loads(raw or b"{}")
         except json.JSONDecodeError:
-            body = {"raw": raw.decode("utf-8", "replace")}
-        self._json(200, {"echo": body, "path": self.path})
+            body = {}
+        if self.path.split("?", 1)[0] != "/v1/chat/completions":
+            self._json(404, {"error": "not found"})
+            return
+        content = _completion_text(body)
+        if "stream" in self.path or bool(body.get("stream")):
+            self._sse(content)
+        else:
+            self._json(200, _envelope(content))
+
+    def _sse(self, content: str) -> None:
+        """Write content as Server-Sent Events: delta frames then a stop frame and [DONE]."""
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream")
+        self.send_header("Cache-Control", "no-cache")
+        self.end_headers()
+        for piece in _chunks(content):
+            frame = json.dumps(
+                {"choices": [{"index": 0, "delta": {"content": piece}, "finish_reason": None}]}
+            )
+            self.wfile.write(f"data: {frame}\n\n".encode())
+        tail = json.dumps({"choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]})
+        self.wfile.write(f"data: {tail}\n\n".encode())
+        self.wfile.write(b"data: [DONE]\n\n")
+        self.wfile.flush()
 
     def _json(self, code: int, payload: dict[str, object]) -> None:
         """Write a JSON response with an explicit content length."""

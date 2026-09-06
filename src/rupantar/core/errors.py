@@ -67,6 +67,20 @@ class ModelFileMissingError(ModelError):
         super().__init__(message)
 
 
+class ModelClientError(ModelError):
+    """The model HTTP endpoint returned an error status; fix the request or check the server log."""
+
+    def __init__(self, message: str, *, status: int | None = None, body: str | None = None) -> None:
+        """Record the HTTP status and a body snippet alongside the message."""
+        self.status = status
+        self.body = body
+        super().__init__(message)
+
+
+class AgentError(RupantarError):
+    """An artefact agent could not produce schema-valid output after one retry."""
+
+
 class RuntimeStartError(ModelError):
     """A model child process failed to start or never reported healthy."""
 

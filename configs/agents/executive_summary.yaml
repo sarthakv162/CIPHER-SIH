@@ -1,0 +1,61 @@
+# Executive summary agent: a decision-maker's one-page read of the source.
+artefact_type: executive_summary
+model_key: brain
+schema: rupantar.core.artefacts:ExecutiveSummary
+max_tokens: 1400
+temperature: 0.3
+
+system_prompt: >-
+  You are a senior intelligence analyst preparing a one-page executive summary for
+  decision-makers. Lead with the bottom line. Be precise and specific about what is
+  known versus inferred, and record any low-confidence claims in confidence_notes.
+
+user_template: |
+  Write an executive summary of the source dossier for $audience.
+  Adopt a $tone register in a $style style, and write $language.
+  Depth: $detail. Primary objective: $objective.
+
+  Produce these fields:
+  - title: a short descriptive title
+  - headline: one sentence stating the single most important finding
+  - key_points: 3 to 6 factual bullet points
+  - context: one paragraph of essential background
+  - implications: 2 to 4 "so what" consequences
+  - recommended_actions: 0 to 5 concrete next steps
+  - one_line_takeaway: a single memorable sentence
+  - confidence_notes: caveats about reliability, or an empty string if none
+
+param_hints:
+  audience:
+    general_public: "a general audience"
+    technical: "a technical audience"
+    executive: "senior executives and decision-makers"
+    policy_maker: "policy makers and regulators"
+    media: "journalists and media"
+    internal: "an internal team"
+  tone:
+    neutral: "neutral"
+    formal: "formal"
+    urgent: "urgent"
+    reassuring: "reassuring"
+    promotional: "promotional"
+    analytical: "analytical"
+  detail:
+    brief: "keep it brief"
+    standard: "standard depth"
+    deep: "go in depth"
+  objective:
+    inform: "inform the reader"
+    warn: "warn the reader"
+    persuade: "persuade the reader"
+    instruct: "instruct the reader"
+    announce: "announce a development"
+    summarise: "summarise the material"
+  style:
+    plain: "plain"
+    narrative: "narrative"
+    bulleted: "bulleted"
+    technical: "technical"
+  language:
+    en: "in English"
+    hi: "in Hindi"

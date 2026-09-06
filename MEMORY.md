@@ -11,12 +11,12 @@
 
 | Field | Value |
 |---|---|
-| Current phase | **2 — Text generation path (not started)** |
-| Last session | 2026-09-06 — Phase 1 shipped |
-| Last commit | `phase-1: model manager` |
-| `make check` status | **green** (ruff + format + mypy 18 files + 84 unit / 1 slow-skip + 6 inv / 4 skeleton) |
+| Current phase | **3 — All artefact agents (not started)** |
+| Last session | 2026-09-06 — Phase 2 shipped |
+| Last commit | `phase-2: text generation path` |
+| `make check` status | **green** (ruff + format 53 files + mypy 25 files + 99 unit + 8 inv / 3 inv skeleton; slow lane `pytest -m slow` → 2 pass) |
 | Active hardware profile | `laptop-16gb` |
-| Models present on disk | none |
+| Models present on disk | **brain** only — `models/brain/Qwen3-4B-Instruct-2507-Q4_K_M.gguf` (2.5 GB, sha `3605803b…`); vlm/asr/tts absent |
 | Python | 3.11.15, uv-managed, `.venv/`, pinned in `.python-version` |
 
 ---
@@ -29,8 +29,8 @@ Mark each phase `TODO` / `IN PROGRESS` / `DONE (date)`. Add one line on what act
 |---|---|---|
 | 0 — Scaffold and contracts | **DONE (2026-09-06)** | Package, frozen `core/schemas.py` + `core/artefacts.py` (7 artefacts, all validators), async `core/store.py`, minimal `core/config.py`, `core/errors.py`, Typer CLI stubs (4 commands), 8 inv skip-skeletons, fixtures (2 articles, image, 30s clip, 7 artefact JSONs). `make check` green. |
 | 1 — Model Manager | **DONE (2026-09-06)** | `models/` package: `runtime_base.py` (ABC + SIGTERM→SIGKILL `terminate_process`, `wait_healthy`, `read_rss_bytes` via `ps`), `_ports.py`, `runtime_stub.py` (child `python -m` stdlib `http.server`, zero model files), `registry.py` (skips file/SHA for `runtime == "stub"`; real missing file → `ModelFileMissingError` naming `scripts/fetch_models.sh`), `_support.py` (Lease/Event/state), `manager.py` (async `acquire()` CM + `obtain/release`, refcount, single `asyncio.Condition` serialises load/evict/reap, `max_heavy_resident` eviction waits for real process exit, LRU + idle-TTL reaper, external-death respawn, `status()`), `runtime_llama.py` (untested vs real binary, `@pytest.mark.slow`). Events → new `events` table in `store.py`. `models status` CLI (not the API route — see Deviations). INV-1/2/7/8 tests real and green. |
-| 2 — Text generation path | TODO | Next. `models/client.py` async OpenAI-compat client vs `lease.endpoint`; needs an HTTP client — **none in requirements yet** (Phase 1 used stdlib `urllib` only). Decide httpx vs stdlib and record it. |
-| 3 — All artefact agents | TODO | |
+| 2 — Text generation path | **DONE (2026-09-06)** | `models/client.py` (async **httpx** `/v1/chat/completions`, GBNF `grammar` passthrough, SSE `stream()`, retry-once on conn reset, `ModelClientError` on 4xx/5xx). `agents/grammar.py` (Pydantic JSON-Schema → GBNF: object/array w/ min-maxItems/string/int/bool, `enum`+`const` → quoted-literal alternation, `$ref`/`$defs`). `agents/base.py` (`ArtefactAgent`; `SHARED_PREAMBLE`+dossier in the **system** turn, agent/param text in the **user** turn — prefix-cache design; `string.Template` params; validate → retry-once appending the error as new turns → `AgentError`). `agents/loader.py` (dotted `module:Class` schema import). `orchestrator/runner.py` `run_single` (minimal 1-`TextBlock` dossier, `acquire`→client→agent→write `data/outputs/<job_id>/<type>.json`; `AgentError` → FAILED job, never raises out; no manifest — Phase 4). `configs/agents/executive_summary.yaml`. Real `cli transform --text FILE --output … [--profile] [--stream/--no-stream] [--out-dir]`. INV-6 real. `runtime_stub.py` now OpenAI-compatible (canned via `RUPANTAR_STUB_COMPLETION`). Real path measured: exec summary in ~53 s on laptop-16gb (DoD < 90 s). |
+| 3 — All artefact agents | TODO | Next. `client.py`/`grammar.py`/`base.py`/`loader.py` are done and general. Add the 6 remaining `configs/agents/*.yaml` + prompts (schemas already frozen in `core/artefacts.py`), `orchestrator/planner.py`, `orchestrator/scheduler.py` (group by `model_key`), `api/` package (`app.py` + routes `transforms`/`jobs`/`models`/`health`) — FastAPI + uvicorn land here, and INV-1's dynamic "API process never loads a model" check. |
 | 4 — Renderers | TODO | |
 | 5 — Parivartan converters | TODO | Adds fixtures: messy CSV, Sigma rule, CEF log. |
 | 6 — Multimodal ingestion | TODO | Adds fixture: advisory PDF. en-only ASR/TTS → `language_limitation` manifest warning. |
@@ -49,11 +49,11 @@ Mark each phase `TODO` / `IN PROGRESS` / `DONE (date)`. Add one line on what act
 | INV-3 | Lazy heavy imports | `tests/inv/test_lazy_imports.py` | skip-skeleton (phase 4) |
 | INV-4 | No non-loopback egress | `tests/inv/test_no_egress.py` | skip-skeleton (phase 8); grep clean |
 | INV-5 | Provenance manifest per artefact | `tests/inv/test_provenance.py` | skip-skeleton (phase 4) |
-| INV-6 | Schema-validated model output | `tests/inv/test_validated_outputs.py` | skip-skeleton (phase 2) |
+| INV-6 | Schema-validated model output | `tests/inv/test_validated_outputs.py` | **PASS** — valid stub completion → `ExecutiveSummary` instance; invalid JSON → `AgentError`, never returned unvalidated. `ArtefactAgent.run` gates every return on `schema.model_validate`. |
 | INV-7 | Single model-start entry point | `tests/inv/test_single_entry_point.py` | **PASS** — regex scan: `subprocess`/`Popen`/`os.spawn`/`create_subprocess_*`/`multiprocessing` only in `models/runtime_*.py`; `ModelManager.acquire`/`obtain` present. |
 | INV-8 | Unload = process kill | `tests/inv/test_unload_kills_process.py` | **PASS** — acquire stub, `os.kill(pid,0)` ok, evict, poll to `ProcessLookupError`; `EVICT_DONE` event carries the dead pid. |
 
-INV-1/2/7/8 are real assertions run in `make check`. INV-3/4/5/6 are still `pytest.skip("implemented in phase N")` skeletons (green as skipped).
+INV-1/2/6/7/8 are real assertions run in `make check`. INV-3/4/5 are still `pytest.skip("implemented in phase N")` skeletons (green as skipped).
 
 ---
 
@@ -73,7 +73,9 @@ Things that are settled. Do not relitigate these without an explicit instruction
 - **`core/artefacts.py` and `core/schemas.py` are FROZEN** as of end-of-Phase-0. `docs/SCHEMAS.md` is their locked spec. Changing either requires a Deviations entry.
 - Python **3.11 exactly** — vendored wheels (ctranslate2, pyarrow, onnxruntime) target 3.11; other versions are a build failure.
 - Artefact list items carry **no `index` field** — array order is the order; renderers use `enumerate()`.
-- Enums are plain `enum.Enum` (not `StrEnum`/`str,Enum`) — see Deviations.
+- Enums are plain `enum.Enum` (not `StrEnum`/`str,Enum`) — see Deviations. Phase-0 Deviation-1 (GBNF string identity) is **resolved**: Pydantic v2 `model_json_schema()` still emits `type: string` beside `enum`/`const`, and `agents/grammar.py` keys off `enum`/`const` regardless.
+- HTTP client is **httpx** (async). Chosen Phase 2; FastAPI pulls it in at Phase 3 anyway. Imported at module top only in `models/client.py`, like `aiosqlite` in `store.py` — not an INV-3 concern.
+- **Agent prompt layout:** identical `SHARED_PREAMBLE` + source dossier go in the **system** turn; all agent- and param-specific text goes last, in the **user** turn. This keeps the long dossier as a byte-identical prefix so llama-server prefix caching spares agents 2–7 the re-eval. Retry turns are appended, never spliced into the first user message.
 
 ---
 
@@ -91,6 +93,12 @@ Anything you did differently from the plan, and why. One line each. Empty is fin
 - **Phase 1: manager serialises all load/evict/reap through one `asyncio.Condition`.** A load holds the lock across `runtime.start()`. Intentional — single heavy residency means concurrent heavy loads are never wanted. `status()` is lock-free.
 - **Phase 1: new additive `core/errors.py` classes** — `ModelError`, `UnknownModelError`, `ModelFileMissingError` (carries `key`/`path`), `RuntimeStartError`, `NoFreePortError`, `AcquireTimeoutError`. `errors.py` is not a frozen contract.
 - **Phase 1: INV-1 test implemented as a static import scan now** (not the phase it was pencilled for). The dynamic "API process never loads a model" check waits for `api/`.
+- **Phase 2: Deviation-1 (plain `enum.Enum` → GBNF) resolved with no contract change.** `model_json_schema()` emits `{"enum": [...], "type": "string"}` for a string-valued plain Enum and `{"const": "...", "type": "string"}` for a `Literal`. `agents/grammar.py` checks `enum`/`const` before `type` and emits an alternation of exact double-quoted JSON literals, so identity holds regardless.
+- **Phase 2: agent validation-retry appends new `assistant`+`user` turns** instead of editing the first user message — keeps the dossier prefix byte-identical for llama-server prefix caching.
+- **Phase 2: `runtime_stub.py` extended to speak `/v1/chat/completions`** (OpenAI envelope; canned content from `RUPANTAR_STUB_COMPLETION` = literal or `@file`, else echoes the last user message; SSE frames on `stream`). Not frozen. `tests/unit/test_runtime_stub.py` updated to the new POST shape.
+- **Phase 2: real llama-server boot test moved** from `tests/unit/test_runtime_llama.py` (where it was an unconditional `pytest.skip` lie) to `tests/integration/test_runtime_llama_real.py` (`@pytest.mark.slow` + `skipif` on binary/GGUF). Keeps `make check` model-free; it now boots a real server, health-checks, SIGTERMs, asserts the pid is gone.
+- **Phase 2: `transform`/`run_single` use `Registry.from_config(verify=False)`** to skip the 2.5 GB startup SHA-256; `llama-server` still fails loudly if the GGUF is missing.
+- **Phase 2: `--n-gpu-layers` left at 0 for `laptop-16gb`.** No-op on Apple Silicon (llama.cpp uses Metal by default; 36.6 vs 36.8 tok/s). `titan-24gb` keeps 99 for Linux/CUDA. `models.yaml brain.notes` records this.
 
 ---
 
@@ -98,9 +106,10 @@ Anything you did differently from the plan, and why. One line each. Empty is fin
 
 Things that are broken or unfinished and need attention. Include the file and the symptom.
 
-- `make check-all` currently errors: no `tests/integration/` directory yet (arrives Phase 2/3). `make check` does not touch it, so this is not blocking Phase 0/1.
-- `runtime_llama.py` is unverified against a real binary — `llama-server` is not installed. argv construction has a fast test; the real boot/health/stop path has only `@pytest.mark.slow` tests that skip (`shutil.which("llama-server") is None`). Install `llama-server` + a GGUF before trusting the real path (Phase 2 real-model DoD, Phase 8 selfcheck).
-- `configs/models.yaml` `active_profile: laptop-16gb` points at model paths that do not exist. `Registry.from_config(config, verify=True)` on the default profile raises `ModelFileMissingError`. `models status` avoids this (constructs stub-safe); Phase 2+ callers and selfcheck must select `test-stub` or pass `verify=False` deliberately until models are fetched.
+- **RESOLVED (Phase 2):** `runtime_llama.py` real path is now verified — `tests/integration/test_runtime_llama_real.py` (slow) boots a real `llama-server` on the brain GGUF, health-checks, SIGTERMs, and asserts the pid is gone. Real end-to-end text path also exercised by `tests/integration/test_text_path_real.py`.
+- `configs/models.yaml` `laptop-16gb`: **brain is present**; `vlm`, `asr`, `tts` files are still absent, so `Registry.from_config(verify=True)` on the full profile still raises `ModelFileMissingError` (on `vlm`). `models status`, `transform`, and `run_single` use `verify=False`. Fetch vlm/asr/tts before Phase 6.
+- `make check-all` runs `pytest tests/integration` with **no `-m "not slow"` filter**, so on a machine with the brain GGUF it executes the two real-model integration tests (~55 s total). `make check` (the phase gate) stays fast and model-free. See Open Questions.
+- `requirements-lock.txt` is still an empty placeholder. `httpx` (+ `anyio`, `certifi`, `h11`, `httpcore`, `idna`, `sniffio`) must be captured by `scripts/vendor_wheels.sh` before air-gapping.
 
 ---
 
@@ -112,6 +121,8 @@ Decisions you could not make on your own. Do not guess — list them here and co
 - Which three cyber formats matter most to the evaluators for Parivartan. Current default: IOC CSV ↔ STIX 2.1, Sigma YAML → JSON, CEF/syslog → JSONL.
 - Whether the recorded demo video uses the `laptop-16gb` or `titan-24gb` profile.
 - `GenerationParams.language`: field kept, brain honours it best-effort; ASR/TTS are en-only and emit a `language_limitation` manifest warning (Phase 6). Tested values `en`, `hi`; others accepted as best-effort. Confirm `hi` is actually a demo requirement.
+- Should `make check-all` deselect `-m slow`? It currently runs the real-model integration tests when models are on disk. Fixing it touches the `Makefile` **and** `PLAN.md` §7 (the single shared `make check` / `check-all` definition) and `CLAUDE.md`. Left as-is for now; `make check` itself is unaffected.
+- GBNF-constrained generation runs at ~17 tok/s vs ~37 tok/s unconstrained on this machine (see §8). If prompt-eval + grammar cost becomes the demo bottleneck for a 7-artefact run, consider dropping the grammar for artefacts whose schema is simple and relying on the Pydantic validator + retry alone.
 
 ---
 
@@ -125,15 +136,21 @@ Measured, not assumed. Update whenever you measure something new.
 | Python | 3.11.15 (uv-managed), `.venv/` | 2026-09-06 |
 | `uv` version | 0.11.29 | 2026-09-06 |
 | `ffmpeg` version | 8.1.2 (`/opt/homebrew/bin/ffmpeg`) | 2026-09-06 |
-| `llama-server` on PATH | **absent** — install before Phase 1 real-model work | 2026-09-06 |
+| `llama-server` on PATH | **present** — v0.4.0 build 10809 (AppleClang, Darwin arm64, Metal), `/opt/homebrew/bin/llama-server` | 2026-09-06 |
 | `piper` on PATH | **absent** — needed Phase 7 | 2026-09-06 |
 | `git` version | 2.51.2 | 2026-09-06 |
 | `asyncio.Condition()` outside a running loop | constructs fine on 3.11 (used in sync CLI path) | 2026-09-06 |
 | Stub runtime child | `python -m rupantar.models.runtime_stub --port N`, stdlib `http.server`, real PID, SIGKILL grace 3s | 2026-09-06 |
 | Phase 1 test suite | no stray `runtime_stub`/`llama-server` procs after run; ports 8100–8199 clean | 2026-09-06 |
 | Free RAM | ~1 GB free+inactive under load (not a clean idle measure) | 2026-09-06 |
-| brain cold/warm load time | unknown | — |
-| brain tok/s, laptop profile | unknown | — |
+| brain GGUF | `models/brain/Qwen3-4B-Instruct-2507-Q4_K_M.gguf`, 2 497 281 120 B, sha256 `3605803b982cb64aead44f6c1b2ae36e3acdb41d8e46c8a94c6533bc4c67e597` | 2026-09-06 |
+| brain llama-server boot → healthy | ~7.5 s first, ~4.0 s warm (GGUF page-cache hot; no true cold-disk figure — `purge` needs sudo) | 2026-09-06 |
+| brain prompt eval | ~40 tok/s (752-tok dossier prompt) | 2026-09-06 |
+| brain generation, **GBNF-constrained** | **~17 tok/s** (521 tok in 30.6 s, `--ctx-size 8192 --threads 6`) — grammar sampling is the cost | 2026-09-06 |
+| brain generation, unconstrained (`llama-bench`, user) | ~36.6–36.8 tok/s | 2026-09-06 |
+| One `executive_summary` end-to-end (CLI, laptop-16gb) | **~53 s wall** (`ai_policy_brief.md`; 752 prompt + 521 completion tok). DoD is < 90 s. | 2026-09-06 |
+| `--n-gpu-layers 99` vs `0`, Apple Silicon | no measurable difference — llama.cpp uses Metal by default. Flag kept only for titan-24gb / Linux-CUDA. | 2026-09-06 |
+| llama-server prefix caching | per-slot; `cache_prompt: true` reuses the longest common token prefix across requests to the same slot. Agents put the identical dossier first so agents 2–7 skip re-evaluating it. | 2026-09-06 |
 | Peak RSS, full multimodal run | unknown | — |
 
 ---
@@ -154,6 +171,24 @@ Changed in this file:
 Next session should start with:
 -
 ```
+
+### 2026-09-06 — Phase 2 — Text generation path shipped, INV-6 real, real brain measured
+Did:
+- Recorded the two benchmark notes from the human (`--n-gpu-layers` no-op on Apple Silicon; llama-server prefix caching → dossier-first prompt design).
+- Repointed `configs/models.yaml` `laptop-16gb.brain` at the real GGUF (`Qwen3-4B-Instruct-2507-Q4_K_M.gguf`), added `sha256:` + real `approx_bytes`; updated `tests/unit/test_registry.py` for the new filename.
+- Chose **httpx** as the HTTP client; added to `requirements.txt` + `pyproject.toml`; installed in `.venv` (0.28.1).
+- Builder subagent built Phase 2: `models/client.py`, `agents/{grammar,base,loader}.py`, `orchestrator/runner.py`, `configs/agents/executive_summary.yaml`, real `cli transform`, OpenAI-compatible `runtime_stub.py`, `core/errors.py` +`ModelClientError`/`AgentError`, INV-6 made a real assertion.
+- Moved the real llama-server boot test out of `tests/unit/` (was a lying unconditional skip) into `tests/integration/test_runtime_llama_real.py` (slow) — now a genuine boot→health→SIGTERM→pid-gone assertion. Keeps `make check` model-free.
+- Ran builder → verifier (PASS w/ warnings) → arch-guard (CLEAN). Ran a real-brain benchmark + timed CLI run.
+Verified:
+- `make check` → ruff ✓, format ✓ (53 files), mypy ✓ (25 files), `pytest tests/unit tests/inv` → 107 passed / 3 inv skeleton, model-free, 15.9 s
+- Phase 2 verify `pytest tests/integration/test_text_path.py -q` → 2 passed (stub, zero model files)
+- `pytest -m slow -q` → 2 passed / 112 deselected, 52 s (real llama boot + real exec summary); no stray `llama-server`/`runtime_stub` procs
+- `transform --text tests/fixtures/articles/ai_policy_brief.md --output executive_summary` → 52.7 s wall, valid `ExecutiveSummary` JSON written to `data/outputs/<job_id>/`
+Changed in this file:
+- §1 phase→3, commit, check counts, brain on disk. §2 Phase 2 → DONE + Phase 3 note. §3 INV-6 → PASS. §4 +httpx / prompt-layout / Deviation-1-resolved decisions. §5 +7 Phase-2 deviations. §6 rewrote (llama real path resolved; brain present / vlm-asr-tts absent; check-all slow note; lock file). §7 +2 open questions. §8 llama-server present + 8 measured rows. §9 this block. §10 httpx.
+Next session should start with:
+- Phase 3 — All artefact agents. `client.py`/`grammar.py`/`base.py`/`loader.py` already general; add the 6 remaining `configs/agents/*.yaml` + prompts, `orchestrator/{planner,scheduler}.py`, and the `api/` package (FastAPI + uvicorn land here). Assert: one 7-output request → exactly one `brain` load, zero reloads. Watch GBNF gen speed (~17 tok/s) for the multi-artefact wall time.
 
 ### 2026-09-06 — Phase 1 — Model Manager shipped, INV-1/2/7/8 real and green
 Did:
@@ -196,6 +231,7 @@ Next session should start with:
 
 Recorded per CLAUDE.md. Also in `requirements.txt` / `pyproject.toml`.
 
-- **runtime** — `pydantic>=2.7`, `pydantic-settings>=2.2`, `PyYAML>=6.0`, `typer>=0.12`, `aiosqlite>=0.20`
+- **runtime** — `pydantic>=2.7`, `pydantic-settings>=2.2`, `PyYAML>=6.0`, `typer>=0.12`, `aiosqlite>=0.20`, `httpx>=0.27`
 - **dev** (`[dev]` extra) — `ruff`, `mypy`, `pytest`, `pytest-asyncio`, `types-PyYAML`
-- **Phase 1 added no dependency** — Model Manager is stdlib only (`asyncio`, `subprocess`, `http.server`, `urllib`, `socket`, `signal`, `os`). Phase 2's `models/client.py` is the first place an HTTP client may be needed.
+- **Phase 1 added no dependency** — Model Manager is stdlib only.
+- **Phase 2 added `httpx>=0.27`** (resolved 0.28.1; transitively `anyio`, `certifi`, `h11`, `httpcore`, `idna`, `sniffio`). Used only in `models/client.py`, imported at module top like `aiosqlite`. FastAPI needs it at Phase 3 regardless. Not yet in `requirements-lock.txt`.
