@@ -1,0 +1,65 @@
+# Infographic spec agent: layout-and-copy brief for a designer to build an infographic.
+artefact_type: infographic_spec
+model_key: brain
+schema: rupantar.core.artefacts:InfographicSpec
+max_tokens: 1400
+temperature: 0.4
+
+system_prompt: >-
+  You are briefing a designer. Give them a headline, a handful of stat blocks with
+  a single bold figure each, the key messages, and clear layout and colour intent.
+  Every figure must come from the dossier. Note any estimated figures in
+  confidence_notes.
+
+user_template: |
+  Write an infographic specification from the source dossier for $audience.
+  Adopt a $tone register in a $style style, and write $language.
+  Depth: $detail. Primary objective: $objective.
+
+  Produce a single JSON object with these fields:
+  - title: a short internal label for the infographic
+  - headline: the large headline the reader sees first
+  - subhead: one supporting line under the headline
+  - sections: 3 to 5 objects, each {heading, stat_value, stat_label, body} where
+    stat_value is a short figure (e.g. "8 days", "11", "0") and body is one sentence
+  - key_messages: 2 to 4 takeaway sentences
+  - layout_recommendation: one of vertical_flow, three_column, timeline, comparison, hub_spoke
+  - colour_intent: one sentence describing the colour scheme and what it signals
+  - icon_suggestions: a list of short icon names
+  - footer: a source line or handling note
+  - confidence_notes: caveats about reliability, or an empty string
+
+param_hints:
+  audience:
+    general_public: "a general audience"
+    technical: "a technical audience"
+    executive: "senior executives and decision-makers"
+    policy_maker: "policy makers and regulators"
+    media: "journalists and media"
+    internal: "an internal team"
+  tone:
+    neutral: "neutral"
+    formal: "formal"
+    urgent: "urgent"
+    reassuring: "reassuring"
+    promotional: "promotional"
+    analytical: "analytical"
+  detail:
+    brief: "keep it brief"
+    standard: "standard depth"
+    deep: "go in depth"
+  objective:
+    inform: "inform the reader"
+    warn: "warn the reader"
+    persuade: "persuade the reader"
+    instruct: "instruct the reader"
+    announce: "announce a development"
+    summarise: "summarise the material"
+  style:
+    plain: "plain"
+    narrative: "narrative"
+    bulleted: "bulleted"
+    technical: "technical"
+  language:
+    en: "in English"
+    hi: "in Hindi"

@@ -46,27 +46,32 @@ def transform(
         "data/outputs"
     ),
 ) -> None:
-    """Turn a source file into a communication artefact."""
+    """Turn a source file into one or more communication artefacts."""
     import asyncio
 
-    job = asyncio.run(_transform(text, output, profile, stream, out_dir))
-    if job.status.value == "FAILED":
-        typer.echo(f"FAILED: {job.error}")
+    jobs = asyncio.run(_transform(text, output, profile, stream, out_dir))
+    failed = 0
+    for job in jobs:
+        if job.status.value == "FAILED":
+            failed += 1
+            typer.echo(f"FAILED {job.artefact_type.value}: {job.error}")
+        else:
+            typer.echo(job.artefact_path)
+    if failed == len(jobs):
         raise typer.Exit(1)
-    typer.echo(job.artefact_path)
 
 
 async def _transform(
     text: Path, output: str, profile: str | None, stream: bool, out_dir: Path
-) -> Job:
-    """Load config, build the manager and agents, and run one single-job transform."""
+) -> list[Job]:
+    """Load config, build the manager and agents, and run one batch transform."""
     from rupantar.agents.loader import load_agents
     from rupantar.core.config import Env, load_config
     from rupantar.core.schemas import ArtefactType, SourceInput, SourceKind, TransformRequest
     from rupantar.core.store import Store
     from rupantar.models.manager import ModelManager
     from rupantar.models.registry import Registry
-    from rupantar.orchestrator.runner import run_single
+    from rupantar.orchestrator.runner import run_batch
 
     config = load_config(env=Env(profile=profile) if profile else Env())
     manager = ModelManager(Registry.from_config(config, verify=False), policy=config.policy)
@@ -79,7 +84,7 @@ async def _transform(
     await store.connect()
     try:
         async with manager:
-            return await run_single(
+            return await run_batch(
                 request,
                 manager=manager,
                 agents=agents,

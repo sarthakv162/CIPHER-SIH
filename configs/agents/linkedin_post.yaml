@@ -1,0 +1,60 @@
+# LinkedIn post agent: one professional post with a hook, body, hashtags, and CTA.
+artefact_type: linkedin_post
+model_key: brain
+schema: rupantar.core.artefacts:LinkedInPost
+max_tokens: 900
+temperature: 0.4
+
+system_prompt: >-
+  You are a communications lead writing for LinkedIn. Open with a concrete hook,
+  keep paragraphs short, and end with an invitation to engage. Stay factual to the
+  dossier and avoid hype. Note any weak claims in confidence_notes.
+
+user_template: |
+  Write a single LinkedIn post from the source dossier for $audience.
+  Adopt a $tone register in a $style style, and write $language.
+  Depth: $detail. Primary objective: $objective.
+
+  Produce a single JSON object with these fields:
+  - title: a short internal label for this post
+  - hook: the first one or two lines, designed to stop the scroll
+  - body: the full post text, at most 2800 characters, short paragraphs
+  - hashtags: 3 to 6 topical tags as plain words WITHOUT a leading '#'
+  - call_to_action: one sentence inviting a specific response
+  - suggested_image_brief: one sentence describing an image to pair with the post
+  - confidence_notes: caveats about reliability, or an empty string
+
+param_hints:
+  audience:
+    general_public: "a general audience"
+    technical: "a technical audience"
+    executive: "senior executives and decision-makers"
+    policy_maker: "policy makers and regulators"
+    media: "journalists and media"
+    internal: "an internal team"
+  tone:
+    neutral: "neutral"
+    formal: "formal"
+    urgent: "urgent"
+    reassuring: "reassuring"
+    promotional: "promotional"
+    analytical: "analytical"
+  detail:
+    brief: "keep it brief"
+    standard: "standard depth"
+    deep: "go in depth"
+  objective:
+    inform: "inform the reader"
+    warn: "warn the reader"
+    persuade: "persuade the reader"
+    instruct: "instruct the reader"
+    announce: "announce a development"
+    summarise: "summarise the material"
+  style:
+    plain: "plain"
+    narrative: "narrative"
+    bulleted: "bulleted"
+    technical: "technical"
+  language:
+    en: "in English"
+    hi: "in Hindi"

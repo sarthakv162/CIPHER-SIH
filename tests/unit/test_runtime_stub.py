@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import urllib.request
+from pathlib import Path
 
 import pytest
 
@@ -71,6 +72,40 @@ async def test_chat_completions_uses_canned_env_completion(
     try:
         body = _post(runtime.endpoint, {"messages": []})
         assert body["choices"][0]["message"]["content"] == "canned-value"  # type: ignore[index]
+    finally:
+        await runtime.stop()
+
+
+async def test_chat_completions_reads_named_fixture_from_a_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / "advisory.json").write_text('{"picked": "advisory"}', encoding="utf-8")
+    monkeypatch.setenv("RUPANTAR_STUB_COMPLETION", str(tmp_path))
+    runtime = StubRuntime(key="brain", class_="heavy", port=find_free_port(8100, 8199))
+    await runtime.start()
+    try:
+        body = _post(
+            runtime.endpoint,
+            {
+                "messages": [],
+                "response_format": {"type": "json_schema", "json_schema": {"name": "advisory"}},
+            },
+        )
+        content = body["choices"][0]["message"]["content"]  # type: ignore[index]
+        assert json.loads(content) == {"picked": "advisory"}
+    finally:
+        await runtime.stop()
+
+
+async def test_directory_spec_without_schema_name_falls_back_to_echo(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("RUPANTAR_STUB_COMPLETION", str(tmp_path))
+    runtime = StubRuntime(key="brain", class_="heavy", port=find_free_port(8100, 8199))
+    await runtime.start()
+    try:
+        body = _post(runtime.endpoint, {"messages": [{"role": "user", "content": "echo me"}]})
+        assert body["choices"][0]["message"]["content"] == "echo me"  # type: ignore[index]
     finally:
         await runtime.stop()
 

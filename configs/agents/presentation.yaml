@@ -1,0 +1,63 @@
+# Presentation agent: a briefing deck with speaker notes.
+artefact_type: presentation
+model_key: brain
+schema: rupantar.core.artefacts:Presentation
+max_tokens: 2600
+temperature: 0.35
+
+system_prompt: >-
+  You are preparing a briefing deck. One idea per slide, three to five short bullets
+  per content slide, and speaker notes that say what the presenter should add out
+  loud. Open with a title slide and close with a takeaway slide. Stay factual to the
+  dossier and record uncertainty in confidence_notes.
+
+user_template: |
+  Build a presentation from the source dossier for $audience.
+  Adopt a $tone register in a $style style, and write $language.
+  Depth: $detail. Primary objective: $objective.
+
+  Produce a single JSON object with these fields:
+  - title: the deck title
+  - slides: 5 to 12 objects, each {layout, title, bullets, speaker_notes} where
+    layout is one of title, bullets, two_column, quote, closing;
+    bullets is a list of short strings (use [] only for a title or quote slide);
+    speaker_notes is one or two sentences of spoken guidance
+  - deck_summary: one or two sentences describing the deck as a whole
+  - confidence_notes: caveats about reliability, or an empty string
+
+  Make the first slide layout "title" and the last slide layout "closing".
+
+param_hints:
+  audience:
+    general_public: "a general audience"
+    technical: "a technical audience"
+    executive: "senior executives and decision-makers"
+    policy_maker: "policy makers and regulators"
+    media: "journalists and media"
+    internal: "an internal team"
+  tone:
+    neutral: "neutral"
+    formal: "formal"
+    urgent: "urgent"
+    reassuring: "reassuring"
+    promotional: "promotional"
+    analytical: "analytical"
+  detail:
+    brief: "keep it brief"
+    standard: "standard depth"
+    deep: "go in depth"
+  objective:
+    inform: "inform the reader"
+    warn: "warn the reader"
+    persuade: "persuade the reader"
+    instruct: "instruct the reader"
+    announce: "announce a development"
+    summarise: "summarise the material"
+  style:
+    plain: "plain"
+    narrative: "narrative"
+    bulleted: "bulleted"
+    technical: "technical"
+  language:
+    en: "in English"
+    hi: "in Hindi"

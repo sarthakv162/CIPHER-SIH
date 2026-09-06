@@ -24,12 +24,41 @@ _SIGKILL_AFTER = 3.0
 
 
 def _completion_text(body: dict[str, object]) -> str:
-    """Resolve the completion: env override (literal or @file), else echo the last user turn."""
+    """Resolve the completion: env override (dir of fixtures, @file, or literal), else echo."""
     spec = os.environ.get("RUPANTAR_STUB_COMPLETION")
     if spec:
+        target = Path(spec[1:] if spec.startswith("@") else spec)
+        if _is_dir(target):
+            name = _schema_name(body)
+            if name:
+                return (target / f"{name}.json").read_text(encoding="utf-8")
+            return _echo(body)
         if spec.startswith("@"):
-            return Path(spec[1:]).read_text(encoding="utf-8")
+            return target.read_text(encoding="utf-8")
         return spec
+    return _echo(body)
+
+
+def _is_dir(path: Path) -> bool:
+    """True when `path` is a directory, False for a literal completion string that is not a path."""
+    try:
+        return path.is_dir()
+    except OSError:
+        return False
+
+
+def _schema_name(body: dict[str, object]) -> str:
+    """The response_format.json_schema.name the caller asked for, or an empty string."""
+    response_format = body.get("response_format")
+    if isinstance(response_format, dict):
+        json_schema = response_format.get("json_schema")
+        if isinstance(json_schema, dict):
+            return str(json_schema.get("name") or "")
+    return ""
+
+
+def _echo(body: dict[str, object]) -> str:
+    """Echo the last user message, the stub's default when no fixture is configured."""
     messages = body.get("messages")
     if isinstance(messages, list):
         for message in reversed(messages):

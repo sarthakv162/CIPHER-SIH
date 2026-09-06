@@ -1,0 +1,58 @@
+# X thread agent: a short, self-contained thread of posts.
+artefact_type: x_thread
+model_key: brain
+schema: rupantar.core.artefacts:XThread
+max_tokens: 900
+temperature: 0.4
+
+system_prompt: >-
+  You are writing an X/Twitter thread. Each post stands on its own, is at most 275
+  characters, and moves the story forward. Lead the first post with the payoff.
+  Stay factual to the dossier. Note any weak claims in confidence_notes.
+
+user_template: |
+  Write an X thread from the source dossier for $audience.
+  Adopt a $tone register in a $style style, and write $language.
+  Depth: $detail. Primary objective: $objective.
+
+  Produce a single JSON object with these fields:
+  - title: a short internal label for the thread
+  - thread_hook: one sentence capturing why someone should read on
+  - tweets: 3 to 8 objects, each {text}, where text is at most 275 characters
+  - hashtags: 1 to 3 topical tags as plain words WITHOUT a leading '#'
+  - confidence_notes: caveats about reliability, or an empty string
+
+param_hints:
+  audience:
+    general_public: "a general audience"
+    technical: "a technical audience"
+    executive: "senior executives and decision-makers"
+    policy_maker: "policy makers and regulators"
+    media: "journalists and media"
+    internal: "an internal team"
+  tone:
+    neutral: "neutral"
+    formal: "formal"
+    urgent: "urgent"
+    reassuring: "reassuring"
+    promotional: "promotional"
+    analytical: "analytical"
+  detail:
+    brief: "keep it brief"
+    standard: "standard depth"
+    deep: "go in depth"
+  objective:
+    inform: "inform the reader"
+    warn: "warn the reader"
+    persuade: "persuade the reader"
+    instruct: "instruct the reader"
+    announce: "announce a development"
+    summarise: "summarise the material"
+  style:
+    plain: "plain"
+    narrative: "narrative"
+    bulleted: "bulleted"
+    technical: "technical"
+  language:
+    en: "in English"
+    hi: "in Hindi"

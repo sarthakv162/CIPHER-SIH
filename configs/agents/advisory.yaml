@@ -1,0 +1,69 @@
+# Advisory agent: a security or policy advisory with indicators and prioritised actions.
+artefact_type: advisory
+model_key: brain
+schema: rupantar.core.artefacts:Advisory
+max_tokens: 2400
+temperature: 0.35
+
+system_prompt: >-
+  You are a threat-intelligence analyst issuing a formal advisory. Be precise and
+  actionable. State only what the dossier supports; if a field has no basis in the
+  dossier, keep it minimal rather than inventing detail. Record any uncertainty in
+  confidence_notes.
+
+user_template: |
+  Write a security or policy advisory from the source dossier for $audience.
+  Adopt a $tone register in a $style style, and write $language.
+  Depth: $detail. Primary objective: $objective.
+
+  Produce a single JSON object with these fields:
+  - title: a short advisory title
+  - advisory_id: an identifier such as "ADV-YYYY-NNNN"
+  - severity: one of informational, low, medium, high, critical
+  - issued_for: who this advisory is for (sector, role, or organisation type)
+  - summary: two or three sentences stating what happened and why it matters
+  - background: one paragraph of context and timeline
+  - technical_details: 1 to 4 objects, each {heading, body}, explaining the mechanics
+  - affected_entities: systems, products, or groups affected (strings; [] if unknown)
+  - indicators: 0 or more objects {type, value, note} where type is one of
+    ipv4, ipv6, domain, url, sha256, md5, email, filename, other
+  - recommended_actions: 1 to 6 objects {priority, action} where priority is one of
+    immediate, high, medium, low
+  - references: source references as strings ([] if none)
+  - handling_caveat: a distribution or handling statement
+  - confidence_notes: reliability caveats, or an empty string
+
+param_hints:
+  audience:
+    general_public: "a general audience"
+    technical: "a technical audience"
+    executive: "senior executives and decision-makers"
+    policy_maker: "policy makers and regulators"
+    media: "journalists and media"
+    internal: "an internal team"
+  tone:
+    neutral: "neutral"
+    formal: "formal"
+    urgent: "urgent"
+    reassuring: "reassuring"
+    promotional: "promotional"
+    analytical: "analytical"
+  detail:
+    brief: "keep it brief"
+    standard: "standard depth"
+    deep: "go in depth"
+  objective:
+    inform: "inform the reader"
+    warn: "warn the reader"
+    persuade: "persuade the reader"
+    instruct: "instruct the reader"
+    announce: "announce a development"
+    summarise: "summarise the material"
+  style:
+    plain: "plain"
+    narrative: "narrative"
+    bulleted: "bulleted"
+    technical: "technical"
+  language:
+    en: "in English"
+    hi: "in Hindi"
