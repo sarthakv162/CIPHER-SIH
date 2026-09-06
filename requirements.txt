@@ -18,3 +18,4 @@ pypdf>=5
 selectolax>=0.3
 faster-whisper>=1.1
 pymupdf>=1.24
+psutil>=6

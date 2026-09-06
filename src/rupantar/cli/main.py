@@ -24,27 +24,34 @@ app.add_typer(models_app, name="models")
 def _init(
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Debug-level logging.")] = False,
 ) -> None:
-    """Set up terminal logging so the detected hardware profile is visible."""
+    """Set up terminal logging and pin the process to offline mode before any work."""
     logging.basicConfig(
         level=logging.DEBUG if verbose else logging.INFO,
         format="%(levelname)s %(name)s: %(message)s",
     )
+    from rupantar.audit.egress import enforce_offline_env
 
-
-def _stub(feature: str, phase: int) -> None:
-    """Print a uniform not-implemented notice and exit cleanly."""
-    typer.echo(f"{feature} is not implemented until phase {phase}")
-    raise typer.Exit(code=0)
+    enforce_offline_env()
 
 
 @app.command()
 def transform(
     text: Annotated[
-        Path,
+        Path | None,
         typer.Option(
-            ..., "--text", exists=True, dir_okay=False, readable=True, help="Source text file."
+            "--text", exists=True, dir_okay=False, readable=True, help="Source text file."
         ),
-    ],
+    ] = None,
+    source: Annotated[
+        list[Path] | None,
+        typer.Option(
+            "--source",
+            exists=True,
+            dir_okay=False,
+            readable=True,
+            help="Any source file (text, image, audio, video); repeatable.",
+        ),
+    ] = None,
     output: Annotated[
         str, typer.Option("--output", help="Artefact type(s), comma-separated.")
     ] = "executive_summary",
@@ -54,14 +61,22 @@ def transform(
     stream: Annotated[
         bool, typer.Option("--stream/--no-stream", help="Stream tokens to stdout.")
     ] = False,
+    strict_airgap: Annotated[
+        bool,
+        typer.Option("--strict-airgap", help="Abort a job if a non-loopback connection appears."),
+    ] = False,
     out_dir: Annotated[Path, typer.Option("--out-dir", help="Output root directory.")] = Path(
         "data/outputs"
     ),
 ) -> None:
-    """Turn a source file into one or more communication artefacts."""
+    """Turn one or more source files into communication artefacts."""
     import asyncio
 
-    jobs = asyncio.run(_transform(text, output, profile, stream, out_dir))
+    paths = [*([text] if text else []), *(source or [])]
+    if not paths:
+        typer.echo("pass at least one --text or --source file")
+        raise typer.Exit(2)
+    jobs = asyncio.run(_transform(paths, output, profile, stream, strict_airgap, out_dir))
     failed = 0
     for job in jobs:
         if job.status.value == "FAILED":
@@ -74,7 +89,12 @@ def transform(
 
 
 async def _transform(
-    text: Path, output: str, profile: str | None, stream: bool, out_dir: Path
+    paths: list[Path],
+    output: str,
+    profile: str | None,
+    stream: bool,
+    strict_airgap: bool,
+    out_dir: Path,
 ) -> list[Job]:
     """Load config, build the manager and agents, and run one batch transform."""
     from rupantar.agents.loader import load_agents
@@ -89,7 +109,7 @@ async def _transform(
     manager = ModelManager(Registry.from_config(config, verify=False), policy=config.policy)
     agents = load_agents(config.configs_dir / "agents")
     request = TransformRequest(
-        sources=[SourceInput(kind=SourceKind.file, path=str(text))],
+        sources=[SourceInput(kind=SourceKind.file, path=str(p)) for p in paths],
         output_types=[ArtefactType(part.strip()) for part in output.split(",") if part.strip()],
     )
     store = Store(config.db_path)
@@ -103,6 +123,7 @@ async def _transform(
                 store=store,
                 out_root=out_dir,
                 stream=stream,
+                strict_airgap=strict_airgap,
             )
     finally:
         await store.close()
@@ -179,9 +200,21 @@ def convert(
 
 
 @app.command()
-def selfcheck() -> None:
-    """Run the full offline system health report (phase 8)."""
-    _stub("selfcheck", 8)
+def selfcheck(
+    json_output: Annotated[
+        bool, typer.Option("--json", help="Emit the report as JSON instead of a table.")
+    ] = False,
+    fast: Annotated[bool, typer.Option("--fast", help="Skip model-file SHA-256 hashing.")] = False,
+    no_model: Annotated[
+        bool, typer.Option("--no-model", help="Skip checks that load the brain (4b offload, 5).")
+    ] = False,
+) -> None:
+    """Run the full offline system health report; exit non-zero when any check fails."""
+    from rupantar.audit.selfcheck import run_selfcheck
+
+    report = run_selfcheck(fast=fast, load_model=not no_model)
+    typer.echo(report.model_dump_json(indent=2) if json_output else report.table())
+    raise typer.Exit(report.exit_code)
 
 
 def _fmt(value: object) -> str:

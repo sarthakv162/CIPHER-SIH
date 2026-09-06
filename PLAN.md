@@ -435,9 +435,16 @@ Also build:
 
 ---
 
-### Phase 9 — Frontend *(deferred, do not start unless PLAN.md is updated)*
+### Phase 9 — Frontend + output presentation quality *(deferred, do not start unless PLAN.md is updated)*
 
-Dashboard with source input, output-type checkboxes, generation parameter controls, live job progress, **Model Manager memory visualiser**, artefact downloads, converter panel, egress indicator.
+**Dashboard** with source input, output-type checkboxes, generation parameter controls, live job progress, **Model Manager memory visualiser**, artefact downloads, converter panel, egress indicator.
+- Platform-accurate previews with live character counters for the `linkedin_post` and `x_thread` artefacts (X 280/post, LinkedIn 3000, truncation preview).
+
+**Output presentation quality** — the renderers currently style everything in code; move to real design assets:
+- `.potx` / `.dotx` template files loaded by `python-pptx` (`Presentation(template_path)`) and `python-docx` (`Document(template_path)`) instead of hand-built layouts — also sidesteps the python-pptx default-template Keynote quirks (see the Post-Phase-5 pptx fix in MEMORY.md §5).
+- Advisory PDF via **HTML + CSS through WeasyPrint** instead of the fpdf2 hand-layout in `render/pdf_render.py`.
+- A real palette + typography for the infographic SVG (`render/svg_render.py`), not the current inline defaults.
+- Selectable via a `template` generation parameter: **`ntro-formal` | `minimal` | `branded`**. Needs a small library of vetted templates per artefact type and the dashboard selector to expose it. New dep: `weasyprint` (pulls cairo/pango — check the air-gap wheel story before committing).
 
 ---
 

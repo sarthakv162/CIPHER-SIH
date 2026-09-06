@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -76,8 +77,16 @@ def _spawn_execution(request: Request, transform_id: str, out_root: Path) -> Non
     agents: dict[str, ArtefactAgent] = request.app.state.agents
     tasks: set[asyncio.Task[Any]] = request.app.state.tasks
 
+    strict = os.environ.get("RUPANTAR_STRICT_AIRGAP", "").lower() in ("1", "true", "yes")
     task = asyncio.create_task(
-        execute(transform_id, manager=manager, agents=agents, store=store, out_root=out_root)
+        execute(
+            transform_id,
+            manager=manager,
+            agents=agents,
+            store=store,
+            out_root=out_root,
+            strict_airgap=strict,
+        )
     )
     tasks.add(task)
 

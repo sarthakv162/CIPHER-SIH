@@ -157,6 +157,11 @@ class ModelManager:
             "quant": _parse_quant(entry.path) if entry.path else "unknown",
         }
 
+    def runtime(self, key: str) -> Runtime | None:
+        """The live Runtime object for `key`, or None when it is not resident (selfcheck only)."""
+        entry = self._entries.get(key)
+        return entry.runtime if entry else None
+
     def status(self) -> list[dict[str, Any]]:
         """Snapshot of every registry model and its residency state."""
         rows: list[dict[str, Any]] = []

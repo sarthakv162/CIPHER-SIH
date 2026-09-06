@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import re
 import subprocess
 from collections.abc import Callable, Sequence
+from pathlib import Path
 
 from rupantar.core.errors import RuntimeStartError
 from rupantar.models.registry import ModelEntry
@@ -16,6 +18,7 @@ from rupantar.models.runtime_base import (
 )
 
 _SIGKILL_AFTER = 10.0
+_OFFLOAD_RE = re.compile(r"offloaded (\d+)/(\d+) layers to GPU")
 
 
 def _as_list(args: object) -> list[object]:
@@ -44,6 +47,8 @@ class LlamaRuntime(Runtime):
         health_timeout: float = 120.0,
         health_interval: float = 0.5,
         spawn: Callable[..., subprocess.Popen[bytes]] = subprocess.Popen,
+        verbose: bool = False,
+        log_path: Path | None = None,
     ) -> None:
         """Configure the llama-server invocation without starting it."""
         self.key = entry.key
@@ -56,6 +61,8 @@ class LlamaRuntime(Runtime):
         self._health_timeout = health_timeout
         self._health_interval = health_interval
         self._spawn = spawn
+        self._verbose = verbose
+        self._log_path = log_path
         self._proc: subprocess.Popen[bytes] | None = None
 
     @property
@@ -88,11 +95,24 @@ class LlamaRuntime(Runtime):
             cmd += ["--mmproj", str(mmproj)]
         cmd += self._common_args
         cmd += [str(a) for a in _as_list(self._entry.args)]
+        if self._verbose:
+            cmd.append("-v")
         return cmd
+
+    def offloaded_layers(self) -> tuple[int, int] | None:
+        """Parse `offloaded N/M layers to GPU` from the captured boot log, if any."""
+        if self._log_path is None or not self._log_path.is_file():
+            return None
+        match = _OFFLOAD_RE.search(self._log_path.read_text(encoding="utf-8", errors="replace"))
+        return (int(match.group(1)), int(match.group(2))) if match else None
 
     async def start(self) -> None:
         """Spawn llama-server and poll GET /health until it is ready."""
-        self._proc = self._spawn(self._command())
+        if self._log_path is not None:
+            handle = self._log_path.open("wb")
+            self._proc = self._spawn(self._command(), stdout=subprocess.DEVNULL, stderr=handle)
+        else:
+            self._proc = self._spawn(self._command())
         ok = await wait_healthy(
             self.is_healthy, timeout=self._health_timeout, interval=self._health_interval
         )

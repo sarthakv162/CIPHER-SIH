@@ -5,7 +5,11 @@ module under src/rupantar/ is scanned for subprocess / os.spawn / create_subproc
 multiprocessing. `ingest/video.py` is exempt for the bare `subprocess` name only: it shells
 out to ffmpeg/ffprobe for keyframes and audio extraction, which are media tools, not models
 (see MEMORY.md Phase 6 deviation). `render/video_render.py` is exempt on the same grounds: it
-shells out to ffmpeg/piper to assemble the video package. Both still must not use Popen /
+shells out to ffmpeg/piper to assemble the video package. `audit/_selfcheck_checks.py` is
+exempt on the same grounds: selfcheck check 2 probes `ffmpeg --version` / `llama-server
+--version` / `piper --version` with subprocess.run to report tool versions. It never serves
+inference and starts no model process (the offload probe in check 4b goes through
+ModelManager.acquire like everything else). All exempt modules still must not use Popen /
 os.spawn / multiprocessing.
 """
 
@@ -15,7 +19,11 @@ import re
 from pathlib import Path
 
 _SRC = Path(__file__).resolve().parents[2] / "src" / "rupantar"
-_MEDIA_TOOL_MODULES = {"ingest/video.py", "render/video_render.py"}
+_MEDIA_TOOL_MODULES = {
+    "ingest/video.py",
+    "render/video_render.py",
+    "audit/_selfcheck_checks.py",
+}
 _SUBPROCESS_NAME = re.compile(r"\bsubprocess\b")
 
 _FORBIDDEN = [

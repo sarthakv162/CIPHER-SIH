@@ -10,6 +10,7 @@ from pathlib import Path
 
 from rupantar import __version__
 from rupantar.agents.base import ArtefactAgent
+from rupantar.audit.egress import scan_egress
 from rupantar.audit.provenance import Manifest, write_manifest
 from rupantar.core.artefacts import ArtefactBase
 from rupantar.core.errors import AgentError, ConfigError
@@ -56,6 +57,7 @@ class _RunContext:
     operator: str
     clock: Callable[[], datetime]
     stream: bool
+    strict_airgap: bool
 
 
 async def prepare(
@@ -85,6 +87,7 @@ async def execute(
     store: Store,
     out_root: Path,
     stream: bool = False,
+    strict_airgap: bool = False,
     operator: str = _DEFAULT_OPERATOR,
     clock: Callable[[], datetime] = _utcnow,
 ) -> list[Job]:
@@ -113,6 +116,7 @@ async def execute(
         operator=operator,
         clock=clock,
         stream=stream,
+        strict_airgap=strict_airgap,
     )
 
     for group in _consecutive_runs(schedule(jobs)):
@@ -134,6 +138,7 @@ async def run_batch(
     store: Store,
     out_root: Path,
     stream: bool = False,
+    strict_airgap: bool = False,
     operator: str = _DEFAULT_OPERATOR,
     clock: Callable[[], datetime] = _utcnow,
     new_id: Callable[[], str] = _uuid,
@@ -147,6 +152,7 @@ async def run_batch(
         store=store,
         out_root=out_root,
         stream=stream,
+        strict_airgap=strict_airgap,
         operator=operator,
         clock=clock,
     )
@@ -160,6 +166,7 @@ async def run_single(
     store: Store,
     out_root: Path,
     stream: bool = False,
+    strict_airgap: bool = False,
     operator: str = _DEFAULT_OPERATOR,
     clock: Callable[[], datetime] = _utcnow,
     new_id: Callable[[], str] = _uuid,
@@ -172,6 +179,7 @@ async def run_single(
         store=store,
         out_root=out_root,
         stream=stream,
+        strict_airgap=strict_airgap,
         operator=operator,
         clock=clock,
         new_id=new_id,
@@ -194,11 +202,15 @@ async def _run_job(job: Job, ctx: _RunContext, client: LlamaClient) -> None:
     """Generate one artefact, render it, write manifests, and mark the job SUCCEEDED or FAILED."""
     agent = ctx.agents[job.artefact_type.value]
     await _transition(ctx.store, job, JobStatus.RUNNING, ctx.clock)
+    if await _egress_aborts(ctx, job):
+        return
     try:
         artefact = await agent.run(ctx.dossier_text, ctx.request.params, client, stream=ctx.stream)
     except AgentError as exc:
         job.error = str(exc)
         await _transition(ctx.store, job, JobStatus.FAILED, ctx.clock)
+        return
+    if await _egress_aborts(ctx, job):
         return
     job_dir = ctx.out_root / job.id
     json_path = Path(_write_artefact(job_dir, agent.artefact_type, artefact))
@@ -206,6 +218,21 @@ async def _run_job(job: Job, ctx: _RunContext, client: LlamaClient) -> None:
     _emit_manifests([json_path, *rendered], job=job, agent=agent, ctx=ctx)
     job.artefact_path = str(json_path)
     await _transition(ctx.store, job, JobStatus.SUCCEEDED, ctx.clock)
+
+
+async def _egress_aborts(ctx: _RunContext, job: Job) -> bool:
+    """Scan for non-loopback connections; fail the job when --strict-airgap and one is found."""
+    report = scan_egress()
+    if report.clean:
+        return False
+    if not ctx.strict_airgap:
+        return False
+    remotes = sorted({v.raddr for v in report.violations})
+    job.error = (
+        f"EGRESS_VIOLATION: non-loopback connections {remotes}; job aborted (--strict-airgap)"
+    )
+    await _transition(ctx.store, job, JobStatus.FAILED, ctx.clock)
+    return True
 
 
 def _emit_manifests(paths: list[Path], *, job: Job, agent: ArtefactAgent, ctx: _RunContext) -> None:

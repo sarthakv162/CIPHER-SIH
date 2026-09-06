@@ -44,7 +44,10 @@ def get_registry(request: Request) -> Registry:
 
 def create_app(config: AppConfig | None = None) -> FastAPI:
     """Build the FastAPI app; construct the manager/store/agents but load no model."""
+    from rupantar.audit.egress import enforce_offline_env
+
     logging.getLogger("rupantar").setLevel(logging.INFO)
+    enforce_offline_env()
     config = config or load_config()
     registry = Registry.from_config(config, verify=False)
     manager = ModelManager(registry, policy=config.policy)
@@ -54,7 +57,9 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     @contextlib.asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         """Open the store on startup; tear the store and every model process down on shutdown."""
-        # TODO(phase-8): honour policy.prewarm_on_startup
+        # policy.prewarm_on_startup is deliberately NOT honoured — auto-spawning llama-server
+        # on startup breaks TestClient; the first transform triggers the load instead.
+        enforce_offline_env()
         await store.connect()
         try:
             yield

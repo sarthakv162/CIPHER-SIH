@@ -89,6 +89,15 @@ class ConversionError(RupantarError):
     """No Parivartan converter exists for a (src, dst) pair; see parivartan.list_conversions()."""
 
 
+class EgressViolationError(RupantarError):
+    """A non-loopback network connection was seen while --strict-airgap was set."""
+
+    def __init__(self, message: str, *, remotes: list[str] | None = None) -> None:
+        """Record the offending remote addresses alongside the message."""
+        self.remotes = remotes or []
+        super().__init__(message)
+
+
 class RuntimeStartError(ModelError):
     """A model child process failed to start or never reported healthy."""
 

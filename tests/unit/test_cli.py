@@ -18,11 +18,12 @@ def test_help_lists_exactly_four_commands() -> None:
         assert command in result.output
 
 
-def test_selfcheck_is_still_a_stub() -> None:
-    result = runner.invoke(app, ["selfcheck"])
-    assert result.exit_code == 0
-    assert "phase 8" in result.output
-    assert "not implemented" in result.output
+def test_selfcheck_runs_and_reports(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    monkeypatch.setenv("RUPANTAR_PROFILE", "test-stub")
+    result = runner.invoke(app, ["selfcheck", "--fast", "--json"])
+    assert "python + platform" in result.output
+    assert "egress during run" in result.output
+    assert result.exit_code in (0, 1)
 
 
 def test_convert_runs_a_conversion(tmp_path: Path) -> None:
