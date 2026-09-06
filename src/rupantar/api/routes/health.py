@@ -24,6 +24,8 @@ async def health(
     return {
         "status": "ok",
         "profile": config.active_profile,
+        "profile_source": config.profile_source,
+        "platform": f"{platform.system()}/{platform.machine()}",
         "python": platform.python_version(),
         "models_resident": resident,
     }

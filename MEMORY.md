@@ -15,7 +15,7 @@
 | Last session | 2026-09-06 — Phase 4 shipped (renderers + provenance) |
 | Last commit | `phase-4: renderers` |
 | `make check` status | **green** (ruff + format + mypy 43 files + 126 unit + 12 inv / 1 inv skeleton; slow lane `pytest -m slow` → 3 pass) |
-| Active hardware profile | `laptop-16gb` |
+| Active hardware profile | **auto-detected** — `apple-metal` on this M4 Air. `RUPANTAR_PROFILE` overrides. |
 | Models present on disk | **brain** only — `models/brain/Qwen3-4B-Instruct-2507-Q4_K_M.gguf` (2.5 GB, sha `3605803b…`); vlm/asr/tts absent |
 | Python | 3.11.15, uv-managed, `.venv/`, pinned in `.python-version` |
 
@@ -112,6 +112,7 @@ Anything you did differently from the plan, and why. One line each. Empty is fin
 - **Phase 4: `_RunContext` frozen dataclass** bundles the ~10 things `_run_job` now needs (agents, dossier text+sha, request, store, out_root, manager, operator, clock, stream). `execute`/`run_batch`/`run_single` gained kw-only `operator: str = "operator"`; all prior signatures still valid.
 - **Phase 4: manifest model identity** — `ModelEntry.declared_sha256` (new, from the yaml `sha256:` key) + `ModelManager.model_meta(key)`. With `verify=False` (runner/API/CLI default) the computed sha is None, so the manifest uses the declared one; stub → `model_sha256: null`, `model_quant: "stub"`.
 - **Phase 4: SVG template inlined** in `svg_render.py` (< 60 lines) — no `package-data` entry needed. docx footer "manifest id" = the sibling manifest *filename* (renderers only get `(artefact, path)`; job/transform ids live in the manifest itself).
+- **Post-Phase-4 (2026-09-06): auto hardware-profile selection.** `configs/models.yaml` restructured — `laptop-16gb` renamed `apple-metal`; added `nvidia-cuda` (`-ngl 99`, no `--threads` → llama picks physical cores) and `cpu-only` (`-ngl 0`, ctx 4096/2048 — usable fallback); `titan-24gb`/`test-stub` kept; **`active_profile:` key removed**. Model defs are now YAML anchors (`&brain_4b` etc.) merged per profile — PyYAML `safe_load` resolves `<<`. `core/config.py` `detect_profile()`: Darwin+arm64 → apple-metal; `shutil.which("nvidia-smi")` → nvidia-cuda (presence only — Phase 8 selfcheck checks it actually works); else cpu-only (loud `WARNING`). `RUPANTAR_PROFILE` still overrides (via `Env.profile`). `AppConfig.profile_source` records how it was chosen; logged at INFO. CLI `@app.callback` does `logging.basicConfig`; `api/app.py` sets the `rupantar` logger to INFO; `/health` gained `profile_source` + `platform`. Nvidia detection is presence-only (running `nvidia-smi` would trip the INV-7 subprocess scan).
 
 ---
 
@@ -120,7 +121,7 @@ Anything you did differently from the plan, and why. One line each. Empty is fin
 Things that are broken or unfinished and need attention. Include the file and the symptom.
 
 - **RESOLVED (Phase 2):** `runtime_llama.py` real path is now verified — `tests/integration/test_runtime_llama_real.py` (slow) boots a real `llama-server` on the brain GGUF, health-checks, SIGTERMs, and asserts the pid is gone. Real end-to-end text path also exercised by `tests/integration/test_text_path_real.py`.
-- `configs/models.yaml` `laptop-16gb`: **brain is present**; `vlm`, `asr`, `tts` files are still absent, so `Registry.from_config(verify=True)` on the full profile still raises `ModelFileMissingError` (on `vlm`). `models status`, `transform`, and `run_single` use `verify=False`. Fetch vlm/asr/tts before Phase 6.
+- **brain only** on disk (`Qwen3-4B-Instruct-2507-Q4_K_M.gguf`, shared by `apple-metal`/`nvidia-cuda`/`cpu-only`). `vlm`/`asr`/`tts` absent → `Registry.from_config(verify=True)` on a full GPU profile raises `ModelFileMissingError` (on `vlm`). `models status`/`transform`/`run_single`/`api` all use `verify=False`. Fetch vlm/asr/tts before Phase 6.
 - `make check-all` runs `pytest tests/integration` with **no `-m "not slow"` filter**, so on a machine with the brain GGUF it executes **3** real-model tests (`test_text_path_real`, `test_multi_artefact_real`, `test_runtime_llama_real`) — ~15–16 min on the loaded dev box (the 7-artefact one alone is ~13 min). `make check` (the phase gate) stays fast and model-free. See Open Questions.
 - `requirements-lock.txt` is still an empty placeholder. `httpx`, `fastapi`, `uvicorn`, `starlette` + transitives must be captured by `scripts/vendor_wheels.sh` before air-gapping.
 
@@ -133,7 +134,7 @@ Decisions you could not make on your own. Do not guess — list them here and co
 - Demo hardware is **confirmed = this dev machine, a fanless MacBook Air M4** (macOS arm64, 16 GB). So `requirements-lock.txt` / wheel vendoring target macOS arm64 py3.11. Still open: whether the demo can instead run on an M4 **Pro/Max** (would fix the latency targets — see the demo-latency item below).
 - `vlm` GGUF quant/build still unverified (file not on disk yet — Phase 6).
 - Which three cyber formats matter most to the evaluators for Parivartan. Current default: IOC CSV ↔ STIX 2.1, Sigma YAML → JSON, CEF/syslog → JSONL.
-- Whether the recorded demo video uses the `laptop-16gb` or `titan-24gb` profile.
+- Whether the recorded demo video uses the auto profile (`apple-metal` on the M4 Air) or `RUPANTAR_PROFILE=titan-24gb`.
 - `GenerationParams.language`: field kept, brain honours it best-effort; ASR/TTS are en-only and emit a `language_limitation` manifest warning (Phase 6). Tested values `en`, `hi`; others accepted as best-effort. Confirm `hi` is actually a demo requirement.
 - Should `make check-all` deselect `-m slow`? It currently runs the real-model integration tests when models are on disk. Fixing it touches the `Makefile` **and** `PLAN.md` §7 (the single shared `make check` / `check-all` definition) and `CLAUDE.md`. Left as-is for now; `make check` itself is unaffected.
 - ~~Schema-enforcement mechanism~~ **RESOLVED 2026-09-06.** Human chose native `response_format: json_schema`; `agents/grammar.py` deleted. See §4 / §5 / §9. Speed was a wash across all options; the call was made on maintenance + guarantee strength for the 6 remaining Phase 3 schemas.
@@ -171,7 +172,7 @@ Measured, not assumed. Update whenever you measure something new.
 | Peak RSS, brain resident (Metal, 8192 ctx) | **4.89 GB** across the whole 7+4 run. Comfortably inside 16 GB — the one-heavy-model thesis holds. | 2026-09-06 |
 | enforcement mechanism cost (GBNF / json_object / json_schema / none) | all within noise of each other; 0 validation failures incl. unconstrained on `ExecutiveSummary` (32 runs). All 7 artefact types validate first try with `json_schema`. See §9 investigation block. | 2026-09-06 |
 | `fastapi` / `starlette` / `uvicorn` | 0.127.1 / 0.50.0 / 0.52.4 (pin `fastapi>=0.115,<0.128` — see §5) | 2026-09-06 |
-| `--n-gpu-layers` on Apple Silicon — **`-ngl 0` was a real mistake** | `-ngl 0` forces CPU-only: **~7 tok/s gen, ~21 tok/s prompt-eval, 6.6 s boot**. `-ngl 99` (or the flag unset) → Metal: **~13 tok/s gen, ~125 tok/s prompt-eval, 1.5–2 s boot**. ~1.9× / ~6× / ~3×. The earlier "36.6 vs 36.8, no difference" compared `-ngl 99` vs *unset* (both Metal) — `-ngl 0` was never tested. `models.yaml` fixed to `-ngl 99` for laptop-16gb brain+vlm (2026-09-06). | 2026-09-06 |
+| `--n-gpu-layers` on Apple Silicon — **`-ngl 0` was a real mistake** | `-ngl 0` forces CPU-only: **~7 tok/s gen, ~21 tok/s prompt-eval, 6.6 s boot**. `-ngl 99` (or the flag unset) → Metal: **~13 tok/s gen, ~125 tok/s prompt-eval, 1.5–2 s boot**. ~1.9× / ~6× / ~3×. The earlier "36.6 vs 36.8, no difference" compared `-ngl 99` vs *unset* (both Metal) — `-ngl 0` was never tested. `apple-metal`/`nvidia-cuda` profiles use `-ngl 99`; only `cpu-only` uses `-ngl 0` (deliberately). | 2026-09-06 |
 | `--parallel N` default | `-1` = auto → **4 slots**, each capped at `ctx/4` = 2048 tok (would overflow a real multimodal dossier). Running the 7 agents concurrently across 4 slots gave only ~20 % wall improvement (290 s vs 363 s) at 3× worse per-artefact latency (4–8 vs 13 tok/s) and cache loss on ~3 agents. `models.yaml` now pins `--parallel 1`: one slot, full 8192 ctx, perfect prefix reuse, low latency. | 2026-09-06 |
 | llama-server prefix caching | per-slot; `cache_prompt: true` (default on) reuses the longest common token prefix. Agents put the identical dossier first so agents 2–7 skip re-evaluating it — confirmed working (~556 cached tok/agent). | 2026-09-06 |
 | Peak RSS, full multimodal run (vlm+asr+brain) | unknown — brain-alone is 4.89 GB | — |
@@ -194,6 +195,12 @@ Changed in this file:
 Next session should start with:
 -
 ```
+
+### 2026-09-06 — Auto hardware-profile selection (post-Phase-4, pre-Phase-5)
+Why: the `-ngl 0` bug happened because nobody checked the config matched the machine; the team has mixed HW.
+Did: `models.yaml` — 3 auto profiles (`apple-metal` [was `laptop-16gb`], `nvidia-cuda`, `cpu-only`) via YAML anchors + `titan-24gb`/`test-stub`; dropped `active_profile:`. `config.py` `detect_profile()` (platform + `nvidia-smi` presence; cpu-only fallback with loud WARNING); `RUPANTAR_PROFILE` overrides; `AppConfig.profile_source`; INFO log. CLI `@app.callback` basicConfig; `api/app.py` logger→INFO; `/health` +`profile_source`/`platform`. `PLAN.md` §5 + Phase-8 §4b (now "report HW/profile/offload, fail if GPU profile but offload=0"); README HW-profiles section. Renamed `laptop-16gb`→`apple-metal` in 4 test files; rewrote `test_config.py` (detection branches via monkeypatch, override, cpu-only WARNING).
+Verified: `make check` green (143 unit + 12 inv / 1 skeleton); CLI logs `hardware profile: apple-metal (Darwin/arm64 …)`; forced `RUPANTAR_PROFILE=cpu-only` + mocked-Linux paths both behave; stub integration 20 passed; `pytest -m slow` [running at commit].
+Deviation: nvidia detection is `shutil.which` presence only — running `nvidia-smi` would trip the INV-7 subprocess scan; "does the GPU actually work" is Phase 8 selfcheck.
 
 ### 2026-09-06 — Phase 4 — renderers + provenance manifests shipped
 Did (builder subagent + lead):

@@ -190,9 +190,12 @@ ArtefactFile + .manifest.json  →  data/outputs/<job_id>/
 
 Sizes are approximate; `registry.py` must read actual file size and SHA-256 at startup and record them.
 
-Profiles: `laptop-16gb` (default), `titan-24gb`.
+Profiles (auto-selected by `core/config.py`; `RUPANTAR_PROFILE` overrides): `apple-metal`,
+`nvidia-cuda`, `cpu-only` — all the 4B/3B "16 GB laptop" tier, differing only in llama.cpp args
+(`-ngl`, `--threads`, `--ctx-size`) — plus `titan-24gb` (bigger models, explicit override only)
+and `test-stub`.
 
-| key | class | laptop-16gb | titan-24gb |
+| key | class | apple-metal / nvidia-cuda / cpu-only | titan-24gb |
 |---|---|---|---|
 | `brain` | heavy | Qwen3-4B-Instruct Q4_K_M (~2.5 GB) | Qwen2.5-14B-Instruct Q4_K_M (~9 GB) |
 | `vlm` | heavy | Qwen2.5-VL-3B-Instruct Q4_K_M + mmproj (~3 GB) | Qwen2.5-VL-7B Q4_K_M |
@@ -224,7 +227,7 @@ Each phase: implement → run its verify command → have the `verifier` subagen
 **Build**
 - Repo layout above, `pyproject.toml` + `requirements.txt` (src layout, `pip install -e .`), `.python-version` (3.11), ruff + mypy config (mypy with the `pydantic.mypy` plugin), `Makefile`
 - `core/errors.py`: typed exception hierarchy (`RupantarError` and subclasses)
-- `core/config.py`: **minimal** — locate `configs/`, load `models.yaml` + `policy.yaml`, resolve active profile (env override → `models.yaml:active_profile`), expose the SQLite path. Grows in Phase 1.
+- `core/config.py`: **minimal** — locate `configs/`, load `models.yaml` + `policy.yaml`, resolve the active profile, expose the SQLite path. Grows in Phase 1. *(Post-Phase-3: profile is now auto-detected from the platform — Apple Silicon → `apple-metal`, `nvidia-smi` on PATH → `nvidia-cuda`, else `cpu-only`; `RUPANTAR_PROFILE` overrides; the choice is logged at INFO.)*
 - `core/schemas.py`: `SourceInput`, `TransformRequest`, `ArtefactType`, `JobStatus`, `Job`, `GenerationParams`, `SourceDossier` (see `docs/SCHEMAS.md`)
 - `core/artefacts.py`: Pydantic model for **all seven** artefact types with every list min/max and char limit enforced in `field_validator`s (see `docs/SCHEMAS.md`)
 - `core/store.py`: SQLite schema + **async** CRUD (`aiosqlite`, JSON columns) for dossiers and jobs
@@ -393,7 +396,7 @@ Also build:
   2. `ffmpeg`, `llama-server`, `piper` on PATH with versions
   3. Every model file in the active profile: exists, size, SHA-256 matches registry
   4. Ports in range are free
-  4b. **Runtime args vs platform.** For each `llama` model in the active profile, parse its `args` and check them against the detected platform: **fail loudly if `--n-gpu-layers 0` (or the flag absent on a build that needs it) while Metal or CUDA is available** — this silently forced CPU-only inference and cost ~2× throughput undetected through Phases 1–3 (see `MEMORY.md` 2026-09-06 perf session). Also warn if `--parallel` is unset (auto-splits the context across 4 slots) or if `--ctx-size` / `--parallel` would give a slot less context than `max_tokens` of the largest agent.
+  4b. **Hardware / profile / offload consistency.** Report: detected platform (`platform.system()/machine()`, `nvidia-smi` present?), the chosen profile and how it was chosen (`config.profile_source`: auto-detect vs `RUPANTAR_PROFILE`), and — after a one-token `brain` load — **whether GPU offload is actually active** (query `llama-server /props` / parse startup output for offloaded layer count > 0, or check `n_gpu_layers`). **Fail loudly** when the profile expects GPU (`apple-metal`/`nvidia-cuda`) but offload is 0 — that means a wrong-backend llama.cpp build (CPU-only Homebrew bottle, missing CUDA), the exact class of bug (`--n-gpu-layers 0`) that cost ~2× undetected through Phases 1–3 (see `MEMORY.md` 2026-09-06 perf session). Also warn if `--parallel` is unset, or if `--ctx-size` / `--parallel` gives a slot less context than the largest agent's `max_tokens`.
   5. Model Manager: load `brain`, one-token generation, unload, assert RSS returns to baseline ±200 MB
   6. Each renderer produces a sample file
   7. Each converter round-trips a fixture

@@ -34,7 +34,7 @@ _BRAIN = _REPO / "models" / "brain" / "Qwen3-4B-Instruct-2507-Q4_K_M.gguf"
 )
 async def test_real_brain_produces_valid_executive_summary(tmp_path: Path) -> None:
     db = tmp_path / "rupantar.db"
-    config = load_config(_REPO / "configs", env=Env(profile="laptop-16gb", db=db))
+    config = load_config(_REPO / "configs", env=Env(profile="apple-metal", db=db))
     manager = ModelManager(Registry.from_config(config, verify=False), policy=config.policy)
     agents = load_agents(_REPO / "configs" / "agents")
     article = _REPO / "tests" / "fixtures" / "articles" / "ai_policy_brief.md"

@@ -1,7 +1,10 @@
-"""Minimal config loading: locate configs/, read the YAML files, resolve the active profile."""
+"""Config loading: locate configs/, read the YAML files, auto-select the hardware profile."""
 
 from __future__ import annotations
 
+import logging
+import platform
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +15,25 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from rupantar.core.errors import ConfigError, ProfileError
 
 _DEFAULT_DB_PATH = Path("data/rupantar.db")
+_LOG = logging.getLogger("rupantar.config")
+
+
+def detect_profile() -> tuple[str, str]:
+    """Pick a hardware profile from the running machine; return (profile_name, reason)."""
+    system, machine = platform.system(), platform.machine()
+    if system == "Darwin" and machine in ("arm64", "aarch64"):
+        return "apple-metal", f"{system}/{machine} Apple Silicon (llama.cpp Metal)"
+    if _has_nvidia():
+        return "nvidia-cuda", f"{system}/{machine}, nvidia-smi on PATH"
+    return (
+        "cpu-only",
+        f"{system}/{machine}, no Apple Silicon or nvidia-smi detected — CPU-only fallback",
+    )
+
+
+def _has_nvidia() -> bool:
+    """True when `nvidia-smi` is on PATH. Whether the GPU actually works is Phase 8 selfcheck."""
+    return shutil.which("nvidia-smi") is not None
 
 
 class Env(BaseSettings):
@@ -30,6 +52,7 @@ class AppConfig(BaseModel):
 
     configs_dir: Path
     active_profile: str
+    profile_source: str
     models: dict[str, Any]
     policy: dict[str, Any]
     db_path: Path
@@ -88,26 +111,36 @@ def load_config(configs_dir: Path | None = None, env: Env | None = None) -> AppC
             "no profiles defined", path=str(resolved_dir / "models.yaml"), key="profiles"
         )
 
-    active = env.profile or models.get("active_profile")
-    if not active:
-        raise ConfigError(
-            "no active profile: set RUPANTAR_PROFILE or models.yaml:active_profile",
-            path=str(resolved_dir / "models.yaml"),
-            key="active_profile",
-        )
+    if env.profile:
+        active, source = env.profile, "RUPANTAR_PROFILE"
+    else:
+        active, source = detect_profile()
     if active not in profiles:
         raise ProfileError(
             f"profile {active!r} is not one of {sorted(profiles)}",
             path=str(resolved_dir / "models.yaml"),
             key="active_profile",
         )
+    _log_profile(active, source)
 
     db_path = env.db if env.db is not None else _DEFAULT_DB_PATH
 
     return AppConfig(
         configs_dir=resolved_dir,
         active_profile=active,
+        profile_source=source,
         models=models,
         policy=policy,
         db_path=db_path,
     )
+
+
+def _log_profile(active: str, source: str) -> None:
+    """Announce the resolved profile at INFO; shout when we fell back to cpu-only blind."""
+    _LOG.info("hardware profile: %s  (%s)", active, source)
+    if active == "cpu-only" and source != "RUPANTAR_PROFILE":
+        _LOG.warning(
+            "No GPU backend detected — running the cpu-only profile. Generation will be slow "
+            "(~2x). If this machine has a GPU, check the llama.cpp build (see README) and set "
+            "RUPANTAR_PROFILE to override."
+        )

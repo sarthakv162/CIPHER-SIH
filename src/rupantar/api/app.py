@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import logging
 from collections.abc import AsyncIterator
 
 from fastapi import FastAPI, Request
@@ -43,6 +44,7 @@ def get_registry(request: Request) -> Registry:
 
 def create_app(config: AppConfig | None = None) -> FastAPI:
     """Build the FastAPI app; construct the manager/store/agents but load no model."""
+    logging.getLogger("rupantar").setLevel(logging.INFO)
     config = config or load_config()
     registry = Registry.from_config(config, verify=False)
     manager = ModelManager(registry, policy=config.policy)

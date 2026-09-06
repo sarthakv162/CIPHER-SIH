@@ -1,7 +1,8 @@
-"""Typer CLI skeleton. Every command is a stub until its owning phase lands."""
+"""Typer CLI: transform, convert, selfcheck, and a models sub-app."""
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated
 
@@ -17,6 +18,17 @@ app = typer.Typer(
 )
 models_app = typer.Typer(add_completion=False, no_args_is_help=True, help="Model manager commands.")
 app.add_typer(models_app, name="models")
+
+
+@app.callback()
+def _init(
+    verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Debug-level logging.")] = False,
+) -> None:
+    """Set up terminal logging so the detected hardware profile is visible."""
+    logging.basicConfig(
+        level=logging.DEBUG if verbose else logging.INFO,
+        format="%(levelname)s %(name)s: %(message)s",
+    )
 
 
 def _stub(feature: str, phase: int) -> None:

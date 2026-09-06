@@ -35,12 +35,12 @@ def test_unknown_key_raises() -> None:
 
 def test_missing_real_file_names_fetch_script() -> None:
     with pytest.raises(ModelFileMissingError) as excinfo:
-        Registry.from_config(_config("laptop-16gb"), verify=True)
+        Registry.from_config(_config("apple-metal"), verify=True)
     assert "scripts/fetch_models.sh" in str(excinfo.value)
 
 
 def test_real_profile_parses_without_verification() -> None:
-    registry = Registry.from_config(_config("laptop-16gb"), verify=False)
+    registry = Registry.from_config(_config("apple-metal"), verify=False)
     brain = registry.entry("brain")
     assert brain.runtime == "llama"
     assert brain.path == Path("models/brain/Qwen3-4B-Instruct-2507-Q4_K_M.gguf")
@@ -59,6 +59,7 @@ def test_verify_records_size_and_sha_for_present_files(tmp_path: Path) -> None:
     config = AppConfig(
         configs_dir=tmp_path,
         active_profile="p",
+        profile_source="test",
         models=models,
         policy={},
         db_path=tmp_path / "x.db",

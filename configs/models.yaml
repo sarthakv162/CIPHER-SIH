@@ -1,10 +1,12 @@
-# Model registry. Sizes are approximate placeholders.
-# registry.py MUST read the real file size and SHA-256 at startup and use those in provenance manifests.
-# Filenames must be confirmed against the actual GGUF builds fetched by scripts/fetch_models.sh.
-# approx_bytes must be plain digits: YAML does not parse underscore digit grouping.
-# registry.py skips file-existence and SHA-256 checks for any entry whose runtime is "stub".
-
-active_profile: laptop-16gb
+# Model registry.
+# registry.py reads the real file size + SHA-256 at startup and uses those in provenance manifests;
+# the `sha256:` here is the expected value (selfcheck compares). approx_bytes must be plain digits.
+# registry.py skips file-existence / SHA checks for any entry whose runtime is "stub".
+#
+# Profile selection is AUTOMATIC (core/config.py): Apple Silicon -> apple-metal,
+# an NVIDIA GPU (nvidia-smi) -> nvidia-cuda, otherwise -> cpu-only.
+# Force one with the RUPANTAR_PROFILE env var (e.g. RUPANTAR_PROFILE=titan-24gb).
+# llama.cpp must be built for the matching backend or the GPU sits unused (see README).
 
 runtimes:
   llama:
@@ -16,40 +18,73 @@ runtimes:
   piper:
     binary: piper
 
+# --- shared model definitions (YAML anchors; args are set per profile) ---
+defaults:
+  brain_4b: &brain_4b
+    class: heavy
+    runtime: llama
+    path: models/brain/Qwen3-4B-Instruct-2507-Q4_K_M.gguf
+    sha256: 3605803b982cb64aead44f6c1b2ae36e3acdb41d8e46c8a94c6533bc4c67e597
+    approx_bytes: 2497281120
+  vlm_3b: &vlm_3b
+    class: heavy
+    runtime: llama
+    path: models/vlm/Qwen2.5-VL-3B-Instruct-Q4_K_M.gguf
+    mmproj: models/vlm/mmproj-Qwen2.5-VL-3B-f16.gguf
+    approx_bytes: 3100000000
+  asr_small: &asr_small
+    class: light
+    runtime: whisper
+    path: models/asr/faster-whisper-small.en-int8
+    approx_bytes: 500000000
+    args: {compute_type: int8, beam_size: 1}
+  tts_lessac: &tts_lessac
+    class: transient
+    runtime: piper
+    path: models/tts/en_US-lessac-medium.onnx
+    config: models/tts/en_US-lessac-medium.onnx.json
+    approx_bytes: 65000000
+
 profiles:
 
-  laptop-16gb:
+  # Apple Silicon (macOS arm64). llama.cpp uses Metal by default; -ngl 99 offloads all layers.
+  # Reference demo machine: MacBook Air M4 (fanless, 4 P-cores) -> --threads 4. ~14.5 tok/s.
+  apple-metal:
     brain:
-      class: heavy
-      runtime: llama
-      path: models/brain/Qwen3-4B-Instruct-2507-Q4_K_M.gguf
-      sha256: 3605803b982cb64aead44f6c1b2ae36e3acdb41d8e46c8a94c6533bc4c67e597
-      approx_bytes: 2497281120
+      <<: *brain_4b
       args: ["--ctx-size", "8192", "--threads", "4", "--n-gpu-layers", "99", "--parallel", "1"]
-      notes: "Demo HW = MacBook Air M4 (fanless, 4P+6E, 16GB). -ngl 99 => Metal: ~14.5 vs ~7 tok/s gen, ~125 vs ~21 prompt-eval; -ngl 0 forces CPU-only, do NOT use. --parallel 1 => one slot, full ctx, prefix-cache reuse. --threads 4 = P-core count (perf-identical to 6; decode is memory-bandwidth-bound). ~14.5 tok/s is this machine's real ceiling (not thermal — flat over 5 back-to-back runs; verified 2026-09-06). An M4 Pro/Max would ~2-3x it."
-
     vlm:
-      class: heavy
-      runtime: llama
-      path: models/vlm/Qwen2.5-VL-3B-Instruct-Q4_K_M.gguf
-      mmproj: models/vlm/mmproj-Qwen2.5-VL-3B-f16.gguf
-      approx_bytes: 3100000000
+      <<: *vlm_3b
       args: ["--ctx-size", "4096", "--threads", "4", "--n-gpu-layers", "99", "--parallel", "1"]
+    asr: *asr_small
+    tts: *tts_lessac
 
-    asr:
-      class: light
-      runtime: whisper
-      path: models/asr/faster-whisper-small.en-int8
-      approx_bytes: 500000000
-      args: {compute_type: int8, beam_size: 1}
+  # NVIDIA GPU. Requires a CUDA-built llama.cpp (see README) or -ngl is a silent no-op.
+  # No --threads: llama.cpp defaults to the physical core count; CPU is not the bottleneck here.
+  nvidia-cuda:
+    brain:
+      <<: *brain_4b
+      args: ["--ctx-size", "8192", "--n-gpu-layers", "99", "--parallel", "1"]
+    vlm:
+      <<: *vlm_3b
+      args: ["--ctx-size", "4096", "--n-gpu-layers", "99", "--parallel", "1"]
+    asr: *asr_small
+    tts: *tts_lessac
 
-    tts:
-      class: transient
-      runtime: piper
-      path: models/tts/en_US-lessac-medium.onnx
-      config: models/tts/en_US-lessac-medium.onnx.json
-      approx_bytes: 65000000
+  # Safe fallback when no GPU backend is detected. Slow but usable.
+  # -ngl 0 = CPU only. Smaller context to keep it responsive. No --threads: llama.cpp picks
+  # physical cores; on a shared machine add "--threads", "N" with N below the core count.
+  cpu-only:
+    brain:
+      <<: *brain_4b
+      args: ["--ctx-size", "4096", "--n-gpu-layers", "0", "--parallel", "1"]
+    vlm:
+      <<: *vlm_3b
+      args: ["--ctx-size", "2048", "--n-gpu-layers", "0", "--parallel", "1"]
+    asr: *asr_small
+    tts: *tts_lessac
 
+  # Explicit override only (RUPANTAR_PROFILE=titan-24gb). Bigger models, needs a 24 GB GPU.
   titan-24gb:
     brain:
       class: heavy
@@ -57,7 +92,6 @@ profiles:
       path: models/brain/Qwen2.5-14B-Instruct-Q4_K_M.gguf
       approx_bytes: 9000000000
       args: ["--ctx-size", "16384", "--n-gpu-layers", "99", "--parallel", "1"]
-
     vlm:
       class: heavy
       runtime: llama
@@ -65,21 +99,15 @@ profiles:
       mmproj: models/vlm/mmproj-Qwen2.5-VL-7B-f16.gguf
       approx_bytes: 5500000000
       args: ["--ctx-size", "8192", "--n-gpu-layers", "99", "--parallel", "1"]
-
     asr:
       class: light
       runtime: whisper
       path: models/asr/faster-whisper-medium.en-int8
       approx_bytes: 1500000000
       args: {compute_type: int8, beam_size: 5}
+    tts: *tts_lessac
 
-    tts:
-      class: transient
-      runtime: piper
-      path: models/tts/en_US-lessac-medium.onnx
-      config: models/tts/en_US-lessac-medium.onnx.json
-      approx_bytes: 65000000
-
+  # Tests only. No model files. Selected with RUPANTAR_PROFILE=test-stub.
   test-stub:
     brain:  {class: heavy, runtime: stub}
     vlm:    {class: heavy, runtime: stub}
