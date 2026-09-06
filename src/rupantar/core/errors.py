@@ -81,6 +81,11 @@ class AgentError(RupantarError):
     """An artefact agent could not produce schema-valid output after one retry."""
 
 
+class VerificationError(RupantarError):
+    """Cross-artefact verification could not parse or validate a brain response; delivered as a
+    warning on the report, never as a crash. Inspect configs/policy.yaml:verification."""
+
+
 class RenderError(RupantarError):
     """No renderer is registered for an (artefact type, format) pair; fix render/base.py FORMATS."""
 

@@ -138,7 +138,7 @@ def _check_one_model(entry: ModelEntry, *, fast: bool) -> CheckResult:
         targets.append((entry.path / "model.bin", entry.extra.get("model_bin_sha256")))
     else:
         targets.append((entry.path, entry.declared_sha256 or entry.extra.get("model_bin_sha256")))
-        for sib_key, sha_key in (("mmproj", "mmproj_sha256"), ("config", None)):
+        for sib_key, sha_key in (("mmproj", "mmproj_sha256"), ("config", "config_sha256")):
             sib = entry.extra.get(sib_key)
             if sib:
                 targets.append((Path(sib), entry.extra.get(sha_key) if sha_key else None))

@@ -2,12 +2,22 @@
 
 from __future__ import annotations
 
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _pkg_version
 from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
 _MANIFEST_SUFFIX = ".manifest.json"
+
+
+def app_version() -> str:
+    """The installed rupantar distribution version, or 'unknown' outside an installed package."""
+    try:
+        return _pkg_version("rupantar")
+    except PackageNotFoundError:
+        return "unknown"
 
 
 class Manifest(BaseModel):
@@ -29,6 +39,7 @@ class Manifest(BaseModel):
     app_version: str
     job_id: str
     transform_id: str
+    verification: dict[str, Any] | None = None
 
 
 def manifest_path(artefact_path: Path) -> Path:

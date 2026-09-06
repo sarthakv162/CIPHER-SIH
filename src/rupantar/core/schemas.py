@@ -125,6 +125,7 @@ class TransformRequest(BaseModel):
     sources: list[SourceInput] = Field(min_length=1)
     output_types: list[ArtefactType] = Field(min_length=1)
     params: GenerationParams = Field(default_factory=GenerationParams)
+    operator: str | None = None
 
     @field_validator("output_types")
     @classmethod

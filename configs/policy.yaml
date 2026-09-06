@@ -6,3 +6,14 @@ context_length: 8192
 health_poll_interval: 0.5
 health_timeout_seconds: 120
 prewarm_on_startup: brain
+verification:
+  enabled: true
+  # 120s (and even 300s) undershoot real M4-Air throughput for a full claims+grounding pair:
+  # two sequential max_tokens=2000 calls at this machine's ~14.5 tok/s ceiling (see MEMORY.md
+  # §8 CLEAN PERF BASELINE) can legitimately need close to 2*2000/14.5 ~= 276s of generation
+  # alone, before prompt-eval and under any contention. 600s gives real headroom instead of
+  # sitting right at the edge -- measured against a real failing run, not guessed. See
+  # MEMORY.md Phase 8.5 session log / deviations.
+  timeout_seconds: 600
+  max_tokens: 2000
+  temperature: 0.0

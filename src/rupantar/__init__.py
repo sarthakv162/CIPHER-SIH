@@ -2,4 +2,6 @@
 
 from __future__ import annotations
 
-__version__ = "0.0.0"
+from rupantar.audit.provenance import app_version
+
+__version__ = app_version()

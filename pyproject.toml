@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rupantar"
-version = "0.0.0"
+version = "0.8.0"
 description = "Offline, air-gapped AI content transformation engine (NTRO / SIH)."
 readme = "README.md"
 requires-python = "==3.11.*"

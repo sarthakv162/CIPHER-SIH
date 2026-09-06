@@ -20,6 +20,7 @@ from rupantar.core.schemas import Job, JobStatus, TransformRequest
 from rupantar.core.store import Store
 from rupantar.models.manager import ModelManager
 from rupantar.orchestrator.runner import execute, prepare
+from rupantar.verify.report import VerificationReport
 
 router = APIRouter(tags=["transforms"])
 _log = logging.getLogger("rupantar.api")
@@ -40,12 +41,42 @@ class TransformAccepted(BaseModel):
     jobs: list[JobRef]
 
 
+class VerificationView(BaseModel):
+    """Small summary of a transform's cross-artefact verification; the manifest has the detail."""
+
+    ok: bool
+    line: str
+    total: int
+    supported: int
+    unsupported: int
+    agree: int
+    conflict: int
+    orphan: int
+
+
 class TransformStatus(BaseModel):
     """Aggregate status of a Transform plus every job row."""
 
     transform_id: str
     status: str
     jobs: list[Job]
+    verification: VerificationView | None = None
+
+
+def _verification_view(report: VerificationReport) -> VerificationView:
+    """Fold a VerificationReport into the small summary the status endpoint returns."""
+    summary = report.summary
+    line = report.summarise() if report.ok else (report.warnings[0] if report.warnings else "")
+    return VerificationView(
+        ok=report.ok,
+        line=line,
+        total=summary.total,
+        supported=summary.supported,
+        unsupported=summary.unsupported,
+        agree=summary.agree,
+        conflict=summary.conflict,
+        orphan=summary.orphan,
+    )
 
 
 class ArtefactEntry(BaseModel):
@@ -70,7 +101,13 @@ def _aggregate(jobs: list[Job]) -> str:
     return "FAILED"
 
 
-def _spawn_execution(request: Request, transform_id: str, out_root: Path) -> None:
+def _spawn_execution(
+    request: Request,
+    transform_id: str,
+    out_root: Path,
+    operator: str | None,
+    verification_params: dict[str, Any] | None,
+) -> None:
     """Schedule execute() as a tracked background task so it is not garbage collected."""
     manager: ModelManager = request.app.state.manager
     store: Store = request.app.state.store
@@ -86,6 +123,8 @@ def _spawn_execution(request: Request, transform_id: str, out_root: Path) -> Non
             store=store,
             out_root=out_root,
             strict_airgap=strict,
+            operator=operator,
+            verification_params=verification_params,
         )
     )
     tasks.add(task)
@@ -112,7 +151,13 @@ async def create_transform(
         transform_id, jobs = await prepare(body, agents=agents, store=store)
     except ConfigError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    _spawn_execution(request, transform_id, config.db_path.parent / "outputs")
+    _spawn_execution(
+        request,
+        transform_id,
+        config.db_path.parent / "outputs",
+        body.operator,
+        config.policy.get("verification", {}),
+    )
     return TransformAccepted(
         transform_id=transform_id,
         status="accepted",
@@ -128,7 +173,13 @@ async def get_transform(
     jobs = await store.list_jobs_for_transform(transform_id)
     if not jobs:
         raise HTTPException(status_code=404, detail=f"transform {transform_id!r} not found")
-    return TransformStatus(transform_id=transform_id, status=_aggregate(jobs), jobs=jobs)
+    report = await store.get_verification_report(transform_id)
+    return TransformStatus(
+        transform_id=transform_id,
+        status=_aggregate(jobs),
+        jobs=jobs,
+        verification=_verification_view(report) if report else None,
+    )
 
 
 @router.get("/transforms/{transform_id}/artefacts")

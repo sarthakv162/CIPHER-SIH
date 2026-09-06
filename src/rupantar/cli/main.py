@@ -10,6 +10,7 @@ import typer
 
 if TYPE_CHECKING:
     from rupantar.core.schemas import Job
+    from rupantar.verify.report import VerificationReport
 
 app = typer.Typer(
     add_completion=False,
@@ -65,6 +66,10 @@ def transform(
         bool,
         typer.Option("--strict-airgap", help="Abort a job if a non-loopback connection appears."),
     ] = False,
+    operator: Annotated[
+        str | None,
+        typer.Option("--operator", help="Who is running this job (falls back to $USER)."),
+    ] = None,
     out_dir: Annotated[Path, typer.Option("--out-dir", help="Output root directory.")] = Path(
         "data/outputs"
     ),
@@ -76,7 +81,9 @@ def transform(
     if not paths:
         typer.echo("pass at least one --text or --source file")
         raise typer.Exit(2)
-    jobs = asyncio.run(_transform(paths, output, profile, stream, strict_airgap, out_dir))
+    jobs, verification_line = asyncio.run(
+        _transform(paths, output, profile, stream, strict_airgap, operator, out_dir)
+    )
     failed = 0
     for job in jobs:
         if job.status.value == "FAILED":
@@ -84,6 +91,8 @@ def transform(
             typer.echo(f"FAILED {job.artefact_type.value}: {job.error}")
         else:
             typer.echo(job.artefact_path)
+    if verification_line:
+        typer.echo(verification_line)
     if failed == len(jobs):
         raise typer.Exit(1)
 
@@ -94,9 +103,10 @@ async def _transform(
     profile: str | None,
     stream: bool,
     strict_airgap: bool,
+    operator: str | None,
     out_dir: Path,
-) -> list[Job]:
-    """Load config, build the manager and agents, and run one batch transform."""
+) -> tuple[list[Job], str | None]:
+    """Load config, build the manager and agents, run one batch transform and its verification."""
     from rupantar.agents.loader import load_agents
     from rupantar.core.config import Env, load_config
     from rupantar.core.schemas import ArtefactType, SourceInput, SourceKind, TransformRequest
@@ -111,12 +121,13 @@ async def _transform(
     request = TransformRequest(
         sources=[SourceInput(kind=SourceKind.file, path=str(p)) for p in paths],
         output_types=[ArtefactType(part.strip()) for part in output.split(",") if part.strip()],
+        operator=operator,
     )
     store = Store(config.db_path)
     await store.connect()
     try:
         async with manager:
-            return await run_batch(
+            jobs = await run_batch(
                 request,
                 manager=manager,
                 agents=agents,
@@ -124,9 +135,23 @@ async def _transform(
                 out_root=out_dir,
                 stream=stream,
                 strict_airgap=strict_airgap,
+                operator=operator,
+                verification_params=config.policy.get("verification", {}),
             )
+        report = await store.get_verification_report(jobs[0].transform_id) if jobs else None
+        return jobs, _verification_line(report)
     finally:
         await store.close()
+
+
+def _verification_line(report: VerificationReport | None) -> str | None:
+    """The one-line verification summary printed after a transform, or None if none ran."""
+    if report is None:
+        return None
+    if report.ok:
+        return f"verification: {report.summarise()}"
+    reason = report.warnings[0] if report.warnings else "no report"
+    return f"verification: unavailable — {reason}"
 
 
 _EXT_TO_FORMAT: dict[str, str] = {

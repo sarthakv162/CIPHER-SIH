@@ -77,6 +77,22 @@ uvicorn rupantar.api.app:create_app --factory --host 127.0.0.1 --port 8000
 Every artefact written to disk gets a sibling `<name>.manifest.json` with the source SHA-256,
 model file SHA + quant, prompt version, generation params, and timestamps.
 
+### Cross-artefact verification
+
+After every transform's artefacts are generated (while the brain lease is still warm), Rupantar
+makes exactly two extra brain calls, total, to trace factual claims back to the source: one call
+extracts every atomic claim across every requested artefact, one call checks each claim against
+the source evidence pack (`SUPPORTED` / `UNSUPPORTED`, with the evidence IDs) and cross-checks
+claims against each other (`AGREE` / `CONFLICT` / `ORPHAN`). The result lands in every artefact's
+`.manifest.json` under `verification`, in `GET /transforms/{id}` as a one-line summary, and on the
+CLI as `verification: 23 claims · 21 supported · 1 unsupported · 1 CONFLICT`.
+
+**This does not guarantee correctness.** It traces factual statements to source evidence and
+flags what it could not substantiate — a claim can be `SUPPORTED` and still wrong if the source
+itself is wrong, and an `UNSUPPORTED` claim may still be true but simply absent from the dossier.
+Treat it as a triage aid, not a certification. Disable it (skips both brain calls, zero added
+latency) via `configs/policy.yaml:verification.enabled: false`.
+
 ## 4. Development
 
 ```bash

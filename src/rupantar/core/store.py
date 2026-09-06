@@ -12,12 +12,18 @@ import aiosqlite
 
 from rupantar.core.errors import StoreError
 from rupantar.core.schemas import Job, SourceDossier, TransformRequest
+from rupantar.verify.report import VerificationReport
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS dossiers (
     id         TEXT PRIMARY KEY,
     created_at TEXT NOT NULL,
     data_json  TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS verification_reports (
+    transform_id TEXT PRIMARY KEY,
+    created_at   TEXT NOT NULL,
+    data_json    TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS transforms (
     id         TEXT PRIMARY KEY,
@@ -105,6 +111,23 @@ class Store:
         ) as cursor:
             row = await cursor.fetchone()
         return SourceDossier.model_validate_json(row["data_json"]) if row else None
+
+    async def save_verification_report(self, transform_id: str, report: VerificationReport) -> None:
+        """Insert or replace one verification report row, keyed by transform."""
+        await self.connection.execute(
+            "INSERT OR REPLACE INTO verification_reports "
+            "(transform_id, created_at, data_json) VALUES (?, ?, ?)",
+            (transform_id, datetime.now(UTC).isoformat(), report.model_dump_json()),
+        )
+        await self.connection.commit()
+
+    async def get_verification_report(self, transform_id: str) -> VerificationReport | None:
+        """Return the verification report for a Transform, or None if none has run yet."""
+        async with self.connection.execute(
+            "SELECT data_json FROM verification_reports WHERE transform_id = ?", (transform_id,)
+        ) as cursor:
+            row = await cursor.fetchone()
+        return VerificationReport.model_validate_json(row["data_json"]) if row else None
 
     async def create_transform(self, transform_id: str, request: TransformRequest) -> None:
         """Persist one Transform (the batch request) under the given id."""

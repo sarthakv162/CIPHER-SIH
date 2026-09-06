@@ -27,6 +27,7 @@ TransformRequest
   sources: list[SourceInput]        # non-empty
   output_types: list[ArtefactType]  # non-empty, de-duplicated, order preserved
   params: GenerationParams
+  operator: str | None = None       # who ran the job; falls back to $USER then "unknown" (runner.resolve_operator)
 
 ArtefactType  (enum)
   executive_summary | advisory | linkedin_post | x_thread
