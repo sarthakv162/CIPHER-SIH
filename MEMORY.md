@@ -12,8 +12,8 @@
 | Field | Value |
 |---|---|
 | Current phase | **4 — Renderers (not started)** |
-| Last session | 2026-09-06 — Phase 3 shipped (agents, orchestration, `api/`) |
-| Last commit | `phase-3: artefact agents, orchestration, api` |
+| Last session | 2026-09-06 — perf session (7-artefact 765 s → `-ngl 99` + `--parallel 1` fix) |
+| Last commit | `perf: fix -ngl 0 CPU-only + pin --parallel 1` |
 | `make check` status | **green** (ruff + format + mypy 33 files + 106 unit + 9 inv / 3 inv skeleton; slow lane `pytest -m slow` → 3 pass, ~14 min on loaded box) |
 | Active hardware profile | `laptop-16gb` |
 | Models present on disk | **brain** only — `models/brain/Qwen3-4B-Instruct-2507-Q4_K_M.gguf` (2.5 GB, sha `3605803b…`); vlm/asr/tts absent |
@@ -99,7 +99,7 @@ Anything you did differently from the plan, and why. One line each. Empty is fin
 - **Phase 2: `runtime_stub.py` extended to speak `/v1/chat/completions`** (OpenAI envelope; canned content from `RUPANTAR_STUB_COMPLETION` = literal or `@file`, else echoes the last user message; SSE frames on `stream`). Not frozen. `tests/unit/test_runtime_stub.py` updated to the new POST shape.
 - **Phase 2: real llama-server boot test moved** from `tests/unit/test_runtime_llama.py` (where it was an unconditional `pytest.skip` lie) to `tests/integration/test_runtime_llama_real.py` (`@pytest.mark.slow` + `skipif` on binary/GGUF). Keeps `make check` model-free; it now boots a real server, health-checks, SIGTERMs, asserts the pid is gone.
 - **Phase 2: `transform`/`run_single` use `Registry.from_config(verify=False)`** to skip the 2.5 GB startup SHA-256; `llama-server` still fails loudly if the GGUF is missing.
-- **Phase 2: `--n-gpu-layers` left at 0 for `laptop-16gb`.** No-op on Apple Silicon (llama.cpp uses Metal by default; 36.6 vs 36.8 tok/s). `titan-24gb` keeps 99 for Linux/CUDA. `models.yaml brain.notes` records this.
+- ~~Phase 2: `--n-gpu-layers` left at 0 for `laptop-16gb` (thought a no-op)~~ **WRONG — reverted 2026-09-06 perf session.** `-ngl 0` forces CPU-only (~2× slower). `models.yaml` laptop-16gb brain+vlm now `-ngl 99 --parallel 1`; all profiles pin `--parallel 1`. See §7 / §8 / §9.
 - **Post-Phase-2 (2026-09-06): hand-rolled `agents/grammar.py` + `tests/unit/test_grammar.py` deleted**, replaced by `response_format: json_schema`. Benchmark showed no speed difference between GBNF, json_object, json_schema, and no constraint (see §9). `docs/SCHEMAS.md` line about "GBNF grammar generated from its JSON Schema" edited to name `response_format: json_schema` instead — a mechanism note in the locked doc, no field/model/bound changed. `PLAN.md` Phase 2 build list updated.
 - **Phase 3: `orchestrator/runner.py` split `prepare()` / `execute()` / `run_batch`.** PLAN's Phase 2 named only `runner.py` (single-job); the API needs a two-phase entry (persist PENDING → return 202 → run in background). `prepare()` validates the source path *before* persisting anything (old `run_single` persisted the job first). `run_single`/`run_batch` behaviour unchanged.
 - **Phase 3: `planner.plan()` mints the `transform_id` itself** (no `transform_id` param); `execute()` rebuilds dossier text from the stored `TransformRequest` (there is no transform→dossier id link in `store.py` — PLAN allowed either).
@@ -132,6 +132,7 @@ Decisions you could not make on your own. Do not guess — list them here and co
 - Should `make check-all` deselect `-m slow`? It currently runs the real-model integration tests when models are on disk. Fixing it touches the `Makefile` **and** `PLAN.md` §7 (the single shared `make check` / `check-all` definition) and `CLAUDE.md`. Left as-is for now; `make check` itself is unaffected.
 - ~~Schema-enforcement mechanism~~ **RESOLVED 2026-09-06.** Human chose native `response_format: json_schema`; `agents/grammar.py` deleted. See §4 / §5 / §9. Speed was a wash across all options; the call was made on maintenance + guarantee strength for the 6 remaining Phase 3 schemas.
 - **Untested for Phase 3:** unconstrained/constrained *validation failure rate* was only measured for `ExecutiveSummary` (0/32). Advisory / Presentation / VideoPackage are structurally harder (nested models, enums, int fields). If the retry-once path fires often on those, revisit temperature or prompt, not the constraint mechanism.
+- ~~7-artefact run is 765 s~~ **RESOLVED 2026-09-06 (perf session).** Root cause: `models.yaml` `--n-gpu-layers 0` (CPU-only) + that test running on a heavily-loaded dev box. Pipeline itself is efficient (0.7 s dead time, prefix cache works, 18 s total prompt-eval). Fixed `-ngl 0 → 99` + `--parallel 1`. Projected with the fix: loaded box ~320 s / demo-4 ~167 s; a quiet demo machine at ~25–35 tok/s → 7 in ~140–180 s, demo-4 in ~70–90 s. **The real demo hardware, measured quiet, is the remaining unknown** — if demo-4 is still >90 s there, tighten the `advisory`/`presentation`/`video_package` prompts for brevity (they currently emit 668/815/903 tok; caps are 2400/2600/2600 so lowering caps alone won't help — the prompt must ask for concision). `--threads` (6 of 6P+4E cores) also untested on quiet HW.
 
 ---
 
@@ -161,7 +162,9 @@ Measured, not assumed. Update whenever you measure something new.
 | One `executive_summary` end-to-end (CLI, laptop-16gb) | ~53 s wall morning; ~70–103 s under later dev-box load. DoD is < 90 s — re-measure quiet. | 2026-09-06 |
 | **All 7 artefacts, one request, real brain** | **765 s wall** (`test_multi_artefact_real`, heavily loaded box), **exactly 1 brain `LOAD_START`**, 0 evict/reload, all 7 schema-valid. ~9 K generated tokens total. On quiet demo HW expect materially less; still the number to beat for the demo. | 2026-09-06 |
 | `fastapi` / `starlette` / `uvicorn` | 0.127.1 / 0.50.0 / 0.52.4 (pin `fastapi>=0.115,<0.128` — see §5) | 2026-09-06 |
-| `--n-gpu-layers 99` vs `0`, Apple Silicon | no measurable difference — llama.cpp uses Metal by default. Flag kept only for titan-24gb / Linux-CUDA. | 2026-09-06 |
+| `--n-gpu-layers` on Apple Silicon — **`-ngl 0` was a real mistake** | `-ngl 0` forces CPU-only: **~7 tok/s gen, ~21 tok/s prompt-eval, 6.6 s boot**. `-ngl 99` (or the flag unset) → Metal: **~13 tok/s gen, ~125 tok/s prompt-eval, 1.5–2 s boot**. ~1.9× / ~6× / ~3×. The earlier "36.6 vs 36.8, no difference" compared `-ngl 99` vs *unset* (both Metal) — `-ngl 0` was never tested. `models.yaml` fixed to `-ngl 99` for laptop-16gb brain+vlm (2026-09-06). | 2026-09-06 |
+| `--parallel N` default | `-1` = auto → **4 slots**, each capped at `ctx/4` = 2048 tok (would overflow a real multimodal dossier). Running the 7 agents concurrently across 4 slots gave only ~20 % wall improvement (290 s vs 363 s) at 3× worse per-artefact latency (4–8 vs 13 tok/s) and cache loss on ~3 agents. `models.yaml` now pins `--parallel 1`: one slot, full 8192 ctx, perfect prefix reuse, low latency. | 2026-09-06 |
+| 7-artefact run, per-agent (Metal, `--parallel 1`, `ai_policy_brief.md`, loaded box ~13 tok/s) | prompt/gen tokens: exec 752/506, advisory 345/668, linkedin 214/467, x_thread 196/328, presentation 242/815, infographic 282/442, video 273/903. cache hit ≈ 556 tok for agents 2–7. **Total gen ≈ 306 s, prompt-eval ≈ 18 s, dead time 0.7 s, wall ≈ 324 s.** ~4130 generated tokens total; demo-4 subset ≈ 2000 tok / ~167 s. | 2026-09-06 |
 | llama-server prefix caching | per-slot; `cache_prompt: true` reuses the longest common token prefix across requests to the same slot. Agents put the identical dossier first so agents 2–7 skip re-evaluating it. | 2026-09-06 |
 | Peak RSS, full multimodal run | unknown | — |
 
@@ -183,6 +186,17 @@ Changed in this file:
 Next session should start with:
 -
 ```
+
+### 2026-09-06 — Perf session — the 765 s 7-artefact run (pre-Phase-4)
+Instrumented a full 7-agent run (raw httpx, full llama-server `timings`), tested concurrency and `--n-gpu-layers`.
+Findings:
+- **`--n-gpu-layers 0` in `models.yaml` was forcing CPU-only.** `-ngl 0` ≈ 7 tok/s; `-ngl 99`/unset (Metal) ≈ 13 tok/s + 6× faster prompt-eval + 3× faster boot. The Phase 3 765 s run went through `ModelManager` → those args → CPU. The old "no difference" note compared `-ngl 99` vs unset, never `-ngl 0`.
+- **Pipeline is not scaling badly.** Instrumented (Metal): total gen 306 s, prompt-eval 18 s, dead time 0.7 s, wall 324 s. Prefix cache works (agents 2–7 hit ~556 cached tok). 765 vs 324 was ~all machine load (7 vs 13 tok/s on a contended box).
+- **Concurrency across the 4 auto-slots doesn't help here** — CPU-bound at 6 threads, ~20 % wall gain for 3× worse per-artefact latency + cache loss. `--parallel 1` is better (full ctx, perfect cache).
+- 4-variant enforcement table (GBNF/json_object/json_schema/none): all ~7 tok/s, 8/8 valid, **0 unconstrained failures** — no fences, no retries. (ExecutiveSummary only.)
+Did: `models.yaml` — laptop-16gb brain+vlm `-ngl 0/none → -ngl 99 --parallel 1`; titan brain+vlm `+--parallel 1`. Updated `brain.notes`. `make check` still green (config-only change). Benchmark scripts in scratchpad (not committed).
+Recommendation to human: land the config fix; **measure a clean 7-artefact + demo-4 run on the actual demo laptop, quiet**, before deciding on prompt-brevity edits. Targets (7 < 240 s, demo-4 < 90 s) are plausible on quiet HW with the fix alone.
+Next: Phase 4 (renderers) — unless the human wants prompt-brevity work first.
 
 ### 2026-09-06 — Phase 3 — artefact agents + orchestration + `api/` shipped
 Did (two builder subagents + lead coordination):
@@ -232,40 +246,9 @@ Changed in this file:
 Next session should start with:
 - Phase 3 — All artefact agents. `client.py`/`grammar.py`/`base.py`/`loader.py` already general; add the 6 remaining `configs/agents/*.yaml` + prompts, `orchestrator/{planner,scheduler}.py`, and the `api/` package (FastAPI + uvicorn land here). Assert: one 7-output request → exactly one `brain` load, zero reloads. Watch GBNF gen speed (~17 tok/s) for the multi-artefact wall time.
 
-### 2026-09-06 — Phase 1 — Model Manager shipped, INV-1/2/7/8 real and green
-Did:
-- Built `src/rupantar/models/`: `runtime_base.py` (Runtime ABC, `terminate_process` SIGTERM→grace→SIGKILL, `wait_healthy`, `read_rss_bytes`), `_ports.py` (bind-test allocator), `runtime_stub.py` (child stdlib `http.server`, `python -m` entrypoint — zero model files), `registry.py` (`ModelEntry` + `Registry.from_config`; skips file/SHA when `runtime == "stub"`; real missing → `ModelFileMissingError` naming `scripts/fetch_models.sh`), `_support.py` (Lease/Event/ModelState/sinks), `manager.py` (async `acquire()` CM + `obtain/release`, refcount, one `asyncio.Condition` serialising load/evict/reap, `max_heavy_resident` eviction that waits for real process exit via `wait_process_gone`, LRU + idle-TTL reaper, external-death respawn, `status()`), `runtime_llama.py` (SIGKILL grace 10s; real-binary tests `@pytest.mark.slow`).
-- `core/errors.py`: +`ModelError`/`UnknownModelError`/`ModelFileMissingError`/`RuntimeStartError`/`NoFreePortError`/`AcquireTimeoutError` (additive).
-- `core/store.py`: +`events` table + `append_event`/`list_events`.
-- `cli/main.py`: `models status` prints the residency table (deviation: not the planned `api/routes/models.py`).
-- Made INV-2 (`test_single_resident`), INV-7 (`test_single_entry_point`), INV-8 (`test_unload_kills_process`) real. Also implemented INV-1 (`test_no_inprocess_models`) as a module-scope import scan (was a lying skip skeleton).
-- Ran builder → verifier (PASS w/ warnings) → arch-guard (CLEAN).
-Verified:
-- `make check` → ruff ✓, format ✓ (38 files), mypy ✓ (18 files), `pytest tests/unit` → 84 passed / 1 slow-skip, `pytest tests/inv` → 6 passed / 4 skeleton
-- Phase 1 verify `pytest tests/inv/test_single_resident.py tests/inv/test_unload_kills_process.py -q` → 2 passed
-- `pytest -m slow` → 1 skipped (llama-server absent), 0 errors
-- zero `.gguf`/`.onnx` on disk; no stray child procs; `models status` → 4-row table; `--help` → 4 commands
-- `core/schemas.py` + `core/artefacts.py` untouched
-Changed in this file:
-- §1 phase→2, commit, check counts. §2 Phase 1 → DONE with build summary; §2 Phase 2 note (HTTP client gap). §3 INV-1/2/7/8 → PASS with method. §5 +7 deviations. §6 +2 blockers (llama unverified, laptop-16gb paths absent). §8 +3 env facts. §9 this block.
-Next session should start with:
-- Phase 2 — Text generation path. First decision: HTTP client for `models/client.py` (httpx vs stdlib `urllib`+`asyncio.to_thread`) — Phase 1 added no HTTP dep. Record the choice in §10 + `requirements.txt` if httpx. Use `test-stub` profile / stub runtime for all non-slow tests.
-
-### 2026-09-06 — Phase 0 — scaffold and contracts shipped, `make check` green
-Did:
-- Applied the user's rulings A–O to the docs: rewrote `docs/SCHEMAS.md` (moved from root; added `SourceInput`/`TransformRequest`/`Job`/`JobStatus`/`ArtefactType`; removed `index` fields; `priority`+`ioc_type` enums; `artefact_type` → `Literal`; `confidence_notes` default `""`; language best-effort note). Updated `PLAN.md` (§2 Python 3.11-exact, §3 layout, §4 Transform vs Job, Phase 0 build list, Phase 1 stub-skip note, Phase 3 routes, Phase 8 version assert, §7 single `make check` def + fixture accumulation, rule 10 → `main`). Aligned `CLAUDE.md` `make check` wording + added 3.11 / frozen-contract bullets.
-- Repo housekeeping: `master` → `main`; `SCHEMAS.md` → `docs/`, agent `.md` → `.claude/agents/`, `models.yaml` → `configs/` (fixed 9 invalid `1_000_000` YAML literals); removed committed `.DS_Store`; `uv python install 3.11` + `.venv` + `.python-version`.
-- Built Phase 0 via a builder subagent: `pyproject.toml` (src layout, ruff/mypy+pydantic-plugin/pytest config), `requirements.txt` + lock stub, `Makefile`, `.gitignore`, `README`, `configs/policy.yaml`; `src/rupantar/` — `__init__`, `py.typed`, `core/{errors,config,schemas,artefacts,store}.py`, `cli/{__main__,main}.py`; `tests/` — conftest, 6 unit modules (57 tests), 8 inv skip-skeletons, fixtures (2 articles, PNG, 30s MP4, 7 artefact JSONs); `scripts/{make_fixtures(real),fetch_models,vendor_wheels,demo}.sh`.
-Verified:
-- `make check` → ruff ✓, `ruff format --check` ✓ (26 files), `mypy src` ✓ (10 files), `pytest tests/unit` → 57 passed, `pytest tests/inv` → 8 skipped
-- `python -m rupantar.cli --help` → lists exactly transform, convert, selfcheck, models
-- All 7 artefact models round-trip their fixture; re-parse stable
-- INV-1/4/7/8 greps over `src/` → clean (no torch/transformers/subprocess/gc-unload/network libs)
-- Largest src file `core/artefacts.py` = 356 lines (< 400); no function > ~25 lines
-Changed in this file:
-- Rewrote §1–§9 for Phase 0 completion; added frozen-contract + Python-3.11 + Transform/Job decisions; recorded 4 deviations; added env facts (Python, ffmpeg 8.1.2, llama-server/piper absent).
-Next session should start with:
-- Phase 1 — Model Manager. Restate its Definition of Done, list files. Note: `registry.py` skips existence/SHA checks when `runtime == "stub"`; `test-stub` profile in `configs/models.yaml` has no `path` keys. Consider installing `llama-server` for the real-model checks, or stay on `runtime_stub`.
+### 2026-09-06 — Phases 0 & 1 (compressed)
+- **Phase 0** — scaffold + frozen contracts (`core/{schemas,artefacts,store,config,errors}.py`, Typer stubs, 8 inv skeletons, fixtures). Applied docs rulings A–O; repo housekeeping (`master`→`main`, dirs, `.venv` 3.11). `make check` green, 57 unit.
+- **Phase 1** — `models/` package: `runtime_base` (Runtime ABC, SIGTERM→SIGKILL), `runtime_stub` (child stdlib http.server), `registry` (stub skips file/SHA), `manager` (`acquire()` CM, refcount, one `asyncio.Condition`, LRU+TTL reaper, single-heavy eviction, external-death respawn), `runtime_llama`. `core/errors.py` +6 model errors. `core/store.py` +`events` table. `models status` CLI (not the API route — deviation). INV-1/2/7/8 made real. builder→verifier→arch-guard. 84 unit / 6 inv.
 
 ---
 
