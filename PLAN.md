@@ -393,6 +393,7 @@ Also build:
   2. `ffmpeg`, `llama-server`, `piper` on PATH with versions
   3. Every model file in the active profile: exists, size, SHA-256 matches registry
   4. Ports in range are free
+  4b. **Runtime args vs platform.** For each `llama` model in the active profile, parse its `args` and check them against the detected platform: **fail loudly if `--n-gpu-layers 0` (or the flag absent on a build that needs it) while Metal or CUDA is available** — this silently forced CPU-only inference and cost ~2× throughput undetected through Phases 1–3 (see `MEMORY.md` 2026-09-06 perf session). Also warn if `--parallel` is unset (auto-splits the context across 4 slots) or if `--ctx-size` / `--parallel` would give a slot less context than `max_tokens` of the largest agent.
   5. Model Manager: load `brain`, one-token generation, unload, assert RSS returns to baseline ±200 MB
   6. Each renderer produces a sample file
   7. Each converter round-trips a fixture

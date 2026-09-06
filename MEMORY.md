@@ -12,8 +12,8 @@
 | Field | Value |
 |---|---|
 | Current phase | **4 — Renderers (not started)** |
-| Last session | 2026-09-06 — perf session (7-artefact 765 s → `-ngl 99` + `--parallel 1` fix) |
-| Last commit | `perf: fix -ngl 0 CPU-only + pin --parallel 1` |
+| Last session | 2026-09-06 — clean perf measurement (idle, purged cache); `-ngl` fix confirmed, targets still missed — see §7 |
+| Last commit | `perf: record clean idle-machine baseline; selfcheck arg check` |
 | `make check` status | **green** (ruff + format + mypy 33 files + 106 unit + 9 inv / 3 inv skeleton; slow lane `pytest -m slow` → 3 pass, ~14 min on loaded box) |
 | Active hardware profile | `laptop-16gb` |
 | Models present on disk | **brain** only — `models/brain/Qwen3-4B-Instruct-2507-Q4_K_M.gguf` (2.5 GB, sha `3605803b…`); vlm/asr/tts absent |
@@ -132,7 +132,8 @@ Decisions you could not make on your own. Do not guess — list them here and co
 - Should `make check-all` deselect `-m slow`? It currently runs the real-model integration tests when models are on disk. Fixing it touches the `Makefile` **and** `PLAN.md` §7 (the single shared `make check` / `check-all` definition) and `CLAUDE.md`. Left as-is for now; `make check` itself is unaffected.
 - ~~Schema-enforcement mechanism~~ **RESOLVED 2026-09-06.** Human chose native `response_format: json_schema`; `agents/grammar.py` deleted. See §4 / §5 / §9. Speed was a wash across all options; the call was made on maintenance + guarantee strength for the 6 remaining Phase 3 schemas.
 - **Untested for Phase 3:** unconstrained/constrained *validation failure rate* was only measured for `ExecutiveSummary` (0/32). Advisory / Presentation / VideoPackage are structurally harder (nested models, enums, int fields). If the retry-once path fires often on those, revisit temperature or prompt, not the constraint mechanism.
-- ~~7-artefact run is 765 s~~ **RESOLVED 2026-09-06 (perf session).** Root cause: `models.yaml` `--n-gpu-layers 0` (CPU-only) + that test running on a heavily-loaded dev box. Pipeline itself is efficient (0.7 s dead time, prefix cache works, 18 s total prompt-eval). Fixed `-ngl 0 → 99` + `--parallel 1`. Projected with the fix: loaded box ~320 s / demo-4 ~167 s; a quiet demo machine at ~25–35 tok/s → 7 in ~140–180 s, demo-4 in ~70–90 s. **The real demo hardware, measured quiet, is the remaining unknown** — if demo-4 is still >90 s there, tighten the `advisory`/`presentation`/`video_package` prompts for brevity (they currently emit 668/815/903 tok; caps are 2400/2600/2600 so lowering caps alone won't help — the prompt must ask for concision). `--threads` (6 of 6P+4E cores) also untested on quiet HW.
+- **Demo latency target — PARTLY OPEN.** `-ngl 0 → 99` fix landed (root cause of the 765 s; was CPU-only). Clean idle measurement: 7-artefact **304 s** (target < 240), demo-4 **~150 s** (target < 90). This machine tops out at ~14.4 tok/s; demo-4 needs ~21. IQ4_XS quant tried and **rejected (8 % slower)**. Human ruled out prompt-trimming. **Awaiting human decision** between: (a) demo-3 (drop `advisory`) ≈ 95 s; (b) speculative decoding (0.6 B draft, `--model-draft`, real work); (c) confirm/upgrade demo hardware — M3/M4 Pro would clear both targets; (d) accept ~150 s with streaming. Until then, Phase 4 can proceed; the perf number is not a Phase 4 blocker.
+- Exact demo hardware still unpinned (was already here). Now load-bearing: at ~14 tok/s neither latency target is met; at ~28 tok/s both are. `--threads` (6 used of 6 P + 4 E cores) untested for tuning.
 
 ---
 
@@ -154,19 +155,21 @@ Measured, not assumed. Update whenever you measure something new.
 | Phase 1 test suite | no stray `runtime_stub`/`llama-server` procs after run; ports 8100–8199 clean | 2026-09-06 |
 | Free RAM | ~1 GB free+inactive under load (not a clean idle measure) | 2026-09-06 |
 | brain GGUF | `models/brain/Qwen3-4B-Instruct-2507-Q4_K_M.gguf`, 2 497 281 120 B, sha256 `3605803b982cb64aead44f6c1b2ae36e3acdb41d8e46c8a94c6533bc4c67e597` | 2026-09-06 |
-| brain llama-server boot → healthy | ~7.5 s first, ~4.0 s warm (GGUF page-cache hot; no true cold-disk figure — `purge` needs sudo) | 2026-09-06 |
-| brain prompt eval | ~40 tok/s (752-tok dossier prompt); with `cache_prompt` a repeat prompt is ~0 | 2026-09-06 |
-| brain generation — **constraint mechanism is NOT the cost** | GBNF, `response_format:json_object`, `response_format:json_schema`, and *no constraint* all measured **within noise of each other** (see grammar-investigation block in §9). Interleaved: 6.9 / 6.9 / 6.9 tok/s. First (staggered) run: 6.6 / 7.7 / 7.8 / 7.2. GBNF is at most ~10 % slower; json_schema == unconstrained. | 2026-09-06 |
-| brain generation, absolute tok/s | **swings 2–3× with machine load** — 17 tok/s (single gen, quieter moment) down to ~7 tok/s (sustained, dev box running node/vite servers + a 54 %-CPU `python@3.14`). `llama-bench` (synthetic, tiny prompt) ~37 tok/s. **Re-measure on the real demo hardware, quiet.** | 2026-09-06 |
-| artefact JSON validity, real brain | `ExecutiveSummary`: 0 failures in 32 runs incl. unconstrained. **All 7 artefact types validated first try** in the Phase 3 real run (Advisory/Presentation/VideoPackage included), `response_format:json_schema`, temp 0.3–0.45. | 2026-09-06 |
-| One `executive_summary` end-to-end (CLI, laptop-16gb) | ~53 s wall morning; ~70–103 s under later dev-box load. DoD is < 90 s — re-measure quiet. | 2026-09-06 |
-| **All 7 artefacts, one request, real brain** | **765 s wall** (`test_multi_artefact_real`, heavily loaded box), **exactly 1 brain `LOAD_START`**, 0 evict/reload, all 7 schema-valid. ~9 K generated tokens total. On quiet demo HW expect materially less; still the number to beat for the demo. | 2026-09-06 |
+| **CLEAN PERF BASELINE** — the rows below are **idle machine, `sudo purge`d page cache**, `-ngl 99 --parallel 1 --ctx-size 8192 --threads 6`. Earlier contended/`-ngl 0` figures were deleted as misleading. | ↓ | 2026-09-06 |
+| brain cold boot → healthy | **2.47 s** (from a purged page cache) | 2026-09-06 |
+| brain warm boot → healthy | **1.03 s** | 2026-09-06 |
+| brain generation, real artefacts | **~14.4 tok/s** — median across the 7 agents, ctx 8192, `json_schema` constraint, temp 0.3–0.45. Flat across agents (14.2–14.6). NOT contended — this is what this machine does. `llama-bench`'s ~37 tok/s is a tiny-context synthetic and does not reflect real use. | 2026-09-06 |
+| brain prompt eval | first agent pays the full ~750-tok dossier eval (folded into its ~40 s wall); agents 2–7 hit ~556 cached tok (byte-identical dossier prefix) and evaluate only 200–350 new. Total prompt-eval across a 7-run ≈ 18 s. | 2026-09-06 |
+| **7-artefact run, one request** (`ai_policy_brief.md`, fresh server) | **304 s wall**, 4133 generated tokens, 1 brain `LOAD_START`, 0.7 s dead time. Per-agent gen tok / wall s: exec 503/40.4 · advisory 639/46.8 · linkedin 433/31.2 · x_thread 322/23.6 · presentation 764/55.1 · infographic 434/32.0 · video 1038/74.9. | 2026-09-06 |
+| **demo-4 subset** (exec, linkedin, x_thread, advisory), fresh server | **~143–156 s wall** (two idle runs; ~9 % run-to-run variance), ~2000 gen tok — **MISSES the < 90 s target** (needs ~21 tok/s; this machine does ~14.4). | 2026-09-06 |
+| IQ4_XS quant vs Q4_K_M (demo-4, idle) | **IQ4_XS is 8 % SLOWER** — 169 s vs 156 s, 13.3 vs 14.5 tok/s; saves 0.3 GB RSS (3.96 vs 4.26). IQ dequant compute outweighs the 9 % smaller file on this Metal build. **Rejected; keep Q4_K_M.** File deleted (re-download from `unsloth/Qwen3-4B-Instruct-2507-GGUF`, sha `cfd15a69…`). | 2026-09-06 |
+| Peak RSS, brain resident (Metal, 8192 ctx) | **4.89 GB** across the whole 7+4 run. Comfortably inside 16 GB — the one-heavy-model thesis holds. | 2026-09-06 |
+| enforcement mechanism cost (GBNF / json_object / json_schema / none) | all within noise of each other; 0 validation failures incl. unconstrained on `ExecutiveSummary` (32 runs). All 7 artefact types validate first try with `json_schema`. See §9 investigation block. | 2026-09-06 |
 | `fastapi` / `starlette` / `uvicorn` | 0.127.1 / 0.50.0 / 0.52.4 (pin `fastapi>=0.115,<0.128` — see §5) | 2026-09-06 |
 | `--n-gpu-layers` on Apple Silicon — **`-ngl 0` was a real mistake** | `-ngl 0` forces CPU-only: **~7 tok/s gen, ~21 tok/s prompt-eval, 6.6 s boot**. `-ngl 99` (or the flag unset) → Metal: **~13 tok/s gen, ~125 tok/s prompt-eval, 1.5–2 s boot**. ~1.9× / ~6× / ~3×. The earlier "36.6 vs 36.8, no difference" compared `-ngl 99` vs *unset* (both Metal) — `-ngl 0` was never tested. `models.yaml` fixed to `-ngl 99` for laptop-16gb brain+vlm (2026-09-06). | 2026-09-06 |
 | `--parallel N` default | `-1` = auto → **4 slots**, each capped at `ctx/4` = 2048 tok (would overflow a real multimodal dossier). Running the 7 agents concurrently across 4 slots gave only ~20 % wall improvement (290 s vs 363 s) at 3× worse per-artefact latency (4–8 vs 13 tok/s) and cache loss on ~3 agents. `models.yaml` now pins `--parallel 1`: one slot, full 8192 ctx, perfect prefix reuse, low latency. | 2026-09-06 |
-| 7-artefact run, per-agent (Metal, `--parallel 1`, `ai_policy_brief.md`, loaded box ~13 tok/s) | prompt/gen tokens: exec 752/506, advisory 345/668, linkedin 214/467, x_thread 196/328, presentation 242/815, infographic 282/442, video 273/903. cache hit ≈ 556 tok for agents 2–7. **Total gen ≈ 306 s, prompt-eval ≈ 18 s, dead time 0.7 s, wall ≈ 324 s.** ~4130 generated tokens total; demo-4 subset ≈ 2000 tok / ~167 s. | 2026-09-06 |
-| llama-server prefix caching | per-slot; `cache_prompt: true` reuses the longest common token prefix across requests to the same slot. Agents put the identical dossier first so agents 2–7 skip re-evaluating it. | 2026-09-06 |
-| Peak RSS, full multimodal run | unknown | — |
+| llama-server prefix caching | per-slot; `cache_prompt: true` (default on) reuses the longest common token prefix. Agents put the identical dossier first so agents 2–7 skip re-evaluating it — confirmed working (~556 cached tok/agent). | 2026-09-06 |
+| Peak RSS, full multimodal run (vlm+asr+brain) | unknown — brain-alone is 4.89 GB | — |
 
 ---
 
@@ -194,9 +197,17 @@ Findings:
 - **Pipeline is not scaling badly.** Instrumented (Metal): total gen 306 s, prompt-eval 18 s, dead time 0.7 s, wall 324 s. Prefix cache works (agents 2–7 hit ~556 cached tok). 765 vs 324 was ~all machine load (7 vs 13 tok/s on a contended box).
 - **Concurrency across the 4 auto-slots doesn't help here** — CPU-bound at 6 threads, ~20 % wall gain for 3× worse per-artefact latency + cache loss. `--parallel 1` is better (full ctx, perfect cache).
 - 4-variant enforcement table (GBNF/json_object/json_schema/none): all ~7 tok/s, 8/8 valid, **0 unconstrained failures** — no fences, no retries. (ExecutiveSummary only.)
-Did: `models.yaml` — laptop-16gb brain+vlm `-ngl 0/none → -ngl 99 --parallel 1`; titan brain+vlm `+--parallel 1`. Updated `brain.notes`. `make check` still green (config-only change). Benchmark scripts in scratchpad (not committed).
-Recommendation to human: land the config fix; **measure a clean 7-artefact + demo-4 run on the actual demo laptop, quiet**, before deciding on prompt-brevity edits. Targets (7 < 240 s, demo-4 < 90 s) are plausible on quiet HW with the fix alone.
-Next: Phase 4 (renderers) — unless the human wants prompt-brevity work first.
+Did: `models.yaml` — laptop-16gb brain+vlm `-ngl 0/none → -ngl 99 --parallel 1`; titan brain+vlm `+--parallel 1`. Updated `brain.notes`. `PLAN.md` Phase 8 §4b: selfcheck must flag `-ngl 0` while Metal/CUDA available. Benchmark scripts in scratchpad (not committed).
+
+**CLEAN MEASUREMENT (idle machine, `sudo purge`d cache, `-ngl 99 --parallel 1`):**
+- cold boot 2.47 s · warm boot 1.03 s
+- **7-artefact: 304 s wall**, 4133 gen tok, 1 load, 0.7 s dead time — **misses the < 240 s target**
+- **demo-4: ~143–156 s** (9 % run variance), ~2000 gen tok — **misses the < 90 s target**
+- peak RSS (brain, Metal, 8192 ctx): **4.89 GB** — one-model thesis holds easily
+- gen ~**14.4 tok/s flat** — this machine's real ceiling; `llama-bench`'s 37 is a tiny-context synthetic
+- **IQ4_XS quant: 8 % SLOWER** (169 vs 156 s) despite being 9 % smaller — rejected, kept Q4_K_M, file deleted
+Conclusion: the fix roughly halves the earlier 765 s but this machine at 14 tok/s **cannot do 4 artefacts in 90 s** — demo-4 needs ~21 tok/s. Prompt-trimming was ruled out by the human. Remaining levers, all costed: (a) demo-3 not demo-4 (drop `advisory`, the slowest → ~95 s); (b) speculative decoding with a 0.6 B draft model (`--model-draft`, ~1.3–1.8× on JSON, real work, +0.5 GB); (c) confirm the actual demo hardware — an M3/M4 Pro would do 25–35 tok/s and the problem vanishes (§7 already flags demo HW as unknown); (d) accept ~150 s with token streaming (already implemented) so progress is visible.
+Next: **human decision on the demo-4 target** (a/b/c/d above), then Phase 4 (renderers). `-ngl 99` fix stands regardless.
 
 ### 2026-09-06 — Phase 3 — artefact agents + orchestration + `api/` shipped
 Did (two builder subagents + lead coordination):
