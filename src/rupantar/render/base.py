@@ -8,6 +8,7 @@ from typing import Any
 
 from rupantar.core.artefacts import ArtefactBase
 from rupantar.core.errors import RenderError
+from rupantar.render.context import RenderContext
 from rupantar.render.docx_render import render_docx
 from rupantar.render.markdown import render_md
 from rupantar.render.pdf_render import render_pdf
@@ -50,8 +51,12 @@ def render(
     out_dir: Path,
     *,
     formats: Iterable[str] | None = None,
+    context: RenderContext | None = None,
 ) -> list[Path]:
-    """Render `artefact` to each requested format under `out_dir`; return the written paths."""
+    """Render `artefact` to each requested format under `out_dir`; return the written paths.
+
+    Only ``render_video`` consumes ``context``; every other renderer ignores it.
+    """
     atype = _artefact_type(artefact)
     wanted = tuple(formats) if formats is not None else FORMATS.get(atype, ("md",))
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -64,6 +69,10 @@ def render(
                 "or drop the format from FORMATS"
             )
         path = out_dir / f"{atype}.{fmt}"
-        result = renderer(artefact, path)
+        result: list[Path] | None = (
+            render_video(artefact, path, context=context)
+            if renderer is render_video
+            else renderer(artefact, path)
+        )
         written.extend(result or [path])
     return written

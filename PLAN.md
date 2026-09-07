@@ -437,6 +437,17 @@ Also build:
 
 ### Phase 9 — Frontend + output presentation quality *(deferred, do not start unless PLAN.md is updated)*
 
+> **Phase 9a — video presentation quality (AUTHORIZED 2026-09-07, DONE).** The user directed a
+> scoped early slice of this phase covering the `video_package` renderer only: a shared design
+> system (`configs/templates/ntro-formal.yaml` + `render/theme.py`), theme-driven panels
+> replacing the Pillow default-font panels, the infographic chained in as a hero panel
+> (`video_package` → `infographic_spec` dependency edge, internally generated when not
+> requested), real source frames as provenance-carrying b-roll, Pillow data-chart panels from
+> numeric facts, and degradable ffmpeg motion (fade-ins + xfade crossfades; zoompan Ken Burns
+> was attempted and dropped — see MEMORY.md §5). No frontend, no docx/pptx templates, no
+> `template` generation parameter yet — those stay deferred. The rest of Phase 9 below is still
+> not started.
+
 **Dashboard** with source input, output-type checkboxes, generation parameter controls, live job progress, **Model Manager memory visualiser**, artefact downloads, converter panel, egress indicator.
 - Platform-accurate previews with live character counters for the `linkedin_post` and `x_thread` artefacts (X 280/post, LinkedIn 3000, truncation preview).
 

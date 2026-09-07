@@ -9,7 +9,9 @@ shells out to ffmpeg/piper to assemble the video package. `audit/_selfcheck_chec
 exempt on the same grounds: selfcheck check 2 probes `ffmpeg --version` / `llama-server
 --version` / `piper --version` with subprocess.run to report tool versions. It never serves
 inference and starts no model process (the offload probe in check 4b goes through
-ModelManager.acquire like everything else). All exempt modules still must not use Popen /
+ModelManager.acquire like everything else). `render/_video_mux.py` and `render/_video_scene.py`
+are exempt on the same grounds as `render/video_render.py`: they shell out to ffmpeg for mp4
+assembly and b-roll frame extraction. All exempt modules still must not use Popen /
 os.spawn / multiprocessing.
 """
 
@@ -22,6 +24,8 @@ _SRC = Path(__file__).resolve().parents[2] / "src" / "rupantar"
 _MEDIA_TOOL_MODULES = {
     "ingest/video.py",
     "render/video_render.py",
+    "render/_video_mux.py",
+    "render/_video_scene.py",
     "audit/_selfcheck_checks.py",
 }
 _SUBPROCESS_NAME = re.compile(r"\bsubprocess\b")

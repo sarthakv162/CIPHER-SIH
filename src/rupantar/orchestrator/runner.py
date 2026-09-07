@@ -13,9 +13,10 @@ from typing import Any
 from rupantar.agents.base import ArtefactAgent
 from rupantar.audit.egress import scan_egress
 from rupantar.audit.provenance import Manifest, app_version, write_manifest
-from rupantar.core.artefacts import ArtefactBase
+from rupantar.core.artefacts import ArtefactBase, InfographicSpec
 from rupantar.core.errors import AgentError, ConfigError
 from rupantar.core.schemas import (
+    ArtefactType,
     Job,
     JobStatus,
     SourceDossier,
@@ -27,10 +28,14 @@ from rupantar.core.store import Store
 from rupantar.ingest.dossier import assemble_dossier
 from rupantar.models.client import LlamaClient
 from rupantar.models.manager import ModelManager
+from rupantar.orchestrator._video_prep import ensure_infographic_spec, file_source_paths
 from rupantar.orchestrator.planner import plan
 from rupantar.orchestrator.scheduler import schedule
 from rupantar.render.base import FORMATS, render
+from rupantar.render.context import RenderContext
 from rupantar.verify.report import VerificationReport, run_verification
+
+_THEME_NAME = "ntro-formal"
 
 
 def resolve_operator(explicit: str | None = None) -> str:
@@ -55,6 +60,8 @@ class _RunContext:
     agents: Mapping[str, ArtefactAgent]
     dossier_text: str
     dossier_sha: str
+    dossier: SourceDossier
+    source_paths: list[Path]
     request: TransformRequest
     store: Store
     out_root: Path
@@ -63,7 +70,17 @@ class _RunContext:
     clock: Callable[[], datetime]
     stream: bool
     strict_airgap: bool
+    infographic_holder: dict[str, InfographicSpec] = field(default_factory=dict)
     verification_params: dict[str, Any] | None = None
+
+    def render_context(self) -> RenderContext:
+        """A fresh RenderContext for the video renderer from this run's material."""
+        return RenderContext(
+            theme_name=_THEME_NAME,
+            dossier=self.dossier,
+            source_paths=list(self.source_paths),
+            infographic_spec=self.infographic_holder.get("spec"),
+        )
 
 
 @dataclass
@@ -126,6 +143,8 @@ async def execute(
         agents=agents,
         dossier_text=dossier.to_prompt_text(),
         dossier_sha=dossier.sha256,
+        dossier=dossier,
+        source_paths=file_source_paths(request.sources),
         request=request,
         store=store,
         out_root=out_root,
@@ -235,11 +254,17 @@ def _consecutive_runs(jobs: list[Job]) -> list[list[Job]]:
 
 async def _run_group(group: list[Job], ctx: _RunContext, client: LlamaClient) -> list[_JobOutcome]:
     """Run every job of one modality group; return only the ones that succeeded."""
+    await ensure_infographic_spec(group, ctx, client)
     results: list[_JobOutcome] = []
     for job in group:
         outcome = await _run_job(job, ctx, client)
-        if outcome is not None:
-            results.append(outcome)
+        if outcome is None:
+            continue
+        if job.artefact_type is ArtefactType.infographic_spec and isinstance(
+            outcome.artefact, InfographicSpec
+        ):
+            ctx.infographic_holder["spec"] = outcome.artefact
+        results.append(outcome)
     return results
 
 
@@ -259,7 +284,10 @@ async def _run_job(job: Job, ctx: _RunContext, client: LlamaClient) -> _JobOutco
         return None
     job_dir = ctx.out_root / job.id
     json_path = Path(_write_artefact(job_dir, agent.artefact_type, artefact))
-    rendered = render(artefact, job_dir, formats=FORMATS.get(agent.artefact_type, ()))
+    render_ctx = ctx.render_context() if job.artefact_type is ArtefactType.video_package else None
+    rendered = render(
+        artefact, job_dir, formats=FORMATS.get(agent.artefact_type, ()), context=render_ctx
+    )
     job.artefact_path = str(json_path)
     await _transition(ctx.store, job, JobStatus.SUCCEEDED, ctx.clock)
     return _JobOutcome(job=job, agent=agent, artefact=artefact, paths=[json_path, *rendered])

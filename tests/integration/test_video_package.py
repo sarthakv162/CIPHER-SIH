@@ -5,13 +5,18 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 
-from rupantar.core.artefacts import VideoPackage
+from rupantar.core.artefacts import InfographicSpec, VideoPackage
+from rupantar.core.schemas import ImageInsight, SourceDossier
 from rupantar.render.base import FORMATS, render
+from rupantar.render.context import RenderContext
 from rupantar.render.video_render import _TTS_MODEL, render_video
+
+_FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
 
 _HAS_FFMPEG = shutil.which("ffmpeg") is not None
 _HAS_VOICE = _TTS_MODEL.is_file()  # piper always works via `python -m piper`; the voice model gates
@@ -156,6 +161,79 @@ def test_never_raises_on_hostile_input(tmp_path: Path) -> None:
 def test_no_scratch_files_left_behind(artefacts_dir: Path, tmp_path: Path) -> None:
     render_video(_load(artefacts_dir), tmp_path / "video_package.video")
     leftovers = [
-        p.name for p in tmp_path.iterdir() if p.name.startswith("_nar") or p.name == "_subs.srt"
+        p.name
+        for p in tmp_path.iterdir()
+        if p.name.startswith("_nar") or p.name in ("_subs.srt",) or p.name.startswith("_frame_")
     ]
     assert not leftovers
+
+
+def _infographic(artefacts_dir: Path) -> InfographicSpec:
+    return InfographicSpec.model_validate_json(
+        (artefacts_dir / "infographic_spec.json").read_text()
+    )
+
+
+def test_context_adds_infographic_hero_and_records_provenance(
+    artefacts_dir: Path, tmp_path: Path
+) -> None:
+    context = RenderContext(infographic_spec=_infographic(artefacts_dir))
+    artefact = _load(artefacts_dir)
+    render_video(artefact, tmp_path / "video_package.video", context=context)
+    board = json.loads((tmp_path / "storyboard.json").read_text())
+    layouts = [p["scene_type"] for p in board["panels"]]
+    assert "infographic_hero" in layouts
+    assert "chart" in layouts  # the fixture has multiple numeric stat_values
+    assert board["scenes"][0]["scene_type"] == "title_card"
+    # more panels than scenes because of the inserted hero/chart panels
+    assert len(board["panels"]) > len(board["scenes"])
+    panels = sorted(tmp_path.glob("panel_*.png"))
+    assert len(panels) == len(board["panels"])
+
+
+def test_context_uses_source_frames_as_backgrounds(artefacts_dir: Path, tmp_path: Path) -> None:
+    dossier = SourceDossier(
+        id="t",
+        created_at=datetime.now(UTC),
+        sha256="",
+        image_insights=[
+            ImageInsight(
+                source_name="sample_image.png",
+                caption="a control room",
+                extracted_text="",
+                evidence_id="E3",
+            )
+        ],
+    )
+    context = RenderContext(
+        dossier=dossier,
+        source_paths=[_FIXTURES / "media" / "sample_image.png"],
+        infographic_spec=None,
+    )
+    render_video(_load(artefacts_dir), tmp_path / "video_package.video", context=context)
+    board = json.loads((tmp_path / "storyboard.json").read_text())
+    assert board["visual_sources"] == [
+        {"evidence_id": "E3", "source_name": "sample_image.png", "kind": "image"}
+    ]
+    assert any(p["background_evidence"] == "E3" for p in board["panels"])
+
+
+def test_hostile_context_does_not_crash(artefacts_dir: Path, tmp_path: Path) -> None:
+    dossier = SourceDossier(
+        id="t",
+        created_at=datetime.now(UTC),
+        sha256="",
+        image_insights=[
+            ImageInsight(source_name="ghost.png", caption="", extracted_text="", evidence_id="E9")
+        ],
+    )
+    context = RenderContext(
+        dossier=dossier,
+        source_paths=[Path("/definitely/not/here.png")],
+        infographic_spec=_infographic(artefacts_dir),
+    )
+    paths = render_video(
+        _hostile(), tmp_path / "video_package.video", max_scene_seconds=1, context=context
+    )
+    assert (tmp_path / "storyboard.json").is_file()
+    assert all(p.is_file() for p in paths)

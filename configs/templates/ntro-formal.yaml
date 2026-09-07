@@ -1,0 +1,44 @@
+# ntro-formal — the default Rupantar visual identity.
+# Drop a sibling <name>.yaml in this directory to add a theme; no code change needed.
+name: ntro-formal
+
+palette:
+  primary: "#0b1f33"
+  accent: "#e0342d"
+  background: "#0b1f33"
+  surface: "#12324f"
+  text: "#ffffff"
+  text_muted: "#9fc2e0"
+  text_inverse: "#0b1f33"
+  severity:
+    low: "#2e7d32"
+    medium: "#f4b400"
+    high: "#ef6c00"
+    critical: "#c62828"
+
+# Pixel sizes at the 1280x720 panel scale.
+type_scale:
+  display: 132
+  title: 58
+  heading: 34
+  body: 24
+  caption: 18
+  footer: 16
+
+spacing:
+  unit: 8
+  steps: [4, 8, 16, 24, 32, 48, 64, 96]
+
+fonts:
+  regular:
+    - "/System/Library/Fonts/Helvetica.ttc"
+    - "/System/Library/Fonts/Supplemental/Arial.ttf"
+    - "/Library/Fonts/Arial Unicode.ttf"
+  bold:
+    - "/System/Library/Fonts/Supplemental/Arial Bold.ttf"
+    - "/System/Library/Fonts/Helvetica.ttc"
+    - "/Library/Fonts/Arial Unicode.ttf"
+
+wordmark:
+  text: "NTRO · Rupantar"
+  logo_path: ""

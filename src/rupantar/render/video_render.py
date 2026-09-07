@@ -1,4 +1,4 @@
-"""Assemble a video package: storyboard JSON, panel PNGs, optional narration and mp4.
+"""Assemble a video package: storyboard JSON, themed panel PNGs, optional narration and mp4.
 
 Uses the ``ffmpeg`` and ``piper`` CLIs as media tools (not model processes). Every external
 tool failure is caught and recorded as a storyboard ``render_warnings`` entry; this renderer
@@ -11,51 +11,111 @@ import json
 import shutil
 import subprocess
 import sys
-import textwrap
-from dataclasses import dataclass
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
-from rupantar.render.subtitle import render_srt
+from rupantar.core.errors import ConfigError
+from rupantar.render._video_mux import build_mp4
+from rupantar.render._video_scene import (
+    PanelPlan,
+    derive_scene_type,
+    plan_panels,
+    render_plan_panel,
+)
+from rupantar.render.context import RenderContext
+from rupantar.render.theme import Theme, load_theme
 
-_CANVAS = (1280, 720)
-_BG = (11, 31, 51)
-_FG = (255, 255, 255)
-_ACCENT = (224, 52, 45)
-_MUTED = (159, 194, 224)
 # matches configs/models.yaml tts.path / tts.config
 _TTS_MODEL = Path("models/tts/en_US-lessac-medium.onnx")
 _TTS_CONFIG = Path("models/tts/en_US-lessac-medium.onnx.json")
 _TTS_DATA_DIR = Path("models/tts")
 _NO_PIPER = "piper (or its voice model) not available — video has no narration"
-_SOFT_SUBS = "subtitles muxed as a selectable track (ffmpeg build lacks the burn-in filter)"
-_NO_SUBS = "subtitles not embedded (ffmpeg lacks subtitle support) — use the .srt sidecar"
-_TEMP_GLOBS = ("_nar_*.wav", "_nar_list.txt", "_subs.srt")
+_TEMP_GLOBS = ("_nar_*.wav", "_nar_list.txt", "_subs.srt", "_frame_*.png")
 
 
-def render_video(artefact: Any, path: Path, *, max_scene_seconds: int = 60) -> list[Path]:
+def render_video(
+    artefact: Any,
+    path: Path,
+    *,
+    max_scene_seconds: int = 60,
+    context: RenderContext | None = None,
+) -> list[Path]:
     """Write storyboard, panels, and (when the tools exist) narration and mp4; return the files."""
     out_dir = path.parent
     out_dir.mkdir(parents=True, exist_ok=True)
     warnings: list[str] = []
     written: list[Path] = []
+    theme = _resolve_theme(context, warnings)
+    footer = str(getattr(artefact, "title", "video_package"))
+    plans: list[PanelPlan] = []
+    visual_sources: list[dict[str, str]] = []
     try:
-        panels = _write_panels(out_dir, artefact, warnings)
+        plans, visual_sources = plan_panels(artefact, theme, context, out_dir, warnings)
+        plans = [replace(p, duration=max(1, min(p.duration, max_scene_seconds))) for p in plans]
+        panels = _write_panels(out_dir, plans, footer, theme, warnings)
         written.extend(panels)
         narration = _write_narration(out_dir, artefact, warnings)
         if narration is not None:
             written.append(narration)
-        mp4 = _write_mp4(out_dir, artefact, panels, narration, warnings, max_scene_seconds)
+        mp4 = build_mp4(out_dir, plans, panels, narration, warnings)
         if mp4 is not None:
             written.append(mp4)
+    except Exception as exc:  # noqa: BLE001 - degrade to storyboard-only, never crash the job
+        warnings.append(f"video assembly aborted ({type(exc).__name__}: {exc})")
     finally:
         _cleanup(out_dir)
-    written.insert(0, _write_storyboard(out_dir, artefact, warnings))
+    written.insert(0, _write_storyboard(out_dir, artefact, plans, visual_sources, warnings))
     if warnings:
         warn_path = out_dir / "video_package.warnings.txt"
         warn_path.write_text("\n".join(warnings) + "\n", encoding="utf-8")
         written.append(warn_path)
     return [p for p in dict.fromkeys(written) if p.is_file()]
+
+
+def _resolve_theme(context: RenderContext | None, warnings: list[str]) -> Theme:
+    """Load the requested theme, degrading to the default (then a stub) if it is unavailable."""
+    name = context.theme_name if context is not None else "ntro-formal"
+    for candidate in dict.fromkeys([name, "ntro-formal"]):
+        try:
+            return load_theme(candidate)
+        except ConfigError as exc:
+            warnings.append(f"theme {candidate!r} unavailable ({exc}) — trying the default")
+    warnings.append("no theme file found — panels use a built-in fallback palette")
+    return _FALLBACK_THEME
+
+
+_FALLBACK_THEME = Theme.model_validate(
+    {
+        "name": "fallback",
+        "palette": {
+            "primary": "#0b1f33",
+            "accent": "#e0342d",
+            "background": "#0b1f33",
+            "surface": "#12324f",
+            "text": "#ffffff",
+            "text_muted": "#9fc2e0",
+            "text_inverse": "#0b1f33",
+            "severity": {
+                "low": "#2e7d32",
+                "medium": "#f4b400",
+                "high": "#ef6c00",
+                "critical": "#c62828",
+            },
+        },
+        "type_scale": {
+            "display": 132,
+            "title": 58,
+            "heading": 34,
+            "body": 24,
+            "caption": 18,
+            "footer": 16,
+        },
+        "spacing": {"unit": 8, "steps": [4, 8, 16, 24, 32, 48, 64, 96]},
+        "fonts": {"regular": [], "bold": []},
+        "wordmark": {"text": "Rupantar", "logo_path": ""},
+    }
+)
 
 
 def _scene_timeline(scenes: list[Any]) -> list[dict[str, Any]]:
@@ -81,13 +141,46 @@ def _scene_timeline(scenes: list[Any]) -> list[dict[str, Any]]:
     return rows
 
 
-def _write_storyboard(out_dir: Path, artefact: Any, warnings: list[str]) -> Path:
-    """Write storyboard.json with the scene timeline and any render warnings."""
+def _scene_types(scenes: list[Any]) -> list[str]:
+    """The derived panel layout for each scene, in order (heuristic; schema has no field)."""
+    count = len(scenes)
+    return [derive_scene_type(index, count, scene) for index, scene in enumerate(scenes)]
+
+
+def _panel_rows(plans: list[PanelPlan]) -> list[dict[str, Any]]:
+    """One dict per rendered panel: layout, duration, and any cited background evidence."""
+    rows: list[dict[str, Any]] = []
+    for plan in plans:
+        rows.append(
+            {
+                "index": plan.index,
+                "scene_type": plan.layout,
+                "duration_seconds": plan.duration,
+                "is_extra": plan.is_extra,
+                "background_evidence": plan.background_evidence or None,
+            }
+        )
+    return rows
+
+
+def _write_storyboard(
+    out_dir: Path,
+    artefact: Any,
+    plans: list[PanelPlan],
+    visual_sources: list[dict[str, str]],
+    warnings: list[str],
+) -> Path:
+    """Write storyboard.json with the scene timeline, panel plan, and any render warnings."""
+    scenes = _scene_timeline(artefact.scenes)
+    for row, scene_type in zip(scenes, _scene_types(artefact.scenes), strict=True):
+        row["scene_type"] = scene_type
     data = {
         "logline": artefact.logline,
         "runtime_seconds_target": artefact.runtime_seconds_target,
         "subtitle_hint": artefact.subtitle_hint,
-        "scenes": _scene_timeline(artefact.scenes),
+        "scenes": scenes,
+        "panels": _panel_rows(plans),
+        "visual_sources": visual_sources,
         "render_warnings": warnings,
     }
     target = out_dir / "storyboard.json"
@@ -95,53 +188,17 @@ def _write_storyboard(out_dir: Path, artefact: Any, warnings: list[str]) -> Path
     return target
 
 
-def _wrap(text: str, width: int) -> list[str]:
-    """Word-wrap `text` to `width` columns, never returning an empty list."""
-    return textwrap.wrap(text.strip(), width=width) or [""]
-
-
-def _font(size: int) -> Any:
-    """The Pillow default bitmap font at `size` (falling back if the size arg is unsupported)."""
-    from PIL import ImageFont
-
-    try:
-        return ImageFont.load_default(size=size)
-    except TypeError:
-        return ImageFont.load_default()
-
-
-def _draw_panel(target: Path, index: int, scene: Any, logline: str) -> None:
-    """Render one 1280x720 storyboard panel PNG for `scene`."""
-    from PIL import Image, ImageDraw
-
-    image = Image.new("RGB", _CANVAS, _BG)
-    draw = ImageDraw.Draw(image)
-    draw.text((60, 40), f"SCENE {index}", font=_font(30), fill=_ACCENT)
-    y = 150
-    for line in _wrap(scene.on_screen_text or scene.scene_description, 26):
-        draw.text((60, y), line, font=_font(58), fill=_FG)
-        y += 74
-    y += 24
-    for line in _wrap(scene.visual_recommendation, 64):
-        draw.text((60, y), line, font=_font(24), fill=_MUTED)
-        y += 32
-    footer = _wrap(logline, 96)[:2]
-    fy = _CANVAS[1] - 40 - 26 * len(footer)
-    for line in footer:
-        draw.text((60, fy), line, font=_font(20), fill=_MUTED)
-        fy += 26
-    image.save(target, format="PNG")
-
-
-def _write_panels(out_dir: Path, artefact: Any, warnings: list[str]) -> list[Path]:
-    """Draw one panel PNG per scene; a failed panel is skipped with a warning, not raised."""
+def _write_panels(
+    out_dir: Path, plans: list[PanelPlan], footer: str, theme: Theme, warnings: list[str]
+) -> list[Path]:
+    """Draw one panel PNG per plan; a failed panel is skipped with a warning, not raised."""
     panels: list[Path] = []
-    for index, scene in enumerate(artefact.scenes, 1):
-        target = out_dir / f"panel_{index:02d}.png"
+    for plan in plans:
+        target = out_dir / f"panel_{plan.index:02d}.png"
         try:
-            _draw_panel(target, index, scene, artefact.logline)
+            render_plan_panel(target, plan, len(plans), footer, theme)
         except Exception as exc:  # noqa: BLE001 - degrade, never crash the job
-            warnings.append(f"panel {index} not rendered ({type(exc).__name__}: {exc})")
+            warnings.append(f"panel {plan.index} not rendered ({type(exc).__name__}: {exc})")
             continue
         panels.append(target)
     return panels
@@ -161,11 +218,11 @@ def _write_narration(out_dir: Path, artefact: Any, warnings: list[str]) -> Path 
     base = _piper_base()
     config = ["-c", str(_TTS_CONFIG.resolve())] if _TTS_CONFIG.is_file() else []
     scene_wavs: list[Path] = []
+    target = out_dir / "narration.wav"
     try:
         for index, scene in enumerate(artefact.scenes, 1):
             wav = out_dir / f"_nar_{index:02d}.wav"
             subprocess.run(
-                # piper 1.8: -f (not --output_file); --data-dir keeps it offline (no voice download)
                 [
                     *base,
                     "-m",
@@ -184,7 +241,6 @@ def _write_narration(out_dir: Path, artefact: Any, warnings: list[str]) -> Path 
             scene_wavs.append(wav)
         listing = out_dir / "_nar_list.txt"
         listing.write_text("".join(f"file '{w.name}'\n" for w in scene_wavs), encoding="utf-8")
-        target = out_dir / "narration.wav"
         subprocess.run(
             [
                 "ffmpeg",
@@ -216,82 +272,8 @@ def _write_narration(out_dir: Path, artefact: Any, warnings: list[str]) -> Path 
     return target if target.is_file() else None
 
 
-def _write_mp4(
-    out_dir: Path,
-    artefact: Any,
-    panels: list[Path],
-    narration: Path | None,
-    warnings: list[str],
-    max_scene_seconds: int,
-) -> Path | None:
-    """Concat panels (one per scene duration) with subtitles and optional narration audio."""
-    if shutil.which("ffmpeg") is None:
-        warnings.append("ffmpeg not available — no video_package.mp4")
-        return None
-    if len(panels) != len(artefact.scenes):
-        warnings.append("storyboard panels incomplete — no video_package.mp4")
-        return None
-    render_srt(artefact, out_dir / "_subs.srt")
-    panel_inputs: list[str] = []
-    for panel, scene in zip(panels, artefact.scenes, strict=True):
-        seconds = max(1, min(int(scene.duration_seconds), max_scene_seconds))
-        panel_inputs += ["-loop", "1", "-t", str(seconds), "-i", panel.name]
-    plan = _VideoPlan(out_dir, panel_inputs, narration, len(panels), out_dir / "video_package.mp4")
-    for mode, note in (("burn", ""), ("soft", _SOFT_SUBS), ("plain", _NO_SUBS)):
-        if plan.build(mode):
-            if note:
-                warnings.append(note)
-            return plan.target
-    warnings.append("ffmpeg video assembly failed — no video_package.mp4")
-    return None
-
-
-@dataclass(frozen=True)
-class _VideoPlan:
-    """Panel inputs plus optional narration; renders the concat mp4 in a chosen subtitle mode."""
-
-    out_dir: Path
-    panel_inputs: list[str]
-    narration: Path | None
-    count: int
-    target: Path
-
-    def command(self, mode: str) -> list[str]:
-        """Build the ffmpeg argv for one subtitle mode (`burn`, `soft`, or `plain`)."""
-        cmd = ["ffmpeg", "-y", *self.panel_inputs]
-        if self.narration is not None:
-            cmd += ["-i", self.narration.name]
-        if mode == "soft":
-            cmd += ["-i", "_subs.srt"]
-        chain = "".join(f"[{i}:v]" for i in range(self.count))
-        if mode == "burn":
-            fg = (
-                f"{chain}concat=n={self.count}:v=1:a=0[v];"
-                "[v]subtitles=_subs.srt:force_style='Fontsize=18'[vs]"
-            )
-        else:
-            fg = f"{chain}concat=n={self.count}:v=1:a=0[vs]"
-        cmd += ["-filter_complex", fg, "-map", "[vs]"]
-        if self.narration is not None:
-            # No -shortest: panels run their full planned time (so the .srt stays in sync);
-            # narration plays from the start and the tail is silent if piper was quicker.
-            cmd += ["-map", f"{self.count}:a"]
-        if mode == "soft":
-            subs_index = self.count + (1 if self.narration is not None else 0)
-            cmd += ["-map", f"{subs_index}:s", "-c:s", "mov_text"]
-        return [*cmd, "-r", "24", "-pix_fmt", "yuv420p", "-preset", "ultrafast", self.target.name]
-
-    def build(self, mode: str) -> bool:
-        """Run one ffmpeg attempt; return True when it produces the target file."""
-        try:
-            subprocess.run(self.command(mode), cwd=self.out_dir, capture_output=True, check=True)
-        except Exception:  # noqa: BLE001 - degrade, never crash the job
-            return False
-        return self.target.is_file()
-
-
 def _cleanup(out_dir: Path) -> None:
-    """Remove intermediate wav/list/srt scratch files left by the ffmpeg and piper steps."""
+    """Remove intermediate wav/list/srt/frame scratch files left by the media steps."""
     for pattern in _TEMP_GLOBS:
         for stale in out_dir.glob(pattern):
             stale.unlink(missing_ok=True)
