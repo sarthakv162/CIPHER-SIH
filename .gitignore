@@ -3,8 +3,8 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .eggs/
-build/
-dist/
+/build/
+/dist/
 .mypy_cache/
 .ruff_cache/
 .pytest_cache/
@@ -25,3 +25,8 @@ data/*.db
 
 # OS
 .DS_Store
+
+# Frontend
+# frontend/dist/ is deliberately COMMITTED: it is the air-gap deliverable the
+# demo machine serves. Only the install tree is ignored.
+frontend/node_modules/

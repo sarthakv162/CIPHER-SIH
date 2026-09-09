@@ -32,7 +32,12 @@ PYTHON=$(uv python find 3.11) scripts/vendor_wheels.sh
 # 3. Fetch the four model files (~7 GB) into models/.
 scripts/fetch_models.sh
 
-# 4. Install the project and verify everything.
+# 4. Vendor the console's webfont, then build it. Both are committed to the repo,
+#    so re-run these only to change the font or rebuild the UI.
+scripts/fetch_fonts.sh
+scripts/vendor_frontend.sh
+
+# 5. Install the project and verify everything.
 uv pip install -e ".[dev]"
 python -m rupantar.cli selfcheck        # expect an all-green table
 ```
@@ -76,6 +81,24 @@ uvicorn rupantar.api.app:create_app --factory --host 127.0.0.1 --port 8000
 
 Every artefact written to disk gets a sibling `<name>.manifest.json` with the source SHA-256,
 model file SHA + quant, prompt version, generation params, and timestamps.
+
+### The operator console
+
+With `frontend/dist/` present, the same uvicorn process serves the UI at `/` — one process,
+one port, no node runtime on the air-gapped machine. Open `http://127.0.0.1:8000/`.
+
+The console is a Vite + React + TypeScript app under `frontend/`. **The air-gapped machine
+never runs `npm ci`**: the built `dist/` is committed, and `scripts/vendor_frontend.sh` is what
+produces it on a machine that has node. That script is also the air-gap gate — after building
+it checks that every CSS `url()` and every `src`/`href` in `index.html` is same-origin, and
+that no unexpected remote URL survived into the bundle. A stray CDN reference fails the build
+there rather than failing INV-4 on the day. Fonts are `woff2` files committed under
+`frontend/public/fonts/` (Inter, SIL OFL, weights 400 and 500), never fetched from a font host.
+
+```bash
+scripts/vendor_frontend.sh     # build + air-gap gate; commit frontend/dist/ afterwards
+cd frontend && npm run dev     # dev only, proxies the API to 127.0.0.1:8000
+```
 
 ### Cross-artefact verification
 

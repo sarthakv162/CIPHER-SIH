@@ -1,0 +1,3 @@
+# Build output. Committed so the air-gapped machine serves the console without
+# running a build, but never worth reading as a diff.
+dist/** linguist-generated=true -diff

@@ -1,0 +1,250 @@
+@import 'tailwindcss';
+
+/* ---------------------------------------------------------------------------
+   Rupantar operator console — design system.
+
+   Self-hosted only. No @import from a font host, no CDN, no remote asset of any
+   kind: the air-gapped machine must render this with the network physically off.
+   --------------------------------------------------------------------------- */
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/inter-latin-400-normal.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/inter-latin-500-normal.woff2') format('woff2');
+}
+
+@theme {
+  /* Surfaces, darkest to most raised. */
+  --color-bg-0: #0a0a0b;
+  --color-bg-1: #121214;
+  --color-bg-2: #18181b;
+  --color-bg-3: #1f1f23;
+
+  --color-border: #27272a;
+  --color-border-2: #3f3f46;
+
+  --color-text-0: #fafafa;
+  --color-text-1: #a1a1aa;
+  /* text-2 measures 2.1-2.6:1 on every surface here — below even the 3.0 large-text
+     floor. It is a NON-TEXT token: disabled glyphs, dividers, decorative marks.
+     Anything a reader must actually read uses text-1 (6.4-7.7:1) or text-0. */
+  --color-text-2: #52525b;
+
+  /* Semantic colour is load-bearing and constant across the whole console:
+     accent = interactive, ok = healthy/offline/supported, warn = unverified,
+     danger = conflict/violation, model = a model is resident. Never decorative. */
+  --color-accent: #5b8def;
+  --color-ok: #34d399;
+  --color-warn: #fbbf24;
+  --color-danger: #f87171;
+  --color-model: #a78bfa;
+
+  --radius-control: 8px;
+  --radius-card: 12px;
+  --radius-panel: 16px;
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  /* Motion: one curve, two durations. Animation communicates state change. */
+  --ease-out-console: cubic-bezier(0.2, 0, 0, 1);
+  --duration-fast: 150ms;
+  --duration-base: 200ms;
+}
+
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--color-border);
+  }
+
+  html {
+    color-scheme: dark;
+    background-color: var(--color-bg-0);
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--color-bg-0);
+    color: var(--color-text-0);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.5;
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Weights 400 and 500 only — the console never uses 600 or 700. */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  th,
+  strong,
+  b {
+    font-weight: 500;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  ::selection {
+    background-color: color-mix(in oklab, var(--color-accent) 35%, transparent);
+    color: var(--color-text-0);
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--color-border);
+    border: 3px solid transparent;
+    border-radius: 999px;
+    background-clip: content-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-border-2);
+  }
+}
+
+@layer components {
+  /* Ambient wash. Accent and neutral families only — never a semantic hue, so a
+     purple or amber glow always means residency or risk, never decoration. */
+  .ambient-wash {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .ambient-wash::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: -55%;
+    width: 150%;
+    height: 120%;
+    transform: translateX(-50%);
+    background: radial-gradient(
+      ellipse 45% 50% at 50% 50%,
+      color-mix(in oklab, var(--color-accent) 30%, transparent) 0%,
+      color-mix(in oklab, var(--color-accent) 11%, transparent) 42%,
+      transparent 68%
+    );
+  }
+
+  .ambient-wash::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: -42%;
+    width: 78%;
+    height: 78%;
+    transform: translateX(-50%);
+    background: radial-gradient(
+      ellipse 50% 50% at 50% 50%,
+      color-mix(in oklab, #8fb0f5 22%, transparent) 0%,
+      transparent 60%
+    );
+  }
+
+  /* Frames the glow so it reads as light falling into the console rather than a
+     flat tint sitting on top of it. */
+  .ambient-vignette {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      ellipse 75% 60% at 50% 35%,
+      transparent 40%,
+      color-mix(in oklab, var(--color-bg-0) 72%, transparent) 100%
+    );
+  }
+
+  /* The rounded inner window from the reference: a hairline plus a 1px top
+     highlight, so panels read as lit from above rather than merely outlined. */
+  .surface-raised {
+    background-color: var(--color-bg-1);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-panel);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.04),
+      0 1px 2px rgb(0 0 0 / 0.4),
+      0 8px 24px -12px rgb(0 0 0 / 0.5);
+  }
+
+  .surface-card {
+    background-color: var(--color-bg-2);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.03);
+  }
+
+  /* Restrained glass — overlays, sheets and the header only. Never on a panel
+     that carries content the operator has to read. */
+  .glass {
+    background-color: color-mix(in oklab, var(--color-bg-1) 72%, transparent);
+    backdrop-filter: blur(12px) saturate(140%);
+    -webkit-backdrop-filter: blur(12px) saturate(140%);
+  }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-text-1);
+  }
+
+  /* RSS and byte counts must not jitter as digits change width. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
+  }
+}
+
+@layer utilities {
+  .hairline-t {
+    border-top: 1px solid var(--color-border);
+  }
+
+  .hairline-b {
+    border-bottom: 1px solid var(--color-border);
+  }
+}
+
+/* The console runs beside inference on a fanless 16 GB M4 Air. When the operator
+   asks for less motion, everything stops — canvases fall back to a static frame. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
