@@ -8,8 +8,11 @@ import { ProvenanceDrawer } from '@/components/ProvenanceDrawer'
 import { LinkedInPreview, XThreadPreview } from '@/components/PlatformPreview'
 import { AdvisoryView, ExecutiveSummaryView } from '@/components/viewers/DocumentView'
 import { InfographicView, PresentationView, VideoView } from '@/components/viewers/MediaView'
+import { ClaimsList } from '@/components/ClaimsList'
+import { OversightPanel } from '@/components/OversightPanel'
 import { ARTEFACT_BY_TYPE } from '@/lib/artefacts'
 import type { ArtefactType } from '@/lib/api'
+import { needsReview, useVerification } from '@/lib/verification'
 import { cn } from '@/lib/utils'
 
 interface ArtefactEntry {
@@ -54,6 +57,9 @@ export function Artefacts() {
     () => (entries ?? []).filter((entry) => entry.status === 'SUCCEEDED' && entry.artefact),
     [entries],
   )
+
+  const { data: report } = useVerification(transformId)
+  const [released, setReleased] = useState<Set<string>>(new Set())
 
   const activeId = params.get('job') ?? succeeded[0]?.job_id
   const active = succeeded.find((entry) => entry.job_id === activeId)
@@ -109,6 +115,13 @@ export function Artefacts() {
                   />
                 )}
                 <span className="truncate">{meta?.label ?? entry.artefact_type}</span>
+                {needsReview(report, entry.artefact_type) &&
+                  !released.has(entry.job_id) && (
+                    <span
+                      className="ml-auto size-1.5 shrink-0 rounded-full bg-danger"
+                      title="Needs review — verification found a conflict"
+                    />
+                  )}
               </button>
             )
           })}
@@ -131,9 +144,32 @@ export function Artefacts() {
                 jobId={active.job_id}
                 onProvenance={() => setShowProvenance((open) => !open)}
                 provenanceOpen={showProvenance}
+                gated={
+                  needsReview(report, active.artefact_type) &&
+                  !released.has(active.job_id)
+                }
               />
               <div className="min-h-0 flex-1 overflow-y-auto p-4">
-                <ArtefactBody transformId={transformId} entry={active} />
+                <div className="mx-auto flex max-w-[860px] flex-col gap-4">
+                  {report && (
+                    <OversightPanel
+                      transformId={transformId}
+                      jobId={active.job_id}
+                      artefactType={active.artefact_type}
+                      report={report}
+                      released={released.has(active.job_id)}
+                      onReleased={() =>
+                        setReleased((current) =>
+                          new Set(current).add(active.job_id),
+                        )
+                      }
+                    />
+                  )}
+                  <ArtefactBody transformId={transformId} entry={active} />
+                  {report && (
+                    <ClaimsList report={report} artefactType={active.artefact_type} />
+                  )}
+                </div>
               </div>
             </>
           ) : (
@@ -174,17 +210,21 @@ function FileBar({
   jobId,
   onProvenance,
   provenanceOpen,
+  gated,
 }: {
   transformId: string
   jobId: string
   onProvenance: () => void
   provenanceOpen: boolean
+  gated: boolean
 }) {
   const { data: files } = useFiles(transformId, jobId)
 
   return (
     <div className="hairline-b flex shrink-0 flex-wrap items-center gap-2 px-4 py-2.5">
-      <span className="text-[12px] text-text-1">Download</span>
+      <span className="text-[12px] text-text-1">
+        {gated ? 'Download (unreleased)' : 'Download'}
+      </span>
       {(files ?? [])
         .filter((file) => file.format !== 'json')
         .map((file) => (
@@ -192,7 +232,12 @@ function FileBar({
             key={file.name}
             href={`/transforms/${transformId}/jobs/${jobId}/files/${encodeURIComponent(file.name)}`}
             download={file.name}
-            className="flex items-center gap-1.5 rounded-[8px] border border-border bg-bg-2 px-2 py-1 text-[11px] text-text-0 transition-colors duration-150 hover:border-border-2 hover:bg-bg-3"
+            className={cn(
+              'flex items-center gap-1.5 rounded-[8px] border border-border px-2 py-1 text-[11px] transition-colors duration-150 hover:border-border-2 hover:bg-bg-3',
+              // Still downloadable under review — an operator may need the file to
+              // judge it — but never the visually primary action while gated.
+              gated ? 'bg-transparent text-text-1 opacity-70' : 'bg-bg-2 text-text-0',
+            )}
           >
             <Download className="size-3" strokeWidth={1.75} />
             <span className="uppercase">{file.format}</span>

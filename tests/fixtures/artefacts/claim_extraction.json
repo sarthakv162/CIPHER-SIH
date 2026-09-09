@@ -1,0 +1,40 @@
+{
+  "claims": [
+    {
+      "id": "C1",
+      "claim": "A coordinated intrusion affected five regional networks.",
+      "artefact_type": "executive_summary",
+      "cited_sources": ["E1"]
+    },
+    {
+      "id": "C2",
+      "claim": "4,200 endpoints were compromised across the affected estate.",
+      "artefact_type": "executive_summary",
+      "cited_sources": ["E1"]
+    },
+    {
+      "id": "C3",
+      "claim": "Attribution to a specific actor has not been established.",
+      "artefact_type": "executive_summary",
+      "cited_sources": ["E1"]
+    },
+    {
+      "id": "C4",
+      "claim": "The intrusion is assessed as high severity.",
+      "artefact_type": "advisory",
+      "cited_sources": ["E1"]
+    },
+    {
+      "id": "C5",
+      "claim": "5,000 endpoints were compromised across the affected estate.",
+      "artefact_type": "advisory",
+      "cited_sources": []
+    },
+    {
+      "id": "C6",
+      "claim": "Affected operators should rotate credentials within 24 hours.",
+      "artefact_type": "advisory",
+      "cited_sources": []
+    }
+  ]
+}

@@ -1,0 +1,60 @@
+{
+  "groundings": [
+    {
+      "claim_id": "C1",
+      "status": "SUPPORTED",
+      "evidence_ids": ["E1"],
+      "note": "The source states five regional networks were affected."
+    },
+    {
+      "claim_id": "C2",
+      "status": "SUPPORTED",
+      "evidence_ids": ["E1"],
+      "note": "The source gives the endpoint total as 4,200."
+    },
+    {
+      "claim_id": "C3",
+      "status": "SUPPORTED",
+      "evidence_ids": ["E1"],
+      "note": "The source says attribution is not yet established."
+    },
+    {
+      "claim_id": "C4",
+      "status": "UNSUPPORTED",
+      "evidence_ids": [],
+      "note": "The source assigns no severity band; this is the model's own assessment."
+    },
+    {
+      "claim_id": "C5",
+      "status": "UNSUPPORTED",
+      "evidence_ids": [],
+      "note": "The source gives 4,200 endpoints, not 5,000. No evidence supports this figure."
+    },
+    {
+      "claim_id": "C6",
+      "status": "UNSUPPORTED",
+      "evidence_ids": [],
+      "note": "No remediation timeframe appears in the source."
+    }
+  ],
+  "relations": [
+    {
+      "kind": "CONFLICT",
+      "claim_ids": ["C2", "C5"],
+      "subject": "endpoints compromised across the affected estate",
+      "detail": "The executive summary states 4,200 endpoints; the advisory states 5,000. Both describe the same total across the same five networks, so they cannot both hold."
+    },
+    {
+      "kind": "AGREE",
+      "claim_ids": ["C1"],
+      "subject": "scope of the intrusion",
+      "detail": "Both artefacts describe five affected regional networks."
+    },
+    {
+      "kind": "ORPHAN",
+      "claim_ids": ["C6"],
+      "subject": "remediation timeframe",
+      "detail": "The 24-hour credential rotation window appears in no other artefact and in no evidence unit."
+    }
+  ]
+}

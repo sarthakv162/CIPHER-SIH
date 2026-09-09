@@ -14,6 +14,7 @@ from rupantar.audit.provenance import Release, is_manifest, record_release
 from rupantar.core.errors import ReleaseError
 from rupantar.core.schemas import Job
 from rupantar.core.store import Store
+from rupantar.verify.report import VerificationReport
 
 router = APIRouter(tags=["oversight"])
 
@@ -35,6 +36,27 @@ class ReleaseResult(BaseModel):
     released_by: str
     released_at: str
     manifests: list[str]
+
+
+@router.get("/transforms/{transform_id}/verification")
+async def get_verification(
+    transform_id: str, store: Annotated[Store, Depends(get_store)]
+) -> VerificationReport:
+    """The full report: every claim with its status and evidence, plus every relation.
+
+    `GET /transforms/{id}` carries only the counts. The oversight workflow needs the
+    claims and the CONFLICT relations themselves to show what actually disagrees.
+    """
+    jobs = await store.list_jobs_for_transform(transform_id)
+    if not jobs:
+        raise HTTPException(status_code=404, detail=f"transform {transform_id!r} not found")
+    report = await store.get_verification_report(transform_id)
+    if report is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"transform {transform_id!r} has no verification report yet",
+        )
+    return report
 
 
 @router.post("/transforms/{transform_id}/jobs/{job_id}/release")
