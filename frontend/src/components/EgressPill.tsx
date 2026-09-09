@@ -48,7 +48,14 @@ export function EgressPill() {
         <ShieldAlert className="size-3.5" strokeWidth={1.75} />
       )}
       <span className="tabular">
-        {clean ? 'Offline · 0 external connections' : `Egress violation · ${count}`}
+        {clean ? (
+          <>
+            <span className="hidden sm:inline">Offline · 0 external connections</span>
+            <span className="sm:hidden">Offline</span>
+          </>
+        ) : (
+          `Egress violation · ${count}`
+        )}
       </span>
     </span>
   )

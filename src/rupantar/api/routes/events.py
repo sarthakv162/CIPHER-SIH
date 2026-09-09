@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 
 from rupantar.api.app import get_bus, get_manager, get_store
-from rupantar.api.events import EventBus, StreamEvent
+from rupantar.api.events import EventBus, StreamEvent, model_payload
 from rupantar.core.store import Store
 from rupantar.models.manager import ModelManager
 from rupantar.orchestrator.progress import transform_payload, verification_payload
@@ -18,6 +18,8 @@ from rupantar.orchestrator.progress import transform_payload, verification_paylo
 router = APIRouter(tags=["events"])
 
 HEARTBEAT_SECONDS = 15.0
+# How much load/evict history a late subscriber receives in its snapshot.
+_EVENT_TAIL = 40
 _SSE_HEADERS = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
 
 
@@ -69,6 +71,9 @@ async def _snapshot(store: Store, manager: ModelManager, transform_id: str) -> d
         **transform_payload(transform_id, jobs, final=False),
         "job_rows": [job.model_dump(mode="json") for job in jobs],
         "models": manager.status(),
+        # Recent load/evict history too: an operator who opens the run page after a
+        # swap has already happened must still see the sequence, not an empty timeline.
+        "model_events": [model_payload(event) for event in manager.events[-_EVENT_TAIL:]],
         "verification": verification_payload(transform_id, report) if report else None,
     }
 

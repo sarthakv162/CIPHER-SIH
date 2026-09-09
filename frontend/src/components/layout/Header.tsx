@@ -54,8 +54,8 @@ interface HeaderProps {
 export function Header({ title, subtitle }: HeaderProps) {
   return (
     <header className="glass sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between gap-4 border-b border-border px-5">
-      <div className="flex min-w-0 items-baseline gap-2.5">
-        <h1 className="truncate text-[14px] text-text-0">{title}</h1>
+      <div className="flex min-w-0 shrink items-baseline gap-2.5">
+        <h1 className="shrink-0 text-[14px] text-text-0">{title}</h1>
         {subtitle && (
           <span className="truncate text-[12px] text-text-1">{subtitle}</span>
         )}
