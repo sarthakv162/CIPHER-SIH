@@ -30,7 +30,9 @@ npm run build
 # 2. Remote URL literals: anything else is compared against a documented allowlist of
 #    strings that are provably never fetched (XML namespace URIs, library error-message
 #    links, the font licence, react-router's internal `new URL()` base). A URL outside
-#    that list is a genuine finding and fails the build.
+#    that list is a genuine finding and fails the build. Each entry below was checked
+#    in the built bundle and is advice text or a namespace URI, never dereferenced:
+#    ungap/url-search-params is inside react-router's IE11 polyfill warning string.
 
 echo "==> Checking fetch vectors are same-origin"
 fail=0
@@ -50,7 +52,7 @@ while IFS= read -r ref; do
 done < <(grep -ohE '(src|href)="[^"]*"' "${DIST}/index.html" || true)
 
 echo "==> Checking for unexpected remote URLs"
-ALLOWED='://(localhost|127\.0\.0\.1)|www\.w3\.org|scripts\.sil\.org/OFL|github\.com/rsms/inter|reactjs\.org/docs/error-decoder|reactrouter\.com/|tailwindcss\.com'
+ALLOWED='://(localhost|127\.0\.0\.1)|www\.w3\.org|scripts\.sil\.org/OFL|github\.com/rsms/inter|github\.com/ungap/url-search-params|reactjs\.org/docs/error-decoder|reactrouter\.com/|tailwindcss\.com'
 
 while IFS= read -r url; do
   echo "  UNEXPECTED REMOTE URL: ${url}" >&2

@@ -14,6 +14,7 @@ export function App() {
       <Route element={<AppShell />}>
         <Route path="/workspace" element={<Workspace />} />
         <Route path="/runs/:transformId" element={<Run />} />
+        <Route path="/runs/:transformId/artefacts" element={<Artefacts />} />
         <Route path="/artefacts" element={<Artefacts />} />
         <Route path="/parivartan" element={<Parivartan />} />
         <Route path="/system" element={<System />} />

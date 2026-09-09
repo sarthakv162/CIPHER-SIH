@@ -87,6 +87,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     from rupantar.api.routes import (
         convert,
         events,
+        files,
         health,
         jobs,
         models,
@@ -100,6 +101,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     app.include_router(transforms.router)
     app.include_router(events.router)
     app.include_router(release.router)
+    app.include_router(files.router)
     app.include_router(jobs.router)
     app.include_router(models.router)
     app.include_router(convert.router)

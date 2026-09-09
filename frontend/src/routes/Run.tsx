@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { AlertTriangle, Check, CircleDashed, Loader2, X } from 'lucide-react'
 import { Header } from '@/components/layout/Header'
@@ -55,7 +55,11 @@ export function Run() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.2, ease: EASE }}
                   >
-                    <JobRow job={job} tokens={stream.tokens.get(job.job_id) ?? ''} />
+                    <JobRow
+                      job={job}
+                      tokens={stream.tokens.get(job.job_id) ?? ''}
+                      transformId={transformId}
+                    />
                   </motion.li>
                 ))}
               </AnimatePresence>
@@ -90,17 +94,35 @@ function StatusMark({ status }: { status: JobFrame['status'] }) {
   return <CircleDashed className="size-4 shrink-0 text-text-2" strokeWidth={1.75} />
 }
 
-function JobRow({ job, tokens }: { job: JobFrame; tokens: string }) {
+function JobRow({
+  job,
+  tokens,
+  transformId,
+}: {
+  job: JobFrame
+  tokens: string
+  transformId: string | undefined
+}) {
   const meta = ARTEFACT_BY_TYPE.get(job.artefact_type)
   const streaming = job.status === 'RUNNING' && tokens.length > 0
+  const done = job.status === 'SUCCEEDED' && transformId
 
   return (
     <div className="flex flex-col gap-2 px-4 py-3">
       <div className="flex items-center gap-3">
         <StatusMark status={job.status} />
-        <span className="min-w-0 flex-1 truncate text-[13px] text-text-0">
-          {meta?.label ?? job.artefact_type}
-        </span>
+        {done ? (
+          <Link
+            to={`/runs/${transformId}/artefacts?job=${job.job_id}`}
+            className="min-w-0 flex-1 truncate text-[13px] text-text-0 underline decoration-border underline-offset-4 transition-colors duration-150 hover:decoration-accent"
+          >
+            {meta?.label ?? job.artefact_type}
+          </Link>
+        ) : (
+          <span className="min-w-0 flex-1 truncate text-[13px] text-text-0">
+            {meta?.label ?? job.artefact_type}
+          </span>
+        )}
         <span
           className={cn(
             'rounded-full border px-2 py-0.5 text-[11px]',
