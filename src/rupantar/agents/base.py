@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import re
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from string import Template
@@ -97,12 +97,13 @@ class ArtefactAgent:
         client: _Client,
         *,
         stream: bool = False,
+        on_delta: Callable[[str], None] | None = None,
     ) -> ArtefactBase:
         """Generate one artefact and return it only after `schema.model_validate` passes."""
         messages = self.build_messages(dossier_text, params)
         last: Exception | None = None
         for _ in range(2):
-            raw = await self._generate(client, messages, stream)
+            raw = await self._generate(client, messages, stream, on_delta)
             try:
                 return self.schema.model_validate(_loads(raw))
             except (ValueError, ValidationError) as exc:
@@ -137,8 +138,9 @@ class ArtefactAgent:
         client: _Client,
         messages: list[dict[str, str]],
         stream: bool,
+        on_delta: Callable[[str], None] | None = None,
     ) -> str:
-        """Call the client, streaming deltas to stdout when `stream` is set."""
+        """Call the client; stream deltas to `on_delta` when given, else to stdout."""
         if not stream:
             return await client.complete(
                 messages,
@@ -154,8 +156,11 @@ class ArtefactAgent:
             temperature=self.temperature,
         ):
             parts.append(delta)
-            print(delta, end="", flush=True)
-        if parts:
+            if on_delta is None:
+                print(delta, end="", flush=True)
+            else:
+                on_delta(delta)
+        if parts and on_delta is None:
             print()
         return "".join(parts)
 

@@ -448,6 +448,31 @@ Also build:
 > `template` generation parameter yet — those stay deferred. The rest of Phase 9 below is still
 > not started.
 
+> **Phase 9b — operator console frontend (AUTHORIZED 2026-09-09).** The user directed the
+> frontend half of Phase 9 with a written build brief. Scope: four new backend endpoints
+> (`GET /transforms/{id}/events` SSE, `GET /templates`,
+> `POST /transforms/{id}/jobs/{job_id}/release`, static `dist/` mount with SPA fallback), then a
+> Vite + React 18 + TypeScript + Tailwind + shadcn/ui single-page console served by the existing
+> FastAPI app on one process and one port. Sub-phases, each its own commit:
+> **9b-1** backend endpoints · **9b-2** scaffold, tokens, self-hosted font, shell, routing ·
+> **9b-3** workspace + run view with the live memory panel · **9b-4** artefact viewers +
+> provenance drawer · **9b-5** verification + release/oversight workflow · **9b-6** templates,
+> Parivartan, System · **9b-7** motion polish, Lottie, entry screen.
+>
+> Binding constraints on this phase, from the brief:
+> - **Zero runtime network access.** No CDN, no remote fonts, images, icons or telemetry. Fonts
+>   are `woff2` vendored in-repo; Lottie JSON vendored. INV-4 is the requirement, not an obstacle.
+> - **Ships as static files.** `vite build` → `dist/` → mounted at `/`. No node process on the
+>   demo machine. `scripts/vendor_frontend.sh` makes the build reproducible air-gapped.
+> - **The UI must not compete with inference for CPU** on a fanless 16 GB M4 Air at ~14.5 tok/s.
+>   No permanent rAF loop behind a working screen; canvas pauses off-route and respects
+>   `prefers-reduced-motion`.
+> - **No three.js** (user-confirmed 2026-09-09) — the entry-screen kinetic grid is 2D canvas.
+> - Semantic colour is load-bearing: purple = a model is resident, amber = unverified,
+>   red = conflict. Ambient gradient/glow may only use the accent and neutral families.
+> - Still deferred, not part of 9b: `.potx`/`.dotx` templates, the WeasyPrint advisory PDF, and
+>   the `template` generation parameter (the `GET /templates` endpoint lands, its consumers do not).
+
 **Dashboard** with source input, output-type checkboxes, generation parameter controls, live job progress, **Model Manager memory visualiser**, artefact downloads, converter panel, egress indicator.
 - Platform-accurate previews with live character counters for the `linkedin_post` and `x_thread` artefacts (X 280/post, LinkedIn 3000, truncation preview).
 

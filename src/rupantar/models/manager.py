@@ -38,6 +38,12 @@ def _parse_quant(path: Path) -> str:
     return match.group(0) if match else "unknown"
 
 
+def _rss_mb(runtime: Runtime | None) -> float | None:
+    """Resident set size of a model process in MB, or None when it is gone or unreadable."""
+    rss = runtime.rss_bytes() if runtime is not None else None
+    return round(rss / 1_000_000, 1) if rss else None
+
+
 __all__ = [
     "Event",
     "EventSink",
@@ -275,7 +281,7 @@ class ModelManager:
         entry.port = port
         entry.state = ModelState.LOADING
         entry.runtime = self._factory(self._registry.entry(entry.key), port)
-        await self._emit("LOAD_START", entry.key, None, port=port)
+        await self._emit("LOAD_START", entry.key, None, port=port, rss_mb=None)
         self._cond.notify_all()
         try:
             await entry.runtime.start()
@@ -293,7 +299,9 @@ class ModelManager:
         entry.state = ModelState.READY
         entry.loaded_at = self._clock()
         entry.last_used = self._clock()
-        await self._emit("LOAD_READY", entry.key, entry.runtime.pid, port=port)
+        await self._emit(
+            "LOAD_READY", entry.key, entry.runtime.pid, port=port, rss_mb=_rss_mb(entry.runtime)
+        )
         self._cond.notify_all()
 
     async def _evict(self, entry: Entry, *, reason: str) -> None:
@@ -304,7 +312,8 @@ class ModelManager:
         runtime = entry.runtime
         pid = runtime.pid
         entry.state = ModelState.EVICTING
-        await self._emit("EVICT_START", entry.key, pid, reason=reason)
+        resident_mb = _rss_mb(runtime)
+        await self._emit("EVICT_START", entry.key, pid, reason=reason, rss_mb=resident_mb)
         self._cond.notify_all()
         await runtime.stop()
         await wait_process_gone(pid)
@@ -313,14 +322,16 @@ class ModelManager:
         entry.refcount = 0
         entry.loaded_at = None
         entry.state = ModelState.NOT_LOADED
-        await self._emit("EVICT_DONE", entry.key, pid, reason=reason)
+        await self._emit(
+            "EVICT_DONE", entry.key, pid, reason=reason, rss_mb=0.0, freed_mb=resident_mb
+        )
         self._cond.notify_all()
 
     async def _discard(self, entry: Entry, *, reason: str) -> None:
         """Drop a dead runtime without counting it as a clean eviction."""
         runtime, entry.runtime = entry.runtime, None
         pid = runtime.pid if runtime else None
-        await self._emit("PROCESS_DIED", entry.key, pid, reason=reason)
+        await self._emit("PROCESS_DIED", entry.key, pid, reason=reason, rss_mb=None)
         entry.port = None
         entry.refcount = 0
         entry.loaded_at = None

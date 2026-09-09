@@ -113,3 +113,7 @@ class NoFreePortError(ModelError):
 
 class AcquireTimeoutError(ModelError):
     """A model lease could not be acquired within policy.yaml:acquire_timeout_seconds."""
+
+
+class ReleaseError(RupantarError):
+    """An operator release could not be recorded; the artefact has no manifest to stamp."""

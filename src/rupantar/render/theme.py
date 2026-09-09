@@ -66,6 +66,8 @@ class Theme(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     name: str
+    label: str = ""
+    description: str = ""
     palette: Palette
     type_scale: dict[str, int]
     spacing: Spacing = Field(default_factory=Spacing)

@@ -11,6 +11,7 @@ from fastapi import FastAPI, Request
 from rupantar import __version__
 from rupantar.agents.base import ArtefactAgent
 from rupantar.agents.loader import load_agents
+from rupantar.api.events import EventBus
 from rupantar.core.config import AppConfig, load_config
 from rupantar.core.store import Store
 from rupantar.models.manager import ModelManager
@@ -42,6 +43,12 @@ def get_registry(request: Request) -> Registry:
     return request.app.state.registry
 
 
+def get_bus(request: Request) -> EventBus:
+    """The single in-process broadcast bus feeding the SSE stream."""
+    bus: EventBus = request.app.state.bus
+    return bus
+
+
 def create_app(config: AppConfig | None = None) -> FastAPI:
     """Build the FastAPI app; construct the manager/store/agents but load no model."""
     from rupantar.audit.egress import enforce_offline_env
@@ -50,7 +57,8 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     enforce_offline_env()
     config = config or load_config()
     registry = Registry.from_config(config, verify=False)
-    manager = ModelManager(registry, policy=config.policy)
+    bus = EventBus()
+    manager = ModelManager(registry, policy=config.policy, event_sink=bus.model_sink)
     store = Store(config.db_path)
     agents = load_agents(config.configs_dir / "agents")
 
@@ -73,13 +81,28 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     app.state.manager = manager
     app.state.store = store
     app.state.agents = agents
+    app.state.bus = bus
     app.state.tasks = set()
 
-    from rupantar.api.routes import convert, health, jobs, models, transforms
+    from rupantar.api.routes import (
+        convert,
+        events,
+        health,
+        jobs,
+        models,
+        release,
+        templates,
+        transforms,
+    )
+    from rupantar.api.static import default_dist_dir, mount_frontend
 
     app.include_router(health.router)
     app.include_router(transforms.router)
+    app.include_router(events.router)
+    app.include_router(release.router)
     app.include_router(jobs.router)
     app.include_router(models.router)
     app.include_router(convert.router)
+    app.include_router(templates.router)
+    mount_frontend(app, default_dist_dir(config.configs_dir))
     return app

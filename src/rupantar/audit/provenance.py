@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import json
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _pkg_version
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
+
+from rupantar.core.errors import ReleaseError
 
 _MANIFEST_SUFFIX = ".manifest.json"
 
@@ -18,6 +21,18 @@ def app_version() -> str:
         return _pkg_version("rupantar")
     except PackageNotFoundError:
         return "unknown"
+
+
+class Release(BaseModel):
+    """Operator acknowledgement of a verification finding on one artefact."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    released_by: str
+    released_at: str
+    acknowledged_claim_ids: list[str] = Field(default_factory=list)
+    acknowledged_relations: list[str] = Field(default_factory=list)
+    note: str = ""
 
 
 class Manifest(BaseModel):
@@ -40,6 +55,7 @@ class Manifest(BaseModel):
     job_id: str
     transform_id: str
     verification: dict[str, Any] | None = None
+    release: Release | None = None
 
 
 def manifest_path(artefact_path: Path) -> Path:
@@ -57,3 +73,29 @@ def write_manifest(artefact_path: Path, manifest: Manifest) -> Path:
 def is_manifest(path: Path) -> bool:
     """True when `path` is itself a manifest file."""
     return path.name.endswith(_MANIFEST_SUFFIX)
+
+
+def read_manifest(manifest_file: Path) -> dict[str, Any]:
+    """Load a manifest file as a raw dict, raising ReleaseError when it is missing or unreadable."""
+    if not manifest_file.is_file():
+        raise ReleaseError(f"no manifest at {manifest_file}; the artefact was never provenanced")
+    try:
+        data: Any = json.loads(manifest_file.read_text(encoding="utf-8"))
+    except ValueError as exc:
+        raise ReleaseError(f"manifest {manifest_file} is not valid JSON: {exc}") from exc
+    if not isinstance(data, dict):
+        raise ReleaseError(f"manifest {manifest_file} is not a JSON object; regenerate it")
+    return data
+
+
+def record_release(manifest_file: Path, release: Release) -> dict[str, Any]:
+    """Stamp `release` into an existing manifest, preserving every field already on disk."""
+    merged = {**read_manifest(manifest_file), "release": release.model_dump(mode="json")}
+    try:
+        Manifest.model_validate(merged)
+    except ValidationError as exc:
+        raise ReleaseError(
+            f"manifest {manifest_file} would become invalid: {exc}; regenerate the artefact"
+        ) from exc
+    manifest_file.write_text(json.dumps(merged, indent=2), encoding="utf-8")
+    return merged

@@ -1,6 +1,10 @@
 # ntro-formal — the default Rupantar visual identity.
 # Drop a sibling <name>.yaml in this directory to add a theme; no code change needed.
 name: ntro-formal
+label: "NTRO Formal"
+description: >-
+  Dark navy institutional identity with a red accent and a four-level severity scale.
+  The default look for every rendered artefact.
 
 palette:
   primary: "#0b1f33"

@@ -15,21 +15,27 @@ from rupantar.audit.egress import scan_egress
 from rupantar.audit.provenance import Manifest, app_version, write_manifest
 from rupantar.core.artefacts import ArtefactBase, InfographicSpec
 from rupantar.core.errors import AgentError, ConfigError
-from rupantar.core.schemas import (
-    ArtefactType,
-    Job,
-    JobStatus,
-    SourceDossier,
-    SourceInput,
-    SourceKind,
-    TransformRequest,
-)
+from rupantar.core.schemas import ArtefactType, Job, JobStatus, SourceDossier, TransformRequest
 from rupantar.core.store import Store
 from rupantar.ingest.dossier import assemble_dossier
 from rupantar.models.client import LlamaClient
 from rupantar.models.manager import ModelManager
+from rupantar.orchestrator._run_support import (
+    client_read_timeout,
+    consecutive_runs,
+    validate_sources,
+    write_artefact,
+)
 from rupantar.orchestrator._video_prep import ensure_infographic_spec, file_source_paths
 from rupantar.orchestrator.planner import plan
+from rupantar.orchestrator.progress import (
+    ProgressSink,
+    delta_sink,
+    job_payload,
+    notify,
+    transform_payload,
+    verification_payload,
+)
 from rupantar.orchestrator.scheduler import schedule
 from rupantar.render.base import FORMATS, render
 from rupantar.render.context import RenderContext
@@ -72,6 +78,7 @@ class _RunContext:
     strict_airgap: bool
     infographic_holder: dict[str, InfographicSpec] = field(default_factory=dict)
     verification_params: dict[str, Any] | None = None
+    progress: ProgressSink | None = None
 
     def render_context(self) -> RenderContext:
         """A fresh RenderContext for the video renderer from this run's material."""
@@ -104,7 +111,7 @@ async def prepare(
     """Plan the Transform, persist it plus every PENDING job and the dossier, return their ids."""
     jobs = plan(request, agents, new_id=new_id, clock=clock)
     transform_id = jobs[0].transform_id
-    _validate_sources(request.sources)
+    validate_sources(request.sources)
     await store.create_transform(transform_id, request)
     for job in jobs:
         await store.create_job(job)
@@ -124,6 +131,7 @@ async def execute(
     operator: str | None = None,
     clock: Callable[[], datetime] = _utcnow,
     verification_params: dict[str, Any] | None = None,
+    progress: ProgressSink | None = None,
 ) -> list[Job]:
     """Run every persisted job of a Transform under modality-grouped leases; return final jobs."""
     jobs = await store.list_jobs_for_transform(transform_id)
@@ -154,22 +162,14 @@ async def execute(
         stream=stream,
         strict_airgap=strict_airgap,
         verification_params=verification_params,
+        progress=progress,
     )
 
-    succeeded: list[_JobOutcome] = []
-    report: VerificationReport | None = None
-    for group in _consecutive_runs(schedule(jobs)):
-        async with manager.acquire(group[0].model_key) as lease:
-            client = LlamaClient(lease.endpoint, read_timeout=_client_read_timeout(ctx))
-            try:
-                group_results = await _run_group(group, ctx, client)
-                if group[0].model_key == "brain" and group_results:
-                    report = await _verify_group(transform_id, group_results, ctx, client)
-                succeeded.extend(group_results)
-            finally:
-                await client.aclose()
+    succeeded, report = await _run_groups(transform_id, jobs, ctx)
     _emit_all_manifests(succeeded, report, ctx)
-    return await store.list_jobs_for_transform(transform_id)
+    final_jobs = await store.list_jobs_for_transform(transform_id)
+    notify(progress, "transform", transform_payload(transform_id, final_jobs, final=True))
+    return final_jobs
 
 
 async def run_batch(
@@ -233,23 +233,24 @@ async def run_single(
     return jobs[0]
 
 
-def _client_read_timeout(ctx: _RunContext) -> float:
-    """HTTP read timeout for this group's client: past `LlamaClient`'s default only if the
-    verification budget could otherwise exceed it -- a slow verification call must hit
-    `run_verification`'s own asyncio timeout, not an opaque lower-level httpx ReadTimeout."""
-    budget = float((ctx.verification_params or {}).get("timeout_seconds", 0))
-    return max(300.0, budget + 30.0)
-
-
-def _consecutive_runs(jobs: list[Job]) -> list[list[Job]]:
-    """Split an ordered job list into maximal runs sharing one model_key."""
-    runs: list[list[Job]] = []
-    for job in jobs:
-        if runs and runs[-1][0].model_key == job.model_key:
-            runs[-1].append(job)
-        else:
-            runs.append([job])
-    return runs
+async def _run_groups(
+    transform_id: str, jobs: list[Job], ctx: _RunContext
+) -> tuple[list[_JobOutcome], VerificationReport | None]:
+    """Run each modality group under one lease, verifying the brain group before releasing it."""
+    succeeded: list[_JobOutcome] = []
+    report: VerificationReport | None = None
+    for group in consecutive_runs(schedule(jobs)):
+        async with ctx.manager.acquire(group[0].model_key) as lease:
+            timeout = client_read_timeout(ctx.verification_params)
+            client = LlamaClient(lease.endpoint, read_timeout=timeout)
+            try:
+                results = await _run_group(group, ctx, client)
+                if group[0].model_key == "brain" and results:
+                    report = await _verify_group(transform_id, results, ctx, client)
+                succeeded.extend(results)
+            finally:
+                await client.aclose()
+    return succeeded, report
 
 
 async def _run_group(group: list[Job], ctx: _RunContext, client: LlamaClient) -> list[_JobOutcome]:
@@ -271,25 +272,31 @@ async def _run_group(group: list[Job], ctx: _RunContext, client: LlamaClient) ->
 async def _run_job(job: Job, ctx: _RunContext, client: LlamaClient) -> _JobOutcome | None:
     """Generate one artefact, render it, and mark the job SUCCEEDED; None signals a failure."""
     agent = ctx.agents[job.artefact_type.value]
-    await _transition(ctx.store, job, JobStatus.RUNNING, ctx.clock)
+    await _transition(ctx.store, job, JobStatus.RUNNING, ctx.clock, ctx.progress)
     if await _egress_aborts(ctx, job):
         return None
     try:
-        artefact = await agent.run(ctx.dossier_text, ctx.request.params, client, stream=ctx.stream)
+        artefact = await agent.run(
+            ctx.dossier_text,
+            ctx.request.params,
+            client,
+            stream=ctx.stream,
+            on_delta=delta_sink(job, ctx.progress),
+        )
     except AgentError as exc:
         job.error = str(exc)
-        await _transition(ctx.store, job, JobStatus.FAILED, ctx.clock)
+        await _transition(ctx.store, job, JobStatus.FAILED, ctx.clock, ctx.progress)
         return None
     if await _egress_aborts(ctx, job):
         return None
     job_dir = ctx.out_root / job.id
-    json_path = Path(_write_artefact(job_dir, agent.artefact_type, artefact))
+    json_path = Path(write_artefact(job_dir, agent.artefact_type, artefact))
     render_ctx = ctx.render_context() if job.artefact_type is ArtefactType.video_package else None
     rendered = render(
         artefact, job_dir, formats=FORMATS.get(agent.artefact_type, ()), context=render_ctx
     )
     job.artefact_path = str(json_path)
-    await _transition(ctx.store, job, JobStatus.SUCCEEDED, ctx.clock)
+    await _transition(ctx.store, job, JobStatus.SUCCEEDED, ctx.clock, ctx.progress)
     return _JobOutcome(job=job, agent=agent, artefact=artefact, paths=[json_path, *rendered])
 
 
@@ -307,6 +314,7 @@ async def _verify_group(
         clock=ctx.clock,
     )
     await ctx.store.save_verification_report(transform_id, report)
+    notify(ctx.progress, "verification", verification_payload(transform_id, report))
     return report
 
 
@@ -336,7 +344,7 @@ async def _egress_aborts(ctx: _RunContext, job: Job) -> bool:
     job.error = (
         f"EGRESS_VIOLATION: non-loopback connections {remotes}; job aborted (--strict-airgap)"
     )
-    await _transition(ctx.store, job, JobStatus.FAILED, ctx.clock)
+    await _transition(ctx.store, job, JobStatus.FAILED, ctx.clock, ctx.progress)
     return True
 
 
@@ -373,24 +381,14 @@ def _emit_manifests(
 
 
 async def _transition(
-    store: Store, job: Job, status: JobStatus, clock: Callable[[], datetime]
+    store: Store,
+    job: Job,
+    status: JobStatus,
+    clock: Callable[[], datetime],
+    progress: ProgressSink | None = None,
 ) -> None:
-    """Set the job status and timestamp and persist the row."""
+    """Set the job status and timestamp, persist the row, and announce the transition."""
     job.status = status
     job.updated_at = clock()
     await store.update_job(job)
-
-
-def _write_artefact(out_dir: Path, artefact_type: str, artefact: ArtefactBase) -> str:
-    """Write the validated artefact JSON (pretty) and return its path."""
-    out_dir.mkdir(parents=True, exist_ok=True)
-    path = out_dir / f"{artefact_type}.json"
-    path.write_text(artefact.model_dump_json(indent=2, by_alias=True), encoding="utf-8")
-    return str(path)
-
-
-def _validate_sources(sources: list[SourceInput]) -> None:
-    """Raise ConfigError naming the first file source whose path is not on disk."""
-    for source in sources:
-        if source.kind is SourceKind.file and not Path(source.path or "").is_file():
-            raise ConfigError(f"source file not found: {source.path}", path=str(source.path))
+    notify(progress, "job", job_payload(job))

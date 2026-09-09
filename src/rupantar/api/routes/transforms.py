@@ -14,6 +14,7 @@ from pydantic import BaseModel
 
 from rupantar.agents.base import ArtefactAgent
 from rupantar.api.app import get_agents, get_config, get_manager, get_store
+from rupantar.api.events import EventBus, StreamEvent
 from rupantar.core.config import AppConfig
 from rupantar.core.errors import ConfigError
 from rupantar.core.schemas import Job, JobStatus, TransformRequest
@@ -113,8 +114,10 @@ def _spawn_execution(
     store: Store = request.app.state.store
     agents: dict[str, ArtefactAgent] = request.app.state.agents
     tasks: set[asyncio.Task[Any]] = request.app.state.tasks
+    bus: EventBus = request.app.state.bus
 
     strict = os.environ.get("RUPANTAR_STRICT_AIRGAP", "").lower() in ("1", "true", "yes")
+    bus.mark_running(transform_id)
     task = asyncio.create_task(
         execute(
             transform_id,
@@ -122,17 +125,32 @@ def _spawn_execution(
             agents=agents,
             store=store,
             out_root=out_root,
+            stream=True,
             strict_airgap=strict,
             operator=operator,
             verification_params=verification_params,
+            progress=bus.progress_sink(transform_id),
         )
     )
     tasks.add(task)
 
     def _done(finished: asyncio.Task[Any]) -> None:
         tasks.discard(finished)
-        if not finished.cancelled() and finished.exception() is not None:
-            _log.error("transform %s execution failed: %s", transform_id, finished.exception())
+        bus.mark_finished(transform_id)
+        error = None if finished.cancelled() else finished.exception()
+        if error is not None:
+            _log.error("transform %s execution failed: %s", transform_id, error)
+        bus.publish(
+            StreamEvent(
+                "transform",
+                {
+                    "transform_id": transform_id,
+                    "final": True,
+                    "error": str(error) if error else None,
+                },
+                transform_id,
+            )
+        )
 
     task.add_done_callback(_done)
 
