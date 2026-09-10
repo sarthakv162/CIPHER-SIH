@@ -41,8 +41,9 @@ export function Workspace() {
     <>
       <Header title="Workspace" subtitle="Compose a transform" />
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-px overflow-y-auto bg-border xl:grid-cols-[300px_1fr_280px] xl:overflow-hidden">
-        <section className="bg-bg-1 p-4 xl:overflow-y-auto">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto md:flex-row md:overflow-hidden">
+        <div className="grid min-w-0 flex-1 grid-cols-1 gap-px overflow-y-auto bg-border lg:grid-cols-[300px_1fr] lg:overflow-hidden">
+        <section className="bg-bg-1 p-4 lg:overflow-y-auto">
           <SourcePanel
             sources={state.sources}
             prompt={state.prompt}
@@ -52,7 +53,7 @@ export function Workspace() {
           />
         </section>
 
-        <section className="bg-bg-1 p-4 xl:overflow-y-auto">
+        <section className="bg-bg-1 p-4 lg:overflow-y-auto">
           <div className="flex items-baseline justify-between">
             <h2 className="text-[13px] text-text-0">Output types</h2>
             <span className="tabular text-[12px] text-text-1">
@@ -75,7 +76,9 @@ export function Workspace() {
           </div>
         </section>
 
-        <section className="bg-bg-1 p-4 xl:overflow-y-auto">
+        </div>
+
+        <aside className="flex w-full shrink-0 flex-col border-t border-border bg-bg-1 p-4 md:w-[286px] md:border-t-0 md:border-l md:overflow-y-auto">
           <h2 className="text-[13px] text-text-0">Parameters</h2>
           <div className="mt-3 flex flex-col gap-3.5">
             <Dropdown
@@ -122,7 +125,7 @@ export function Workspace() {
               </p>
             )}
           </div>
-        </section>
+        </aside>
       </div>
 
       <div className="hairline-t flex shrink-0 items-center justify-between gap-4 bg-bg-1 px-4 py-3">
