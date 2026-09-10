@@ -9,7 +9,7 @@ import os
 from pathlib import Path
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 
 from rupantar.agents.base import ArtefactAgent
@@ -18,7 +18,7 @@ from rupantar.api.events import EventBus, StreamEvent
 from rupantar.core.config import AppConfig
 from rupantar.core.errors import ConfigError
 from rupantar.core.schemas import Job, JobStatus, TransformRequest
-from rupantar.core.store import Store
+from rupantar.core.store import Store, TransformSummary
 from rupantar.models.manager import ModelManager
 from rupantar.orchestrator.runner import execute, prepare
 from rupantar.verify.report import VerificationReport
@@ -40,6 +40,19 @@ class TransformAccepted(BaseModel):
     transform_id: str
     status: str
     jobs: list[JobRef]
+
+
+class TransformListEntry(BaseModel):
+    """One row of the recent-transforms list that fills the console sidebar."""
+
+    transform_id: str
+    created_at: str
+    output_types: list[str]
+    job_count: int
+    status: str
+    has_verification: bool
+    verification_ok: bool | None = None
+    conflicts: int = 0
 
 
 class VerificationView(BaseModel):
@@ -180,6 +193,29 @@ async def create_transform(
         transform_id=transform_id,
         status="accepted",
         jobs=[JobRef(job_id=job.id, artefact_type=job.artefact_type.value) for job in jobs],
+    )
+
+
+@router.get("/transforms")
+async def list_transforms(
+    store: Annotated[Store, Depends(get_store)],
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+) -> list[TransformListEntry]:
+    """List recent transforms, newest first, for the console sidebar."""
+    return [_list_entry(row) for row in await store.list_transforms(limit=limit)]
+
+
+def _list_entry(summary: TransformSummary) -> TransformListEntry:
+    """Project a store TransformSummary onto the wire model."""
+    return TransformListEntry(
+        transform_id=summary.transform_id,
+        created_at=summary.created_at,
+        output_types=summary.output_types,
+        job_count=summary.job_count,
+        status=summary.status,
+        has_verification=summary.has_verification,
+        verification_ok=summary.verification_ok,
+        conflicts=summary.conflicts,
     )
 
 

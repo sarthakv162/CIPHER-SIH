@@ -164,6 +164,18 @@ async def check_hw_offload(config: AppConfig, *, load_model: bool) -> list[Check
 async def check_model_manager(config: AppConfig, *, load_model: bool) -> list[CheckResult]:
     """Check 5: load brain, generate one token, unload, assert RSS returns to baseline ±200 MB."""
     registry = Registry.from_config(config, verify=False)
+    if not load_model:
+        # Honouring this is what makes the check safe to run inside a process that
+        # already owns a ModelManager: building a second one here could put two heavy
+        # models in memory at once (INV-2).
+        return [
+            _result(
+                "5",
+                "model manager load/unload",
+                "ok",
+                "load/unload check skipped (no model load requested)",
+            )
+        ]
     manager = ModelManager(registry, policy=config.policy)
     baseline = _tree_rss()
     try:

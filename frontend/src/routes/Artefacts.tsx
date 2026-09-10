@@ -70,8 +70,7 @@ export function Artefacts() {
         <Header title="Artefacts" subtitle="No run selected" />
         <div className="flex flex-1 items-center justify-center p-6">
           <p className="max-w-[46ch] text-center text-[13px] leading-relaxed text-text-1">
-            Open a run to see the artefacts it produced. A list of past transforms
-            needs an endpoint that does not exist yet.
+            Pick a run from Recent in the sidebar to see the artefacts it produced.
           </p>
         </div>
       </>

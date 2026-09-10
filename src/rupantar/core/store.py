@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from types import TracebackType
@@ -49,6 +50,72 @@ CREATE TABLE IF NOT EXISTS events (
 );
 CREATE INDEX IF NOT EXISTS idx_events_kind ON events (kind);
 """
+
+_LIST_TRANSFORMS_SQL = """
+SELECT t.id                                         AS id,
+       t.created_at                                 AS created_at,
+       json_extract(t.data_json, '$.output_types')  AS output_types,
+       COUNT(j.id)                                  AS job_count,
+       COALESCE(SUM(j.status = 'RUNNING'), 0)       AS running,
+       COALESCE(SUM(j.status = 'PENDING'), 0)       AS pending,
+       COALESCE(SUM(j.status = 'SUCCEEDED'), 0)     AS succeeded,
+       v.transform_id IS NOT NULL                   AS has_verification,
+       json_extract(v.data_json, '$.ok')            AS verification_ok,
+       json_extract(v.data_json, '$.summary.conflict') AS conflicts,
+       MAX(t.rowid)                                 AS ordinal
+FROM transforms t
+LEFT JOIN jobs j ON j.transform_id = t.id
+LEFT JOIN verification_reports v ON v.transform_id = t.id
+GROUP BY t.id
+ORDER BY t.created_at DESC, ordinal DESC
+LIMIT ?
+"""
+
+
+@dataclass(frozen=True)
+class TransformSummary:
+    """One sidebar row: what was asked for, how the jobs ended, what verification found."""
+
+    transform_id: str
+    created_at: str
+    output_types: list[str]
+    job_count: int
+    status: str
+    has_verification: bool
+    verification_ok: bool | None
+    conflicts: int
+
+
+def _fold_status(*, job_count: int, running: int, pending: int, succeeded: int) -> str:
+    """Fold job status counts into one batch status, matching the per-transform endpoint."""
+    if running:
+        return "RUNNING"
+    if pending:
+        return "PENDING"
+    if job_count and succeeded == job_count:
+        return "SUCCEEDED"
+    return "FAILED"
+
+
+def _summary_from_row(row: aiosqlite.Row) -> TransformSummary:
+    """Build a TransformSummary from one aggregated result row."""
+    raw_types = row["output_types"]
+    has_report = bool(row["has_verification"])
+    return TransformSummary(
+        transform_id=row["id"],
+        created_at=row["created_at"],
+        output_types=list(json.loads(raw_types)) if raw_types else [],
+        job_count=int(row["job_count"]),
+        status=_fold_status(
+            job_count=int(row["job_count"]),
+            running=int(row["running"]),
+            pending=int(row["pending"]),
+            succeeded=int(row["succeeded"]),
+        ),
+        has_verification=has_report,
+        verification_ok=bool(row["verification_ok"]) if has_report else None,
+        conflicts=int(row["conflicts"] or 0),
+    )
 
 
 class Store:
@@ -246,3 +313,11 @@ class Store:
         ) as cursor:
             rows = await cursor.fetchall()
         return [Job.model_validate_json(row["data_json"]) for row in rows]
+
+    async def list_transforms(self, *, limit: int = 50) -> list[TransformSummary]:
+        """Return the most recent transforms with their job and verification rollups."""
+        if limit < 1:
+            raise StoreError("list_transforms limit must be >= 1", entity="transforms")
+        async with self.connection.execute(_LIST_TRANSFORMS_SQL, (limit,)) as cursor:
+            rows = await cursor.fetchall()
+        return [_summary_from_row(row) for row in rows]

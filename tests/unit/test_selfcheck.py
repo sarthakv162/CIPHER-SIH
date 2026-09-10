@@ -14,6 +14,7 @@ from rupantar.audit._selfcheck_checks import (
     check_python,
     check_renderers,
 )
+from rupantar.audit._selfcheck_hw import check_hw_offload, check_model_manager
 from rupantar.audit.selfcheck import CheckResult, SelfcheckReport, run_selfcheck
 from rupantar.core.config import Env, load_config
 from rupantar.models.registry import ModelEntry
@@ -117,3 +118,43 @@ def test_run_selfcheck_stub_profile_passes(stub_config) -> None:  # type: ignore
     # model-file and offload checks are stub no-ops; nothing here should hard-fail
     non_tool_fails = [c for c in report.checks if c.level == "fail" and c.number != "2"]
     assert not non_tool_fails, [(c.name, c.detail) for c in non_tool_fails]
+
+
+async def test_check_model_manager_without_a_model_builds_no_manager(  # type: ignore[no-untyped-def]
+    stub_config, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Regression: --no-model / load_model=False must not construct a second ModelManager."""
+
+    def _forbidden(*args: object, **kwargs: object) -> None:
+        raise AssertionError("check_model_manager built a ModelManager with load_model=False")
+
+    monkeypatch.setattr("rupantar.audit._selfcheck_hw.ModelManager", _forbidden)
+    (result,) = await check_model_manager(stub_config, load_model=False)
+    assert result.number == "5"
+    assert result.level == "ok"
+    assert "skipped" in result.detail
+
+
+async def test_check_hw_offload_without_a_model_builds_no_manager(  # type: ignore[no-untyped-def]
+    stub_config, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def _forbidden(*args: object, **kwargs: object) -> None:
+        raise AssertionError("check_hw_offload built a ModelManager with load_model=False")
+
+    monkeypatch.setattr("rupantar.audit._selfcheck_hw.ModelManager", _forbidden)
+    (result,) = await check_hw_offload(stub_config, load_model=False)
+    assert result.number == "4b"
+    assert "skipped" in result.detail
+
+
+def test_run_selfcheck_without_a_model_skips_the_load_check(  # type: ignore[no-untyped-def]
+    stub_config, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def _forbidden(*args: object, **kwargs: object) -> None:
+        raise AssertionError("run_selfcheck(load_model=False) built a ModelManager")
+
+    monkeypatch.setattr("rupantar.audit._selfcheck_hw.ModelManager", _forbidden)
+    report = run_selfcheck(config=stub_config, fast=True, load_model=False)
+    check_five = next(c for c in report.checks if c.number == "5")
+    assert check_five.level == "ok"
+    assert "skipped" in check_five.detail

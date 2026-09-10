@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { ArrowLeftRight, FileStack, type LucideIcon, Plus, ShieldCheck } from 'lucide-react'
+import { RecentTransforms } from '@/components/RecentTransforms'
 import { cn } from '@/lib/utils'
 
 interface NavItemProps {
@@ -64,11 +65,8 @@ export function Sidebar() {
 
       <nav className="flex min-h-0 flex-1 flex-col gap-1.5">
         <div className="section-label px-2.5">Recent</div>
-        <div className="flex flex-col gap-0.5">
-          {/* Populated from the transforms table in 9b-3. */}
-          <p className="px-2.5 py-1.5 text-[12px] leading-relaxed text-text-1">
-            No transforms yet.
-          </p>
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <RecentTransforms />
         </div>
       </nav>
 

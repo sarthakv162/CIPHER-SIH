@@ -92,6 +92,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         jobs,
         models,
         release,
+        selfcheck,
         templates,
         transforms,
     )
@@ -106,5 +107,6 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     app.include_router(models.router)
     app.include_router(convert.router)
     app.include_router(templates.router)
+    app.include_router(selfcheck.router)
     mount_frontend(app, default_dist_dir(config.configs_dir))
     return app

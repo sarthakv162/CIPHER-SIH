@@ -19,6 +19,7 @@ from rupantar.core.schemas import (
     TransformRequest,
 )
 from rupantar.core.store import Store
+from rupantar.verify.report import VerificationReport, VerificationSummary
 
 
 def _job(job_id: str, transform_id: str, artefact: ArtefactType) -> Job:
@@ -112,3 +113,110 @@ async def test_connection_before_connect_raises(db_path: Path) -> None:
     store = Store(db_path)
     with pytest.raises(StoreError):
         _ = store.connection
+
+
+def _request(*artefacts: ArtefactType) -> TransformRequest:
+    return TransformRequest(
+        sources=[SourceInput(kind=SourceKind.text, text="body")],
+        output_types=list(artefacts),
+    )
+
+
+async def _add_job(store: Store, job_id: str, transform_id: str, status: JobStatus) -> None:
+    job = _job(job_id, transform_id, ArtefactType.advisory)
+    job.status = status
+    await store.create_job(job)
+
+
+async def test_list_transforms_is_newest_first_and_honours_limit(db_path: Path) -> None:
+    async with Store(db_path) as store:
+        for index in range(4):
+            await store.create_transform(f"tr-{index}", _request(ArtefactType.advisory))
+
+        rows = await store.list_transforms()
+        assert [r.transform_id for r in rows] == ["tr-3", "tr-2", "tr-1", "tr-0"]
+
+        limited = await store.list_transforms(limit=2)
+        assert [r.transform_id for r in limited] == ["tr-3", "tr-2"]
+
+
+async def test_list_transforms_rejects_a_zero_limit(db_path: Path) -> None:
+    async with Store(db_path) as store:
+        with pytest.raises(StoreError):
+            await store.list_transforms(limit=0)
+
+
+async def test_list_transforms_reports_requested_types_and_job_count(db_path: Path) -> None:
+    async with Store(db_path) as store:
+        await store.create_transform("tr-1", _request(ArtefactType.advisory, ArtefactType.x_thread))
+        await _add_job(store, "j-1", "tr-1", JobStatus.SUCCEEDED)
+        await _add_job(store, "j-2", "tr-1", JobStatus.SUCCEEDED)
+
+        (row,) = await store.list_transforms()
+        assert row.output_types == ["advisory", "x_thread"]
+        assert row.job_count == 2
+        assert row.status == "SUCCEEDED"
+        assert row.has_verification is False
+        assert row.verification_ok is None
+        assert row.conflicts == 0
+
+
+@pytest.mark.parametrize(
+    ("statuses", "expected"),
+    [
+        ([JobStatus.SUCCEEDED, JobStatus.RUNNING, JobStatus.PENDING], "RUNNING"),
+        ([JobStatus.SUCCEEDED, JobStatus.PENDING], "PENDING"),
+        ([JobStatus.SUCCEEDED, JobStatus.FAILED], "FAILED"),
+        ([JobStatus.SUCCEEDED, JobStatus.SUCCEEDED], "SUCCEEDED"),
+        ([JobStatus.CANCELLED], "FAILED"),
+        ([], "FAILED"),
+    ],
+)
+async def test_list_transforms_folds_mixed_job_statuses(
+    db_path: Path, statuses: list[JobStatus], expected: str
+) -> None:
+    async with Store(db_path) as store:
+        await store.create_transform("tr-1", _request(ArtefactType.advisory))
+        for index, status in enumerate(statuses):
+            await _add_job(store, f"j-{index}", "tr-1", status)
+
+        (row,) = await store.list_transforms()
+        assert row.status == expected
+        assert row.job_count == len(statuses)
+
+
+async def test_list_transforms_carries_the_verification_conflict_count(db_path: Path) -> None:
+    report = VerificationReport(
+        transform_id="tr-1",
+        generated_at="2026-09-09T00:00:00+00:00",
+        summary=VerificationSummary(total=9, supported=7, unsupported=2, conflict=2, orphan=1),
+    )
+    async with Store(db_path) as store:
+        await store.create_transform("tr-1", _request(ArtefactType.advisory))
+        await store.create_transform("tr-2", _request(ArtefactType.advisory))
+        await _add_job(store, "j-1", "tr-1", JobStatus.SUCCEEDED)
+        await store.save_verification_report("tr-1", report)
+
+        rows = {r.transform_id: r for r in await store.list_transforms()}
+        assert rows["tr-1"].has_verification is True
+        assert rows["tr-1"].verification_ok is True
+        assert rows["tr-1"].conflicts == 2
+        assert rows["tr-2"].has_verification is False
+        assert rows["tr-2"].conflicts == 0
+
+
+async def test_list_transforms_marks_a_failed_verification_run(db_path: Path) -> None:
+    report = VerificationReport(
+        transform_id="tr-1",
+        generated_at="2026-09-09T00:00:00+00:00",
+        ok=False,
+        warnings=["verification timed out"],
+    )
+    async with Store(db_path) as store:
+        await store.create_transform("tr-1", _request(ArtefactType.advisory))
+        await store.save_verification_report("tr-1", report)
+
+        (row,) = await store.list_transforms()
+        assert row.has_verification is True
+        assert row.verification_ok is False
+        assert row.conflicts == 0
