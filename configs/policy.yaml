@@ -8,12 +8,20 @@ health_timeout_seconds: 120
 prewarm_on_startup: brain
 verification:
   enabled: true
-  # 120s (and even 300s) undershoot real M4-Air throughput for a full claims+grounding pair:
-  # two sequential max_tokens=2000 calls at this machine's ~14.5 tok/s ceiling (see MEMORY.md
-  # §8 CLEAN PERF BASELINE) can legitimately need close to 2*2000/14.5 ~= 276s of generation
-  # alone, before prompt-eval and under any contention. 600s gives real headroom instead of
-  # sitting right at the edge -- measured against a real failing run, not guessed. See
-  # MEMORY.md Phase 8.5 session log / deviations.
-  timeout_seconds: 600
-  max_tokens: 2000
+  # Sized from the max_tokens below, not guessed. Two sequential calls at this machine's
+  # ~14.5 tok/s ceiling (MEMORY.md §8 CLEAN PERF BASELINE) is ~2*4000/14.5 ~= 550s of
+  # generation alone, before prompt-eval and under any contention. 1200s leaves real
+  # headroom rather than sitting at the edge; 600s was the measured floor for the old
+  # 2000-token budget, and raising one without the other would just move the failure.
+  # Do not lower either without re-measuring on the target machine.
+  timeout_seconds: 1200
+  # 2000 was too small and it failed silently-ish: a multi-artefact transform has more
+  # claims than that can serialise, so the response was cut mid-string and the whole
+  # report was lost as "unparseable JSON". Measured 2026-09-10 -- the 2-artefact demo
+  # step failed at 2000 and produced `30 claims * 24 supported * 1 CONFLICT` at 4000.
+  # `_parse.py` now also salvages complete elements from a truncated array, so
+  # overflowing this budget degrades to a partial report rather than to nothing.
+  # timeout_seconds is raised in step: two sequential 4000-token calls at this
+  # machine's ~14.5 tok/s ceiling is ~550s of generation before prompt-eval.
+  max_tokens: 4000
   temperature: 0.0

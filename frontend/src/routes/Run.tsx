@@ -195,6 +195,18 @@ function VerificationSummary({ report }: { report: VerificationFrame }) {
         <Stat label="conflicts" value={summary.conflict} tone="danger" />
       </div>
 
+      {/* 0 supported is verification working, not failing: it means the source
+          carried nothing that entails what was written. Say so, or a reader takes
+          an all-amber panel for a broken system. */}
+      {summary.total > 0 && summary.supported === 0 && (
+        <p className="mt-3 flex gap-1.5 rounded-[8px] border border-warn/25 bg-warn/8 px-2.5 py-2 text-[11px] leading-snug text-warn">
+          <AlertTriangle className="mt-px size-3 shrink-0" strokeWidth={1.75} />
+          Nothing here could be traced to the source. That usually means the source
+          carried little usable evidence — a silent clip, an image with no text —
+          not that generation failed. Treat every claim as the model's own.
+        </p>
+      )}
+
       <p className="mt-3 text-[11px] leading-snug text-text-1">{report.disclaimer}</p>
     </section>
   )
