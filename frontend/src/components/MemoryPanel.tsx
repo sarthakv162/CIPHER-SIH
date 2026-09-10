@@ -30,8 +30,8 @@ export function MemoryPanel({ models, events }: MemoryPanelProps) {
   return (
     <section className="surface-card p-4">
       <div className="flex items-baseline justify-between">
-        <h2 className="text-[13px] text-text-0">Model residency</h2>
-        <p className="tabular text-[12px] text-text-1">
+        <h2 className="text-[16px] text-text-0">Model residency</h2>
+        <p className="tabular text-[15px] text-text-1">
           {(usedMb / 1000).toFixed(2)} / 16.0 GB
         </p>
       </div>
@@ -72,10 +72,10 @@ export function MemoryPanel({ models, events }: MemoryPanelProps) {
                     : 'border-model/40 bg-model/20',
                 )}
               >
-                <span className="truncate text-[12px] leading-none text-text-0">
+                <span className="truncate text-[15px] leading-none text-text-0">
                   {model.key}
                 </span>
-                <span className="tabular truncate text-[11px] leading-none text-model">
+                <span className="tabular truncate text-[14px] leading-none text-model">
                   {model.rss_mb ? `${(model.rss_mb / 1000).toFixed(2)} GB` : 'loading…'}
                   {/* The pid is the evidence that a model is a real supervised
                       process, not an in-process load — kept unless space is tight. */}
@@ -87,7 +87,7 @@ export function MemoryPanel({ models, events }: MemoryPanelProps) {
 
           {resident.length === 0 && (
             <div className="flex w-full items-center px-2">
-              <span className="text-[12px] text-text-1">No model resident</span>
+              <span className="text-[15px] text-text-1">No model resident</span>
             </div>
           )}
         </div>
@@ -105,7 +105,7 @@ function SwapTimeline({ events }: { events: ModelFrame[] }) {
   )
   if (steps.length === 0) {
     return (
-      <p className="mt-3 text-[12px] text-text-1">
+      <p className="mt-3 text-[15px] text-text-1">
         The swap sequence appears here as models load and are evicted.
       </p>
     )
@@ -124,7 +124,7 @@ function SwapTimeline({ events }: { events: ModelFrame[] }) {
           >
             <span
               className={cn(
-                'rounded-full border px-2 py-0.5 text-[11px]',
+                'rounded-full border px-2 py-0.5 text-[14px]',
                 step.kind === 'LOAD_READY'
                   ? 'border-model/30 bg-model/10 text-model'
                   : step.kind === 'PROCESS_DIED'

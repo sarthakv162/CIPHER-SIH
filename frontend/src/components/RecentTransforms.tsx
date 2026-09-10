@@ -27,11 +27,11 @@ export function RecentTransforms() {
   })
 
   if (isLoading) {
-    return <p className="px-2.5 py-1.5 text-[12px] text-text-1">Loading…</p>
+    return <p className="px-2.5 py-1.5 text-[15px] text-text-1">Loading…</p>
   }
 
   if (!data || data.length === 0) {
-    return <p className="px-2.5 py-1.5 text-[12px] text-text-1">No transforms yet.</p>
+    return <p className="px-2.5 py-1.5 text-[15px] text-text-1">No transforms yet.</p>
   }
 
   return (
@@ -60,7 +60,7 @@ export function RecentTransforms() {
                         : 'bg-ok',
                 )}
               />
-              <span className="tabular truncate text-[12px] text-text-0">
+              <span className="tabular truncate text-[15px] text-text-0">
                 {row.output_types.length === 1
                   ? row.output_types[0].replace(/_/g, ' ')
                   : `${row.job_count} artefacts`}
@@ -72,7 +72,7 @@ export function RecentTransforms() {
                 />
               )}
             </span>
-            <span className="tabular truncate pl-3 text-[11px] text-text-1">
+            <span className="tabular truncate pl-3 text-[14px] text-text-1">
               {new Date(row.created_at).toLocaleString(undefined, {
                 month: 'short',
                 day: 'numeric',

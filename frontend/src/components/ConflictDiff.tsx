@@ -75,13 +75,13 @@ export function ConflictDiff({
           strokeWidth={1.75}
         />
         <span className="min-w-0 flex-1">
-          <span className="block text-[13px] text-text-0">{relation.subject}</span>
-          <span className="mt-0.5 block text-[12px] leading-snug text-text-1">
+          <span className="block text-[16px] text-text-0">{relation.subject}</span>
+          <span className="mt-0.5 block text-[15px] leading-snug text-text-1">
             {relation.detail}
           </span>
         </span>
         {acknowledged && (
-          <span className="shrink-0 rounded-full border border-border bg-bg-3 px-2 py-0.5 text-[11px] text-text-1">
+          <span className="shrink-0 rounded-full border border-border bg-bg-3 px-2 py-0.5 text-[14px] text-text-1">
             acknowledged
           </span>
         )}
@@ -103,19 +103,19 @@ export function ConflictDiff({
                   className="rounded-[8px] border border-border bg-bg-0 p-2.5"
                 >
                   <div className="flex items-baseline justify-between gap-2">
-                    <span className="text-[11px] text-text-1">
+                    <span className="text-[14px] text-text-1">
                       {ARTEFACT_BY_TYPE.get(claim.artefact_type)?.label ??
                         claim.artefact_type}
                     </span>
-                    <span className="tabular text-[11px] text-text-2">
+                    <span className="tabular text-[14px] text-text-2">
                       {claim.claim_id}
                     </span>
                   </div>
-                  <p className="mt-1.5 text-[13px] leading-relaxed text-text-0">
+                  <p className="mt-1.5 text-[16px] leading-relaxed text-text-0">
                     <Highlighted text={claim.claim} />
                   </p>
                   {claim.note && (
-                    <p className="mt-1.5 text-[11px] leading-snug text-text-1">
+                    <p className="mt-1.5 text-[14px] leading-snug text-text-1">
                       {claim.note}
                     </p>
                   )}
@@ -128,7 +128,7 @@ export function ConflictDiff({
                 <button
                   type="button"
                   onClick={onAcknowledge}
-                  className="rounded-[8px] border border-border bg-bg-2 px-2.5 py-1.5 text-[12px] text-text-0 transition-colors duration-150 hover:border-border-2 hover:bg-bg-3"
+                  className="rounded-[8px] border border-border bg-bg-2 px-2.5 py-1.5 text-[15px] text-text-0 transition-colors duration-150 hover:border-border-2 hover:bg-bg-3"
                 >
                   Acknowledge this conflict
                 </button>

@@ -41,8 +41,8 @@ export function Run() {
 
           <section className="surface-card overflow-hidden">
             <div className="hairline-b flex items-baseline justify-between px-4 py-3">
-              <h2 className="text-[13px] text-text-0">Artefacts</h2>
-              <span className="tabular text-[12px] text-text-1">
+              <h2 className="text-[16px] text-text-0">Artefacts</h2>
+              <span className="tabular text-[15px] text-text-1">
                 {jobs.filter((j) => j.status === 'SUCCEEDED').length} of {jobs.length} done
               </span>
             </div>
@@ -66,7 +66,7 @@ export function Run() {
                 ))}
               </AnimatePresence>
               {jobs.length === 0 && (
-                <li className="px-4 py-6 text-center text-[12px] text-text-1">
+                <li className="px-4 py-6 text-center text-[15px] text-text-1">
                   Waiting for the first job…
                 </li>
               )}
@@ -74,7 +74,7 @@ export function Run() {
           </section>
 
           {stream.status === 'error' && !stream.final && (
-            <p className="flex items-center gap-2 rounded-[8px] border border-warn/25 bg-warn/10 px-3 py-2 text-[12px] text-warn">
+            <p className="flex items-center gap-2 rounded-[8px] border border-warn/25 bg-warn/10 px-3 py-2 text-[15px] text-warn">
               <AlertTriangle className="size-3.5 shrink-0" strokeWidth={1.75} />
               The event stream dropped. The run continues on the server — reload to
               rejoin it.
@@ -116,18 +116,18 @@ function JobRow({
         {done ? (
           <Link
             to={`/runs/${transformId}/artefacts?job=${job.job_id}`}
-            className="min-w-0 flex-1 truncate text-[13px] text-text-0 underline decoration-border underline-offset-4 transition-colors duration-150 hover:decoration-accent"
+            className="min-w-0 flex-1 truncate text-[16px] text-text-0 underline decoration-border underline-offset-4 transition-colors duration-150 hover:decoration-accent"
           >
             {meta?.label ?? job.artefact_type}
           </Link>
         ) : (
-          <span className="min-w-0 flex-1 truncate text-[13px] text-text-0">
+          <span className="min-w-0 flex-1 truncate text-[16px] text-text-0">
             {meta?.label ?? job.artefact_type}
           </span>
         )}
         <span
           className={cn(
-            'rounded-full border px-2 py-0.5 text-[11px]',
+            'rounded-full border px-2 py-0.5 text-[14px]',
             job.status === 'SUCCEEDED'
               ? 'border-ok/25 bg-ok/10 text-ok'
               : job.status === 'FAILED' || job.status === 'CANCELLED'
@@ -142,13 +142,13 @@ function JobRow({
       </div>
 
       {job.error && (
-        <p className="pl-7 text-[12px] leading-snug text-danger">{job.error}</p>
+        <p className="pl-7 text-[15px] leading-snug text-danger">{job.error}</p>
       )}
 
       {/* Token deltas as they arrive. This is the raw JSON the model is emitting,
           shown so a five-minute wait is visibly alive, not so it can be read. */}
       {streaming && (
-        <pre className="ml-7 max-h-20 overflow-hidden rounded-[8px] border border-border bg-bg-0 px-2.5 py-2 text-[11px] leading-relaxed text-text-1">
+        <pre className="ml-7 max-h-20 overflow-hidden rounded-[8px] border border-border bg-bg-0 px-2.5 py-2 text-[14px] leading-relaxed text-text-1">
           <code className="break-all whitespace-pre-wrap">{tokens.slice(-320)}</code>
         </pre>
       )}
@@ -163,8 +163,8 @@ function VerificationSummary({ report }: { report: VerificationFrame }) {
       <section className="surface-card flex items-start gap-2.5 p-4">
         <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warn" strokeWidth={1.75} />
         <div>
-          <h2 className="text-[13px] text-text-0">Verification unavailable</h2>
-          <p className="mt-1 text-[12px] leading-snug text-text-1">
+          <h2 className="text-[16px] text-text-0">Verification unavailable</h2>
+          <p className="mt-1 text-[15px] leading-snug text-text-1">
             {report.warnings[0] ?? 'The verification pass did not complete.'} The
             artefacts themselves are unaffected.
           </p>
@@ -177,7 +177,7 @@ function VerificationSummary({ report }: { report: VerificationFrame }) {
   return (
     <section className="surface-card p-4">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
-        <h2 className="flex shrink-0 items-center gap-1.5 text-[13px] text-text-0">
+        <h2 className="flex shrink-0 items-center gap-1.5 text-[16px] text-text-0">
           <LottieMark
             animationData={completeMark}
             size={18}
@@ -185,7 +185,7 @@ function VerificationSummary({ report }: { report: VerificationFrame }) {
           />
           Verification
         </h2>
-        <span className="tabular text-[12px] text-text-1 sm:text-right">{report.line}</span>
+        <span className="tabular text-[15px] text-text-1 sm:text-right">{report.line}</span>
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -199,7 +199,7 @@ function VerificationSummary({ report }: { report: VerificationFrame }) {
           carried nothing that entails what was written. Say so, or a reader takes
           an all-amber panel for a broken system. */}
       {summary.total > 0 && summary.supported === 0 && (
-        <p className="mt-3 flex gap-1.5 rounded-[8px] border border-warn/25 bg-warn/8 px-2.5 py-2 text-[11px] leading-snug text-warn">
+        <p className="mt-3 flex gap-1.5 rounded-[8px] border border-warn/25 bg-warn/8 px-2.5 py-2 text-[14px] leading-snug text-warn">
           <AlertTriangle className="mt-px size-3 shrink-0" strokeWidth={1.75} />
           Nothing here could be traced to the source. That usually means the source
           carried little usable evidence — a silent clip, an image with no text —
@@ -207,7 +207,7 @@ function VerificationSummary({ report }: { report: VerificationFrame }) {
         </p>
       )}
 
-      <p className="mt-3 text-[11px] leading-snug text-text-1">{report.disclaimer}</p>
+      <p className="mt-3 text-[14px] leading-snug text-text-1">{report.disclaimer}</p>
     </section>
   )
 }
@@ -234,7 +234,7 @@ function Stat({
     >
       <div
         className={cn(
-          'tabular text-[18px] leading-none',
+          'tabular text-[24px] leading-none',
           lit && tone === 'ok' && 'text-ok',
           lit && tone === 'warn' && 'text-warn',
           lit && tone === 'danger' && 'text-danger',
@@ -243,7 +243,7 @@ function Stat({
       >
         {value}
       </div>
-      <div className="mt-1 text-[11px] text-text-1">{label}</div>
+      <div className="mt-1 text-[14px] text-text-1">{label}</div>
     </div>
   )
 }

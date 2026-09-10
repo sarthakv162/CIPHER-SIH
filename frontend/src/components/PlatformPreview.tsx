@@ -30,7 +30,7 @@ function CharCount({
   return (
     <span
       className={cn(
-        'tabular text-[11px]',
+        'tabular text-[14px]',
         over ? 'text-danger' : nearing ? 'text-warn' : 'text-text-1',
       )}
       title={`Platform limit ${limit.toLocaleString()}. The artefact schema caps this at ${schemaLimit.toLocaleString()}, so a valid artefact is always within it.`}
@@ -54,7 +54,7 @@ export function LinkedInPreview({ body, hook, hashtags, callToAction }: LinkedIn
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <span className="text-[12px] text-text-1">Post preview</span>
+        <span className="text-[15px] text-text-1">Post preview</span>
         <CharCount
           used={used}
           limit={LINKEDIN_PLATFORM_LIMIT}
@@ -65,14 +65,14 @@ export function LinkedInPreview({ body, hook, hashtags, callToAction }: LinkedIn
       <article className="surface-card overflow-hidden">
         <header className="flex items-center gap-2.5 p-3">
           <div
-            className="flex size-10 shrink-0 items-center justify-center rounded-full bg-bg-3 text-[13px] text-text-1"
+            className="flex size-10 shrink-0 items-center justify-center rounded-full bg-bg-3 text-[16px] text-text-1"
             aria-hidden="true"
           >
             ◈
           </div>
           <div className="min-w-0">
-            <div className="truncate text-[13px] text-text-0">Organisation</div>
-            <div className="truncate text-[11px] text-text-1">
+            <div className="truncate text-[16px] text-text-0">Organisation</div>
+            <div className="truncate text-[14px] text-text-1">
               Communications · Now · Public
             </div>
           </div>
@@ -80,17 +80,17 @@ export function LinkedInPreview({ body, hook, hashtags, callToAction }: LinkedIn
 
         <div className="px-3 pb-3">
           {/* Line breaks are load-bearing on LinkedIn — preserve them exactly. */}
-          <p className="text-[13px] leading-relaxed whitespace-pre-wrap text-text-0">
+          <p className="text-[16px] leading-relaxed whitespace-pre-wrap text-text-0">
             {hook}
           </p>
-          <p className="mt-2.5 text-[13px] leading-relaxed whitespace-pre-wrap text-text-0">
+          <p className="mt-2.5 text-[16px] leading-relaxed whitespace-pre-wrap text-text-0">
             {body}
           </p>
           {callToAction && (
-            <p className="mt-2.5 text-[13px] leading-relaxed text-text-0">{callToAction}</p>
+            <p className="mt-2.5 text-[16px] leading-relaxed text-text-0">{callToAction}</p>
           )}
           {hashtags.length > 0 && (
-            <p className="mt-2.5 text-[13px] leading-relaxed text-accent">
+            <p className="mt-2.5 text-[16px] leading-relaxed text-accent">
               {hashtags.map((tag) => `#${tag}`).join(' ')}
             </p>
           )}
@@ -105,7 +105,7 @@ export function LinkedInPreview({ body, hook, hashtags, callToAction }: LinkedIn
           ].map(({ icon: Icon, label }) => (
             <span
               key={label}
-              className="flex items-center gap-1.5 px-2 py-1 text-[12px] text-text-1"
+              className="flex items-center gap-1.5 px-2 py-1 text-[15px] text-text-1"
             >
               <Icon className="size-4" strokeWidth={1.75} />
               {label}
@@ -127,14 +127,14 @@ export function XThreadPreview({ tweets, hashtags, threadHook }: XThreadProps) {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <span className="text-[12px] text-text-1">Thread preview</span>
-        <span className="tabular text-[11px] text-text-1">
+        <span className="text-[15px] text-text-1">Thread preview</span>
+        <span className="tabular text-[14px] text-text-1">
           {tweets.length} post{tweets.length === 1 ? '' : 's'}
         </span>
       </div>
 
       {threadHook && (
-        <p className="text-[12px] leading-snug text-text-1">Hook: {threadHook}</p>
+        <p className="text-[15px] leading-snug text-text-1">Hook: {threadHook}</p>
       )}
 
       <div className="surface-card p-3">
@@ -147,7 +147,7 @@ export function XThreadPreview({ tweets, hashtags, threadHook }: XThreadProps) {
                 {/* Avatar column doubles as the connecting line between posts. */}
                 <div className="flex shrink-0 flex-col items-center">
                   <div
-                    className="flex size-9 items-center justify-center rounded-full bg-bg-3 text-[12px] text-text-1"
+                    className="flex size-9 items-center justify-center rounded-full bg-bg-3 text-[15px] text-text-1"
                     aria-hidden="true"
                   >
                     ◈
@@ -157,20 +157,20 @@ export function XThreadPreview({ tweets, hashtags, threadHook }: XThreadProps) {
 
                 <div className={cn('min-w-0 flex-1', last ? 'pb-0' : 'pb-4')}>
                   <div className="flex items-baseline gap-1.5">
-                    <span className="text-[13px] text-text-0">Organisation</span>
-                    <span className="text-[12px] text-text-1">@org · now</span>
+                    <span className="text-[16px] text-text-0">Organisation</span>
+                    <span className="text-[15px] text-text-1">@org · now</span>
                   </div>
-                  <p className="mt-0.5 text-[13px] leading-relaxed whitespace-pre-wrap text-text-0">
+                  <p className="mt-0.5 text-[16px] leading-relaxed whitespace-pre-wrap text-text-0">
                     {tweet.text}
                   </p>
                   <div className="mt-1.5 flex items-center gap-4">
-                    <span className="flex items-center gap-1 text-[11px] text-text-1">
+                    <span className="flex items-center gap-1 text-[14px] text-text-1">
                       <MessageCircle className="size-3.5" strokeWidth={1.75} />
                     </span>
-                    <span className="flex items-center gap-1 text-[11px] text-text-1">
+                    <span className="flex items-center gap-1 text-[14px] text-text-1">
                       <Repeat2 className="size-3.5" strokeWidth={1.75} />
                     </span>
-                    <span className="flex items-center gap-1 text-[11px] text-text-1">
+                    <span className="flex items-center gap-1 text-[14px] text-text-1">
                       <Heart className="size-3.5" strokeWidth={1.75} />
                     </span>
                     <span className="ml-auto">
@@ -188,7 +188,7 @@ export function XThreadPreview({ tweets, hashtags, threadHook }: XThreadProps) {
         </ol>
 
         {hashtags.length > 0 && (
-          <p className="hairline-t mt-1 pt-2.5 pl-[46px] text-[13px] text-accent">
+          <p className="hairline-t mt-1 pt-2.5 pl-[46px] text-[16px] text-accent">
             {hashtags.map((tag) => `#${tag}`).join(' ')}
           </p>
         )}

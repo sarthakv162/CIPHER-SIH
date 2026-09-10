@@ -70,11 +70,11 @@ export function System() {
                 <AlertTriangle className="size-5 text-danger" strokeWidth={1.75} />
               )}
               <div>
-                <div className="text-[15px] text-text-0">
+                <div className="text-[18px] text-text-0">
                   {isFetching ? 'Running checks…' : (data?.result ?? 'Unavailable')}
                 </div>
                 {data && (
-                  <div className="text-[12px] text-text-1">
+                  <div className="text-[15px] text-text-1">
                     {data.checks.filter((c) => c.level === 'ok').length} of{' '}
                     {data.checks.length} checks passed
                   </div>
@@ -83,7 +83,7 @@ export function System() {
             </div>
 
             {data && (
-              <dl className="flex flex-wrap gap-x-5 gap-y-1 text-[12px]">
+              <dl className="flex flex-wrap gap-x-5 gap-y-1 text-[15px]">
                 <div>
                   <dt className="text-text-1">Profile</dt>
                   <dd className="text-text-0">{data.profile}</dd>
@@ -105,7 +105,7 @@ export function System() {
               type="button"
               onClick={() => refetch()}
               disabled={isFetching}
-              className="ml-auto flex items-center gap-1.5 rounded-[8px] border border-border bg-bg-2 px-2.5 py-1.5 text-[12px] text-text-0 transition-colors duration-150 hover:border-border-2 hover:bg-bg-3 disabled:opacity-50"
+              className="ml-auto flex items-center gap-1.5 rounded-[8px] border border-border bg-bg-2 px-2.5 py-1.5 text-[15px] text-text-0 transition-colors duration-150 hover:border-border-2 hover:bg-bg-3 disabled:opacity-50"
             >
               <RefreshCw
                 className={cn('size-3.5', isFetching && 'animate-spin')}
@@ -116,15 +116,15 @@ export function System() {
           </section>
 
           {isError && (
-            <p className="rounded-[8px] border border-warn/25 bg-warn/10 px-3 py-2 text-[12px] text-warn">
+            <p className="rounded-[8px] border border-warn/25 bg-warn/10 px-3 py-2 text-[15px] text-warn">
               The selfcheck endpoint did not respond.
             </p>
           )}
 
           <section className="surface-card overflow-hidden">
             <div className="hairline-b flex items-center justify-between px-4 py-3">
-              <h2 className="text-[13px] text-text-0">Checks</h2>
-              <label className="flex items-center gap-1.5 text-[12px] text-text-1">
+              <h2 className="text-[16px] text-text-0">Checks</h2>
+              <label className="flex items-center gap-1.5 text-[15px] text-text-1">
                 <input
                   type="checkbox"
                   checked={deep}
@@ -139,19 +139,19 @@ export function System() {
               {(data?.checks ?? []).map((check) => (
                 <li key={check.number} className="flex items-start gap-3 px-4 py-2.5">
                   <StatusDot level={check.level} />
-                  <span className="tabular w-6 shrink-0 text-[12px] text-text-2">
+                  <span className="tabular w-6 shrink-0 text-[15px] text-text-2">
                     {check.number}
                   </span>
-                  <span className="w-[170px] shrink-0 text-[13px] text-text-0">
+                  <span className="w-[170px] shrink-0 text-[16px] text-text-0">
                     {check.name}
                   </span>
-                  <span className="min-w-0 flex-1 text-[12px] leading-relaxed break-words text-text-1">
+                  <span className="min-w-0 flex-1 text-[15px] leading-relaxed break-words text-text-1">
                     {check.detail}
                   </span>
                 </li>
               ))}
               {!data && !isFetching && (
-                <li className="px-4 py-6 text-center text-[12px] text-text-1">
+                <li className="px-4 py-6 text-center text-[15px] text-text-1">
                   No report yet.
                 </li>
               )}
@@ -159,8 +159,8 @@ export function System() {
           </section>
 
           <section className="surface-card p-4">
-            <h2 className="text-[13px] text-text-0">Output templates</h2>
-            <p className="mt-1 text-[12px] leading-snug text-text-1">
+            <h2 className="text-[16px] text-text-0">Output templates</h2>
+            <p className="mt-1 text-[15px] leading-snug text-text-1">
               Installed themes. Selecting one per transform is not wired up yet — the
               renderers currently use <code className="text-text-0">ntro-formal</code>{' '}
               for every artefact.
@@ -177,10 +177,10 @@ export function System() {
                     aria-hidden="true"
                   />
                   <span className="min-w-0">
-                    <span className="block text-[12px] text-text-0">
+                    <span className="block text-[15px] text-text-0">
                       {template.label || template.name}
                     </span>
-                    <span className="block text-[11px] leading-snug text-text-1">
+                    <span className="block text-[14px] leading-snug text-text-1">
                       {template.description}
                     </span>
                   </span>

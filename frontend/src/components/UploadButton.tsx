@@ -104,10 +104,10 @@ export function UploadButton({ onUploaded }: UploadButtonProps) {
           )}
         </motion.span>
 
-        <span className="text-[13px] text-text-0">
+        <span className="text-[16px] text-text-0">
           {busy ? `Uploading ${progress}…` : dragging ? 'Drop to upload' : 'Upload a source'}
         </span>
-        <span className="text-[11px] leading-snug text-text-1">
+        <span className="text-[14px] leading-snug text-text-1">
           Drag a file here, or click to browse — pdf, docx, image, audio, video
         </span>
       </motion.button>
@@ -129,7 +129,7 @@ export function UploadButton({ onUploaded }: UploadButtonProps) {
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.15, ease: EASE }}
-            className="flex items-start gap-1.5 text-[11px] leading-snug text-danger"
+            className="flex items-start gap-1.5 text-[14px] leading-snug text-danger"
           >
             <AlertTriangle className="mt-px size-3 shrink-0" strokeWidth={1.75} />
             {error}

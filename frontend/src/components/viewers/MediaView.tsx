@@ -35,8 +35,8 @@ export function PresentationView({
                   : 'border-border bg-bg-2 hover:border-border-2 hover:bg-bg-3',
               )}
             >
-              <span className="tabular text-[10px] text-text-1">{index + 1}</span>
-              <span className="mt-0.5 line-clamp-2 block text-[11px] leading-snug text-text-0">
+              <span className="tabular text-[13px] text-text-1">{index + 1}</span>
+              <span className="mt-0.5 line-clamp-2 block text-[14px] leading-snug text-text-0">
                 {item.title}
               </span>
             </button>
@@ -47,12 +47,12 @@ export function PresentationView({
       <div className="flex min-w-0 flex-1 flex-col gap-3">
         <div className="surface-card flex aspect-video min-h-0 flex-col justify-center gap-3 p-6">
           <span className="section-label">{slide.layout.replace('_', ' ')}</span>
-          <h2 className="text-[20px] leading-tight text-text-0">{slide.title}</h2>
+          <h2 className="text-[26px] leading-tight text-text-0">{slide.title}</h2>
           <ul className="flex flex-col gap-1.5">
             {slide.bullets.map((bullet, index) => (
               <li
                 key={index}
-                className="flex gap-2 text-[13px] leading-relaxed text-text-1"
+                className="flex gap-2 text-[16px] leading-relaxed text-text-1"
               >
                 <span className="text-accent">—</span>
                 {bullet}
@@ -63,7 +63,7 @@ export function PresentationView({
 
         <div className="surface-card p-3">
           <h3 className="section-label">Speaker notes</h3>
-          <p className="mt-1.5 text-[12px] leading-relaxed text-text-1">
+          <p className="mt-1.5 text-[15px] leading-relaxed text-text-1">
             {slide.speaker_notes}
           </p>
         </div>
@@ -86,15 +86,15 @@ export function InfographicView({
   return (
     <div className="flex flex-col gap-3">
       <div>
-        <h2 className="text-[16px] leading-tight text-text-0">{headline}</h2>
-        <p className="mt-1 text-[13px] text-text-1">{subhead}</p>
+        <h2 className="text-[20px] leading-tight text-text-0">{headline}</h2>
+        <p className="mt-1 text-[16px] text-text-1">{subhead}</p>
       </div>
       {src ? (
         <div className="surface-card flex justify-center overflow-auto p-4">
           <img src={src} alt={headline} className="max-w-full" />
         </div>
       ) : (
-        <p className="rounded-[8px] border border-border bg-bg-0 px-3 py-4 text-center text-[12px] text-text-1">
+        <p className="rounded-[8px] border border-border bg-bg-0 px-3 py-4 text-center text-[15px] text-text-1">
           No SVG was rendered for this artefact.
         </p>
       )}
@@ -126,7 +126,7 @@ export function VideoView({
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-[13px] leading-relaxed text-text-1">{logline}</p>
+      <p className="text-[16px] leading-relaxed text-text-1">{logline}</p>
 
       {src ? (
         <video
@@ -136,7 +136,7 @@ export function VideoView({
           src={src}
         />
       ) : (
-        <p className="rounded-[8px] border border-warn/25 bg-warn/10 px-3 py-2.5 text-[12px] leading-snug text-warn">
+        <p className="rounded-[8px] border border-warn/25 bg-warn/10 px-3 py-2.5 text-[15px] leading-snug text-warn">
           No MP4 was assembled — the renderer degraded to a storyboard. The scene
           plan below is still complete.
         </p>
@@ -170,17 +170,17 @@ export function VideoView({
             )}
           >
             <div className="flex items-baseline justify-between gap-2">
-              <span className="tabular text-[11px] text-text-1">
+              <span className="tabular text-[14px] text-text-1">
                 Scene {index + 1}
               </span>
-              <span className="tabular text-[11px] text-text-1">
+              <span className="tabular text-[14px] text-text-1">
                 {duration(scene.duration_seconds)}
               </span>
             </div>
-            <p className="mt-1 text-[13px] leading-snug text-text-0">
+            <p className="mt-1 text-[16px] leading-snug text-text-0">
               {scene.on_screen_text}
             </p>
-            <p className="mt-1 text-[12px] leading-relaxed text-text-1">
+            <p className="mt-1 text-[15px] leading-relaxed text-text-1">
               {scene.narration}
             </p>
           </li>

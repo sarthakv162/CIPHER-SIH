@@ -90,21 +90,21 @@ export function OutputTypeCard({
         </span>
       </span>
 
-      <span className="text-[14px] leading-tight font-medium text-text-0">{label}</span>
-      <span className="text-[12px] leading-snug text-text-1">{description}</span>
+      <span className="text-[17px] leading-tight font-medium text-text-0">{label}</span>
+      <span className="text-[15px] leading-snug text-text-1">{description}</span>
 
       <span className="mt-auto flex w-full items-center justify-between gap-2 pt-1.5">
         <span className="flex gap-1">
           {formats.map((format) => (
             <span
               key={format}
-              className="rounded-[4px] border border-border px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-text-1"
+              className="rounded-[4px] border border-border px-1.5 py-0.5 text-[13px] uppercase tracking-wide text-text-1"
             >
               {format}
             </span>
           ))}
         </span>
-        <span className="tabular text-[11px] text-text-1">~{duration(seconds)}</span>
+        <span className="tabular text-[14px] text-text-1">~{duration(seconds)}</span>
       </span>
     </motion.button>
   )

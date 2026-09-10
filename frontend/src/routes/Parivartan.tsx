@@ -72,14 +72,14 @@ export function Parivartan() {
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
         <div className="mx-auto flex max-w-[1000px] flex-col gap-4">
           <section className="surface-card p-4">
-            <h2 className="text-[13px] text-text-0">Conversion matrix</h2>
-            <p className="mt-1 text-[12px] text-text-1">
+            <h2 className="text-[16px] text-text-0">Conversion matrix</h2>
+            <p className="mt-1 text-[15px] text-text-1">
               Source format down the side, target across the top. A filled cell is a
               conversion this build can do.
             </p>
 
             <div className="mt-3 overflow-x-auto">
-              <table className="border-separate border-spacing-0.5 text-[11px]">
+              <table className="border-separate border-spacing-0.5 text-[14px]">
                 <thead>
                   <tr>
                     <th className="sticky left-0 z-10 bg-bg-2 p-1 text-left font-normal text-text-1">
@@ -143,19 +143,19 @@ export function Parivartan() {
           {selected && (
             <section className="surface-card p-4">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-[5px] border border-border bg-bg-0 px-2 py-1 text-[12px] text-text-0">
+                <span className="rounded-[5px] border border-border bg-bg-0 px-2 py-1 text-[15px] text-text-0">
                   {selected.src}
                 </span>
                 <ArrowRight className="size-3.5 text-text-2" strokeWidth={1.75} />
-                <span className="rounded-[5px] border border-accent/30 bg-accent/10 px-2 py-1 text-[12px] text-accent">
+                <span className="rounded-[5px] border border-accent/30 bg-accent/10 px-2 py-1 text-[15px] text-accent">
                   {selected.dst}
                 </span>
-                <span className="text-[12px] text-text-1">{selected.label}</span>
+                <span className="text-[15px] text-text-1">{selected.label}</span>
               </div>
-              <p className="mt-2 text-[12px] leading-snug text-text-1">{selected.notes}</p>
+              <p className="mt-2 text-[15px] leading-snug text-text-1">{selected.notes}</p>
 
               <div className="mt-3 flex flex-col gap-1.5">
-                <label htmlFor="convert-path" className="text-[12px] text-text-1">
+                <label htmlFor="convert-path" className="text-[15px] text-text-1">
                   Input file path on this machine
                 </label>
                 <div className="flex gap-1.5">
@@ -164,7 +164,7 @@ export function Parivartan() {
                     value={inputPath}
                     onChange={(event) => setInputPath(event.target.value)}
                     placeholder="data/samples/iocs.csv"
-                    className="min-w-0 flex-1 rounded-[8px] border border-border bg-bg-0 px-2.5 py-1.5 text-[12px] text-text-0 placeholder:text-text-2 focus:border-border-2 focus:outline-none"
+                    className="min-w-0 flex-1 rounded-[8px] border border-border bg-bg-0 px-2.5 py-1.5 text-[15px] text-text-0 placeholder:text-text-2 focus:border-border-2 focus:outline-none"
                   />
                   <button
                     type="button"
@@ -174,7 +174,7 @@ export function Parivartan() {
                       convert.mutate()
                     }}
                     className={cn(
-                      'flex shrink-0 items-center gap-1.5 rounded-[8px] border px-3 py-1.5 text-[12px] transition-colors duration-150',
+                      'flex shrink-0 items-center gap-1.5 rounded-[8px] border px-3 py-1.5 text-[15px] transition-colors duration-150',
                       inputPath.trim() && !convert.isPending
                         ? 'border-accent/40 bg-accent/15 text-text-0 hover:border-accent/60 hover:bg-accent/20'
                         : 'cursor-not-allowed border-border bg-bg-2 text-text-1',
@@ -188,7 +188,7 @@ export function Parivartan() {
                 </div>
               </div>
 
-              {error && <p className="mt-2 text-[12px] text-danger">{error}</p>}
+              {error && <p className="mt-2 text-[15px] text-danger">{error}</p>}
 
               {convert.data && <ReportView report={convert.data} />}
             </section>
@@ -213,16 +213,16 @@ function ReportView({ report }: { report: ConversionReport }) {
         ) : (
           <AlertTriangle className="size-4 shrink-0 text-danger" strokeWidth={1.75} />
         )}
-        <span className="text-[13px] text-text-0">
+        <span className="text-[16px] text-text-0">
           {report.ok ? 'Converted' : 'Conversion failed'}
         </span>
-        <span className="tabular ml-auto text-[11px] text-text-1">
+        <span className="tabular ml-auto text-[14px] text-text-1">
           {report.rows} rows · {duration(report.duration_seconds)}
         </span>
       </div>
 
       {report.output_path && (
-        <p className="mt-2 text-[11px] break-all text-text-1">
+        <p className="mt-2 text-[14px] break-all text-text-1">
           Written to <code className="font-mono text-text-0">{report.output_path}</code>
         </p>
       )}
@@ -232,7 +232,7 @@ function ReportView({ report }: { report: ConversionReport }) {
           {report.warnings.map((warning, index) => (
             <li
               key={index}
-              className="flex gap-1.5 text-[11px] leading-snug text-warn"
+              className="flex gap-1.5 text-[14px] leading-snug text-warn"
             >
               <AlertTriangle className="mt-px size-3 shrink-0" strokeWidth={1.75} />
               {warning}

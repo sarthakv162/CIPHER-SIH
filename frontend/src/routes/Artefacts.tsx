@@ -69,7 +69,7 @@ export function Artefacts() {
       <>
         <Header title="Artefacts" subtitle="No run selected" />
         <div className="flex flex-1 items-center justify-center p-6">
-          <p className="max-w-[46ch] text-center text-[13px] leading-relaxed text-text-1">
+          <p className="max-w-[46ch] text-center text-[16px] leading-relaxed text-text-1">
             Pick a run from Recent in the sidebar to see the artefacts it produced.
           </p>
         </div>
@@ -85,7 +85,7 @@ export function Artefacts() {
         <nav className="flex shrink-0 gap-1 overflow-x-auto border-b border-border p-2 lg:w-[188px] lg:flex-col lg:overflow-x-visible lg:overflow-y-auto lg:border-r lg:border-b-0 lg:p-3">
           <Link
             to={`/runs/${transformId}`}
-            className="flex shrink-0 items-center gap-1.5 rounded-[8px] px-2 py-1.5 text-[12px] whitespace-nowrap text-text-1 transition-colors duration-150 hover:bg-bg-2 hover:text-text-0 lg:mb-1"
+            className="flex shrink-0 items-center gap-1.5 rounded-[8px] px-2 py-1.5 text-[15px] whitespace-nowrap text-text-1 transition-colors duration-150 hover:bg-bg-2 hover:text-text-0 lg:mb-1"
           >
             <ArrowLeft className="size-3.5" strokeWidth={1.75} />
             Back to run
@@ -101,7 +101,7 @@ export function Artefacts() {
                 type="button"
                 onClick={() => setParams({ job: entry.job_id })}
                 className={cn(
-                  'flex shrink-0 items-center gap-2 rounded-[8px] px-2 py-2 text-left text-[12px] whitespace-nowrap transition-colors duration-150',
+                  'flex shrink-0 items-center gap-2 rounded-[8px] px-2 py-2 text-left text-[15px] whitespace-nowrap transition-colors duration-150',
                   current
                     ? 'bg-bg-3 text-text-0'
                     : 'text-text-1 hover:bg-bg-2 hover:text-text-0',
@@ -126,10 +126,10 @@ export function Artefacts() {
           })}
 
           {isLoading && (
-            <p className="px-2 py-1.5 text-[12px] text-text-1">Loading…</p>
+            <p className="px-2 py-1.5 text-[15px] text-text-1">Loading…</p>
           )}
           {!isLoading && succeeded.length === 0 && (
-            <p className="px-2 py-1.5 text-[12px] leading-snug text-text-1">
+            <p className="px-2 py-1.5 text-[15px] leading-snug text-text-1">
               No artefacts landed for this run.
             </p>
           )}
@@ -173,7 +173,7 @@ export function Artefacts() {
             </>
           ) : (
             <div className="flex flex-1 items-center justify-center p-6">
-              <p className="text-[13px] text-text-1">Select an artefact.</p>
+              <p className="text-[16px] text-text-1">Select an artefact.</p>
             </div>
           )}
         </div>
@@ -221,7 +221,7 @@ function FileBar({
 
   return (
     <div className="hairline-b flex shrink-0 flex-wrap items-center gap-2 px-4 py-2.5">
-      <span className="text-[12px] text-text-1">
+      <span className="text-[15px] text-text-1">
         {gated ? 'Download (unreleased)' : 'Download'}
       </span>
       {(files ?? [])
@@ -232,7 +232,7 @@ function FileBar({
             href={`/transforms/${transformId}/jobs/${jobId}/files/${encodeURIComponent(file.name)}`}
             download={file.name}
             className={cn(
-              'flex items-center gap-1.5 rounded-[8px] border border-border px-2 py-1 text-[11px] transition-colors duration-150 hover:border-border-2 hover:bg-bg-3',
+              'flex items-center gap-1.5 rounded-[8px] border border-border px-2 py-1 text-[14px] transition-colors duration-150 hover:border-border-2 hover:bg-bg-3',
               // Still downloadable under review — an operator may need the file to
               // judge it — but never the visually primary action while gated.
               gated ? 'bg-transparent text-text-1 opacity-70' : 'bg-bg-2 text-text-0',
@@ -244,14 +244,14 @@ function FileBar({
           </a>
         ))}
       {files && files.length === 0 && (
-        <span className="text-[11px] text-text-1">No files on disk yet.</span>
+        <span className="text-[14px] text-text-1">No files on disk yet.</span>
       )}
 
       <button
         type="button"
         onClick={onProvenance}
         className={cn(
-          'ml-auto flex items-center gap-1.5 rounded-[8px] border px-2 py-1 text-[11px] transition-colors duration-150',
+          'ml-auto flex items-center gap-1.5 rounded-[8px] border px-2 py-1 text-[14px] transition-colors duration-150',
           provenanceOpen
             ? 'border-accent/40 bg-accent/10 text-accent'
             : 'border-border bg-bg-2 text-text-0 hover:border-border-2 hover:bg-bg-3',

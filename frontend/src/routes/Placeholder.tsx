@@ -12,7 +12,7 @@ export function Placeholder({ title, subtitle, note }: PlaceholderProps) {
     <>
       <Header title={title} subtitle={subtitle} />
       <div className="flex flex-1 items-center justify-center p-6">
-        <p className="max-w-[52ch] text-center text-[13px] leading-relaxed text-text-1">
+        <p className="max-w-[52ch] text-center text-[16px] leading-relaxed text-text-1">
           {note}
         </p>
       </div>

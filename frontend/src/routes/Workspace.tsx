@@ -55,8 +55,8 @@ export function Workspace() {
 
         <section className="min-h-0 flex-1 bg-bg-1 p-4">
           <div className="flex items-baseline justify-between">
-            <h2 className="text-[13px] text-text-0">Output types</h2>
-            <span className="tabular text-[12px] text-text-1">
+            <h2 className="text-[16px] text-text-0">Output types</h2>
+            <span className="tabular text-[15px] text-text-1">
               {state.selected.length} of {ARTEFACTS.length} selected
             </span>
           </div>
@@ -78,8 +78,8 @@ export function Workspace() {
 
         </div>
 
-        <aside className="flex w-full shrink-0 flex-col border-t border-border bg-bg-1 p-4 md:w-[286px] md:border-t-0 md:border-l md:overflow-y-auto">
-          <h2 className="text-[13px] text-text-0">Parameters</h2>
+        <aside className="flex w-full shrink-0 flex-col border-t border-border bg-bg-1 p-4 md:w-[320px] md:border-t-0 md:border-l md:overflow-y-auto">
+          <h2 className="text-[16px] text-text-0">Parameters</h2>
           <div className="mt-3 flex flex-col gap-3.5">
             <Dropdown
               label="Audience"
@@ -118,7 +118,7 @@ export function Workspace() {
               onChange={(v) => state.setParam('language', v)}
             />
             {state.params.language !== 'en' && (
-              <p className="flex gap-1.5 text-[11px] leading-snug text-warn">
+              <p className="flex gap-1.5 text-[14px] leading-snug text-warn">
                 <AlertTriangle className="mt-px size-3.5 shrink-0" strokeWidth={1.75} />
                 Speech and narration are English-only. Written artefacts honour this
                 best-effort; a note is recorded in the manifest.
@@ -131,9 +131,9 @@ export function Workspace() {
       <div className="hairline-t flex shrink-0 items-center justify-between gap-4 bg-bg-1 px-4 py-3">
         <div className="min-w-0">
           {error ? (
-            <p className="truncate text-[12px] text-danger">{error}</p>
+            <p className="truncate text-[15px] text-danger">{error}</p>
           ) : (
-            <p className="tabular text-[12px] text-text-1">
+            <p className="tabular text-[15px] text-text-1">
               {state.selected.length === 0
                 ? 'Select at least one output type'
                 : !hasSource
@@ -142,7 +142,7 @@ export function Workspace() {
             </p>
           )}
           {ready && !error && (
-            <p className="mt-0.5 text-[11px] text-text-1">
+            <p className="mt-0.5 text-[14px] text-text-1">
               Estimated on this hardware. Verification adds time after generation.
             </p>
           )}
@@ -156,7 +156,7 @@ export function Workspace() {
             submit.mutate()
           }}
           className={cn(
-            'flex shrink-0 items-center gap-2 rounded-[8px] border px-3.5 py-2 text-[13px]',
+            'flex shrink-0 items-center gap-2 rounded-[8px] border px-3.5 py-2 text-[16px]',
             'transition-all duration-200 ease-[cubic-bezier(0.2,0,0,1)]',
             ready && !submit.isPending
               ? 'border-accent/40 bg-accent/15 text-text-0 shadow-[0_6px_20px_-8px_rgba(91,141,239,0.6)] hover:border-accent/60 hover:bg-accent/20'

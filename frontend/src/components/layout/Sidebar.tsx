@@ -17,7 +17,7 @@ function NavItem({ to, label, icon: Icon, end }: NavItemProps) {
       end={end}
       className={({ isActive }) =>
         cn(
-          'group flex items-center gap-2.5 rounded-[8px] px-2.5 py-2 text-[13px] transition-colors',
+          'group flex items-center gap-2.5 rounded-[8px] px-2.5 py-2 text-[16px] transition-colors',
           'duration-150 ease-[cubic-bezier(0.2,0,0,1)]',
           isActive
             ? 'bg-bg-3 text-text-0'
@@ -41,14 +41,14 @@ function NavItem({ to, label, icon: Icon, end }: NavItemProps) {
 /** Left rail: new transform, recent work, then the standing tools at the bottom. */
 export function Sidebar() {
   return (
-    <aside className="flex w-[232px] shrink-0 flex-col gap-5 px-3 py-4">
+    <aside className="flex w-[264px] shrink-0 flex-col gap-5 px-3 py-4">
       <div className="flex items-center gap-2.5 px-2.5 pt-1">
         <div className="relative flex size-7 items-center justify-center rounded-[8px] bg-bg-3 ring-1 ring-border">
-          <span className="text-[13px] leading-none text-accent">◈</span>
+          <span className="text-[16px] leading-none text-accent">◈</span>
         </div>
         <div className="min-w-0">
-          <div className="truncate text-[13px] leading-tight text-text-0">Rupantar</div>
-          <div className="truncate text-[11px] leading-tight text-text-1">Operator console</div>
+          <div className="truncate text-[16px] leading-tight text-text-0">Rupantar</div>
+          <div className="truncate text-[14px] leading-tight text-text-1">Operator console</div>
         </div>
       </div>
 
@@ -56,7 +56,7 @@ export function Sidebar() {
         to="/workspace"
         className={cn(
           'mx-0.5 flex items-center gap-2 rounded-[8px] border border-border bg-bg-2 px-2.5 py-2',
-          'text-[13px] text-text-0 transition-colors duration-150 hover:border-border-2 hover:bg-bg-3',
+          'text-[16px] text-text-0 transition-colors duration-150 hover:border-border-2 hover:bg-bg-3',
         )}
       >
         <Plus className="size-4 text-accent" strokeWidth={1.75} />

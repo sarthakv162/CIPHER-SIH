@@ -28,11 +28,11 @@ export interface Manifest {
 function Row({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div className="grid grid-cols-[110px_1fr] gap-2 py-1.5">
-      <dt className="text-[12px] text-text-1">{label}</dt>
+      <dt className="text-[15px] text-text-1">{label}</dt>
       <dd
         className={cn(
-          'min-w-0 text-[12px] break-all text-text-0',
-          mono && 'tabular font-mono text-[11px]',
+          'min-w-0 text-[15px] break-all text-text-0',
+          mono && 'tabular font-mono text-[14px]',
         )}
       >
         {value}
@@ -78,7 +78,7 @@ export function ProvenanceDrawer({
       aria-label="Provenance"
     >
       <header className="hairline-b flex items-center justify-between px-4 py-3">
-        <h2 className="flex items-center gap-2 text-[13px] text-text-0">
+        <h2 className="flex items-center gap-2 text-[16px] text-text-0">
           <Fingerprint className="size-4 text-accent" strokeWidth={1.75} />
           Provenance
         </h2>
@@ -93,10 +93,10 @@ export function ProvenanceDrawer({
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
-        {isLoading && <p className="text-[12px] text-text-1">Reading the manifest…</p>}
+        {isLoading && <p className="text-[15px] text-text-1">Reading the manifest…</p>}
 
         {isError && (
-          <p className="text-[12px] leading-snug text-warn">
+          <p className="text-[15px] leading-snug text-warn">
             No manifest yet. It is written once the whole transform finishes, so a
             job that has just landed may briefly have none.
           </p>
@@ -122,7 +122,7 @@ export function ProvenanceDrawer({
                 {Object.entries(data.generation_params).map(([key, value]) => (
                   <span
                     key={key}
-                    className="rounded-[5px] border border-border bg-bg-2 px-1.5 py-0.5 text-[11px] text-text-1"
+                    className="rounded-[5px] border border-border bg-bg-2 px-1.5 py-0.5 text-[14px] text-text-1"
                   >
                     {key}: <span className="text-text-0">{String(value)}</span>
                   </span>
@@ -137,14 +137,14 @@ export function ProvenanceDrawer({
                   {sources.map((id) => (
                     <span
                       key={id}
-                      className="rounded-[5px] border border-accent/25 bg-accent/10 px-1.5 py-0.5 text-[11px] text-accent"
+                      className="rounded-[5px] border border-accent/25 bg-accent/10 px-1.5 py-0.5 text-[14px] text-accent"
                     >
                       {id}
                     </span>
                   ))}
                 </div>
               ) : (
-                <p className="mt-1.5 text-[12px] text-text-1">
+                <p className="mt-1.5 text-[15px] text-text-1">
                   This artefact cites no evidence IDs.
                 </p>
               )}
@@ -153,7 +153,7 @@ export function ProvenanceDrawer({
             {data.release && (
               <section className="mt-4">
                 <h3 className="section-label">Release</h3>
-                <pre className="mt-1.5 overflow-x-auto rounded-[8px] border border-border bg-bg-0 p-2 text-[11px] text-text-1">
+                <pre className="mt-1.5 overflow-x-auto rounded-[8px] border border-border bg-bg-0 p-2 text-[14px] text-text-1">
                   {JSON.stringify(data.release, null, 2)}
                 </pre>
               </section>

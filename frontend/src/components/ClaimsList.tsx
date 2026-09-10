@@ -23,7 +23,7 @@ export function VerificationBadge({
   return (
     <span
       className={cn(
-        'inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px]',
+        'inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[13px]',
         tone,
       )}
     >
@@ -59,11 +59,11 @@ export function ClaimsList({ report, artefactType }: ClaimsListProps) {
   return (
     <section className="surface-card p-3">
       <div className="flex items-baseline justify-between gap-2">
-        <h3 className="text-[13px] text-text-0">Claims traced</h3>
+        <h3 className="text-[16px] text-text-0">Claims traced</h3>
         {/* A claim can be grounded AND in conflict with another artefact, so a bare
             "n of m supported" would sit next to a visible conflict badge and read
             as a contradiction. Count the conflicted ones separately. */}
-        <span className="tabular text-[11px] text-text-1">
+        <span className="tabular text-[14px] text-text-1">
           {claims.filter((c) => c.status === 'SUPPORTED' && !conflicted.has(c.claim_id))
             .length}{' '}
           supported
@@ -84,7 +84,7 @@ export function ClaimsList({ report, artefactType }: ClaimsListProps) {
         ))}
       </ul>
 
-      <p className="mt-2.5 text-[11px] leading-snug text-text-1">{report.disclaimer}</p>
+      <p className="mt-2.5 text-[14px] leading-snug text-text-1">{report.disclaimer}</p>
     </section>
   )
 }
@@ -103,7 +103,7 @@ function ClaimRow({
       <div className="flex items-start gap-2">
         <p
           className={cn(
-            'min-w-0 flex-1 text-[13px] leading-relaxed',
+            'min-w-0 flex-1 text-[16px] leading-relaxed',
             conflicted
               ? 'text-danger decoration-danger/50'
               : supported
@@ -125,17 +125,17 @@ function ClaimRow({
             claim.evidence_ids.map((id) => (
               <span
                 key={id}
-                className="rounded-[4px] border border-accent/25 bg-accent/10 px-1.5 py-0.5 text-[10px] text-accent"
+                className="rounded-[4px] border border-accent/25 bg-accent/10 px-1.5 py-0.5 text-[13px] text-accent"
               >
                 {id}
               </span>
             ))
           ) : (
-            <span className="text-[11px] text-text-1">No evidence unit entails this.</span>
+            <span className="text-[14px] text-text-1">No evidence unit entails this.</span>
           )}
         </div>
         {claim.note && (
-          <p className="mt-1 text-[11px] leading-snug text-text-1">{claim.note}</p>
+          <p className="mt-1 text-[14px] leading-snug text-text-1">{claim.note}</p>
         )}
       </div>
     </li>

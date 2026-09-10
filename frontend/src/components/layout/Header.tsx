@@ -9,7 +9,7 @@ function ProfileChip() {
   if (!data) return null
   return (
     <span
-      className="flex items-center gap-1.5 rounded-full border border-border bg-bg-2 px-2.5 py-1 text-[12px] text-text-1"
+      className="flex items-center gap-1.5 rounded-full border border-border bg-bg-2 px-2.5 py-1 text-[15px] text-text-1"
       title={`Profile chosen by ${data.profile_source} · ${data.platform} · Python ${data.python}`}
     >
       <span className="size-1.5 rounded-full bg-accent" />
@@ -29,7 +29,7 @@ function ResidencyChip() {
   return (
     <span
       className={cn(
-        'flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] transition-colors duration-200',
+        'flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[15px] transition-colors duration-200',
         resident > 0
           ? 'border-model/25 bg-model/10 text-model'
           : 'border-border bg-bg-2 text-text-1',
@@ -55,9 +55,9 @@ export function Header({ title, subtitle }: HeaderProps) {
   return (
     <header className="glass sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between gap-4 border-b border-border px-5">
       <div className="flex min-w-0 shrink items-baseline gap-2.5">
-        <h1 className="shrink-0 text-[14px] text-text-0">{title}</h1>
+        <h1 className="shrink-0 text-[17px] text-text-0">{title}</h1>
         {subtitle && (
-          <span className="truncate text-[12px] text-text-1">{subtitle}</span>
+          <span className="truncate text-[15px] text-text-1">{subtitle}</span>
         )}
       </div>
       <div className="flex shrink-0 items-center gap-2">

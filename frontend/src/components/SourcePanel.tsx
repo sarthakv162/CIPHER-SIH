@@ -75,8 +75,8 @@ export function SourcePanel({
           />
         )}
         <div>
-        <h2 className="text-[13px] text-text-0">Sources</h2>
-        <p className="mt-1 text-[12px] leading-snug text-text-1">
+        <h2 className="text-[16px] text-text-0">Sources</h2>
+        <p className="mt-1 text-[15px] leading-snug text-text-1">
           Text, PDF, image, audio or video. Uploads are written to this machine —
           nothing leaves it.
         </p>
@@ -89,7 +89,7 @@ export function SourcePanel({
 
       {/* Still available for a file already sitting on this machine. */}
       <details className="group">
-        <summary className="cursor-pointer list-none text-[11px] text-text-1 transition-colors duration-150 hover:text-text-0">
+        <summary className="cursor-pointer list-none text-[14px] text-text-1 transition-colors duration-150 hover:text-text-0">
           or reference a path already on this machine
         </summary>
         <div className="mt-2 flex gap-1.5">
@@ -99,13 +99,13 @@ export function SourcePanel({
             onKeyDown={(event) => event.key === 'Enter' && submit()}
             placeholder="data/samples/incident.pdf"
             aria-label="Source path"
-            className="min-w-0 flex-1 rounded-[8px] border border-border bg-bg-0 px-2.5 py-1.5 text-[12px] text-text-0 placeholder:text-text-2 focus:border-border-2 focus:outline-none"
+            className="min-w-0 flex-1 rounded-[8px] border border-border bg-bg-0 px-2.5 py-1.5 text-[15px] text-text-0 placeholder:text-text-2 focus:border-border-2 focus:outline-none"
           />
           <button
             type="button"
             onClick={submit}
             disabled={!draft.trim()}
-            className="flex items-center gap-1 rounded-[8px] border border-border bg-bg-2 px-2.5 py-1.5 text-[12px] text-text-0 transition-colors duration-150 hover:border-border-2 hover:bg-bg-3 disabled:opacity-40"
+            className="flex items-center gap-1 rounded-[8px] border border-border bg-bg-2 px-2.5 py-1.5 text-[15px] text-text-0 transition-colors duration-150 hover:border-border-2 hover:bg-bg-3 disabled:opacity-40"
           >
             <Plus className="size-3.5" strokeWidth={1.75} />
             Add
@@ -117,7 +117,7 @@ export function SourcePanel({
         <div className="flex flex-col gap-1.5">
           <label
             htmlFor="prompt"
-            className="flex items-center gap-1.5 text-[12px] text-text-1"
+            className="flex items-center gap-1.5 text-[15px] text-text-1"
           >
             <Type className="size-3.5" strokeWidth={1.75} />
             Text source
@@ -128,7 +128,7 @@ export function SourcePanel({
             onChange={(event) => onPromptChange(event.target.value)}
             placeholder="Paste or write source material here."
             className={cn(
-              'min-h-[132px] flex-1 resize-y rounded-[12px] border border-border bg-bg-0 px-3 py-2.5 text-[12px] leading-relaxed',
+              'min-h-[132px] flex-1 resize-y rounded-[12px] border border-border bg-bg-0 px-3 py-2.5 text-[15px] leading-relaxed',
               'text-text-0 placeholder:text-text-2 focus:border-border-2 focus:outline-none',
             )}
           />
@@ -146,10 +146,10 @@ export function SourcePanel({
             >
               <Icon className="mt-0.5 size-4 shrink-0 text-text-1" strokeWidth={1.75} />
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-[12px] text-text-0">
+                <span className="block truncate text-[15px] text-text-0">
                   {path.split('/').pop()}
                 </span>
-                <span className="block truncate text-[11px] text-text-1">
+                <span className="block truncate text-[14px] text-text-1">
                   {ext || 'file'} · {plan}
                 </span>
               </span>
@@ -165,7 +165,7 @@ export function SourcePanel({
           )
         })}
         {files.length === 0 && (
-          <li className="rounded-[8px] border border-border/60 px-2.5 py-3 text-center text-[12px] text-text-1">
+          <li className="rounded-[8px] border border-border/60 px-2.5 py-3 text-center text-[15px] text-text-1">
             No files added
           </li>
         )}

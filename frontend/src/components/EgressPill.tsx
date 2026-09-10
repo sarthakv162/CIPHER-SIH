@@ -18,7 +18,7 @@ export function EgressPill() {
 
   if (isError) {
     return (
-      <span className="flex items-center gap-1.5 rounded-full border border-border bg-bg-2 px-2.5 py-1 text-[12px] text-text-1">
+      <span className="flex items-center gap-1.5 rounded-full border border-border bg-bg-2 px-2.5 py-1 text-[15px] text-text-1">
         <ShieldAlert className="size-3.5" strokeWidth={1.75} />
         Egress unknown
       </span>
@@ -31,7 +31,7 @@ export function EgressPill() {
   return (
     <span
       className={cn(
-        'flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] transition-colors duration-200',
+        'flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[15px] transition-colors duration-200',
         clean
           ? 'border-ok/25 bg-ok/10 text-ok'
           : 'border-danger/30 bg-danger/10 text-danger',

@@ -82,8 +82,8 @@ export function OversightPanel({
       <section className="flex items-start gap-2.5 rounded-[8px] border border-ok/25 bg-ok/8 p-3">
         <ShieldCheck className="mt-0.5 size-4 shrink-0 text-ok" strokeWidth={1.75} />
         <div>
-          <h3 className="text-[13px] text-text-0">Released for use</h3>
-          <p className="mt-0.5 text-[12px] leading-snug text-text-1">
+          <h3 className="text-[16px] text-text-0">Released for use</h3>
+          <p className="mt-0.5 text-[15px] leading-snug text-text-1">
             An operator acknowledged {conflicts.length} conflict
             {conflicts.length === 1 ? '' : 's'} and took responsibility for release.
             The acknowledgement is recorded in this artefact’s manifest.
@@ -98,14 +98,14 @@ export function OversightPanel({
       <header className="flex items-start gap-2.5">
         <AlertTriangle className="mt-0.5 size-4 shrink-0 text-danger" strokeWidth={1.75} />
         <div className="min-w-0 flex-1">
-          <h3 className="text-[13px] text-text-0">Needs review</h3>
-          <p className="mt-0.5 text-[12px] leading-snug text-text-1">
+          <h3 className="text-[16px] text-text-0">Needs review</h3>
+          <p className="mt-0.5 text-[15px] leading-snug text-text-1">
             Verification found {conflicts.length} conflict
             {conflicts.length === 1 ? '' : 's'} between this artefact and another in
             the same transform. Acknowledge each one to release it.
           </p>
         </div>
-        <span className="tabular shrink-0 rounded-full border border-danger/30 bg-danger/10 px-2 py-0.5 text-[11px] text-danger">
+        <span className="tabular shrink-0 rounded-full border border-danger/30 bg-danger/10 px-2 py-0.5 text-[14px] text-danger">
           {acked.size} / {conflicts.length}
         </span>
       </header>
@@ -128,29 +128,29 @@ export function OversightPanel({
 
       <div className="mt-3 flex flex-col gap-2 border-t border-border pt-3">
         <label className="flex flex-col gap-1">
-          <span className="text-[12px] text-text-1">
+          <span className="text-[15px] text-text-1">
             Releasing operator <span className="text-danger">*</span>
           </span>
           <input
             value={operator}
             onChange={(event) => setOperator(event.target.value)}
             placeholder="Your name or identifier"
-            className="rounded-[8px] border border-border bg-bg-0 px-2.5 py-1.5 text-[12px] text-text-0 placeholder:text-text-2 focus:border-border-2 focus:outline-none"
+            className="rounded-[8px] border border-border bg-bg-0 px-2.5 py-1.5 text-[15px] text-text-0 placeholder:text-text-2 focus:border-border-2 focus:outline-none"
           />
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="text-[12px] text-text-1">Note (optional)</span>
+          <span className="text-[15px] text-text-1">Note (optional)</span>
           <textarea
             value={note}
             onChange={(event) => setNote(event.target.value)}
             rows={2}
             placeholder="Why this is releasable despite the conflict."
-            className="resize-y rounded-[8px] border border-border bg-bg-0 px-2.5 py-1.5 text-[12px] leading-relaxed text-text-0 placeholder:text-text-2 focus:border-border-2 focus:outline-none"
+            className="resize-y rounded-[8px] border border-border bg-bg-0 px-2.5 py-1.5 text-[15px] leading-relaxed text-text-0 placeholder:text-text-2 focus:border-border-2 focus:outline-none"
           />
         </label>
 
-        {error && <p className="text-[12px] text-danger">{error}</p>}
+        {error && <p className="text-[15px] text-danger">{error}</p>}
 
         <button
           type="button"
@@ -160,7 +160,7 @@ export function OversightPanel({
             release.mutate()
           }}
           className={cn(
-            'flex items-center justify-center gap-2 rounded-[8px] border px-3 py-2 text-[13px]',
+            'flex items-center justify-center gap-2 rounded-[8px] border px-3 py-2 text-[16px]',
             'transition-colors duration-200',
             canRelease && !release.isPending
               ? 'border-ok/40 bg-ok/12 text-text-0 hover:border-ok/60 hover:bg-ok/18'

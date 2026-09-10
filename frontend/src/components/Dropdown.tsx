@@ -39,7 +39,7 @@ export function Dropdown<T extends string>({
 
   return (
     <div ref={root} className="relative flex flex-col gap-1.5">
-      <span className="text-[12px] text-text-1">{label}</span>
+      <span className="text-[15px] text-text-1">{label}</span>
 
       <button
         type="button"
@@ -47,7 +47,7 @@ export function Dropdown<T extends string>({
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
         className={cn(
-          'flex items-center justify-between gap-2 rounded-[8px] border px-2.5 py-2 text-left text-[12px]',
+          'flex items-center justify-between gap-2 rounded-[8px] border px-2.5 py-2 text-left text-[15px]',
           'transition-colors duration-150 ease-[cubic-bezier(0.2,0,0,1)]',
           open
             ? 'border-accent/50 bg-bg-3 text-text-0'
@@ -88,7 +88,7 @@ export function Dropdown<T extends string>({
                       setOpen(false)
                     }}
                     className={cn(
-                      'flex w-full items-center justify-between gap-2 rounded-[5px] px-2 py-1.5 text-left text-[12px]',
+                      'flex w-full items-center justify-between gap-2 rounded-[5px] px-2 py-1.5 text-left text-[15px]',
                       'transition-colors duration-150',
                       active
                         ? 'bg-accent/15 text-text-0'
