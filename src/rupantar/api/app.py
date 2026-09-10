@@ -95,6 +95,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         selfcheck,
         templates,
         transforms,
+        uploads,
     )
     from rupantar.api.static import default_dist_dir, mount_frontend
 
@@ -108,5 +109,6 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     app.include_router(convert.router)
     app.include_router(templates.router)
     app.include_router(selfcheck.router)
+    app.include_router(uploads.router)
     mount_frontend(app, default_dist_dir(config.configs_dir))
     return app

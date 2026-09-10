@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { FileAudio, FileText, FileVideo, Image, Plus, Trash2, Type } from 'lucide-react'
 import type { SourceInput } from '@/lib/api'
+import { UploadButton } from '@/components/UploadButton'
+import { LottieMark } from '@/components/Lottie'
+import emptyMark from '@/assets/lottie/workspace-empty.json'
 import { cn } from '@/lib/utils'
 
 /**
@@ -46,7 +49,6 @@ export function SourcePanel({
   onRemove,
 }: SourcePanelProps) {
   const [draft, setDraft] = useState('')
-  const [dropped, setDropped] = useState<string | null>(null)
 
   const files = sources.filter((s) => s.kind === 'file')
 
@@ -55,43 +57,47 @@ export function SourcePanel({
     if (!value) return
     onAdd(value)
     setDraft('')
-    setDropped(null)
   }
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4">
-      <div>
+      <div className="flex items-start gap-2">
+        {files.length === 0 && !prompt.trim() && (
+          <LottieMark
+            animationData={emptyMark}
+            size={28}
+            className="mt-0.5 shrink-0"
+            fallback={
+              <div className="flex size-full items-center justify-center">
+                <span className="size-2 rounded-full bg-accent/70" />
+              </div>
+            }
+          />
+        )}
+        <div>
         <h2 className="text-[13px] text-text-0">Sources</h2>
         <p className="mt-1 text-[12px] leading-snug text-text-1">
-          Text, PDF, image, audio or video. Files are read from a path on this
-          machine — the engine runs where the files are.
+          Text, PDF, image, audio or video. Uploads are written to this machine —
+          nothing leaves it.
         </p>
+        </div>
       </div>
 
-      <div
-        onDragOver={(event) => event.preventDefault()}
-        onDrop={(event) => {
-          event.preventDefault()
-          const file = event.dataTransfer.files[0]
-          if (!file) return
-          // A browser never exposes a real filesystem path. Prefill the name so the
-          // operator only has to complete the directory.
-          setDraft(file.name)
-          setDropped(file.name)
-        }}
-        className="rounded-[8px] border border-dashed border-border bg-bg-0 px-3 py-4 text-center"
-      >
-        <p className="text-[12px] text-text-1">
-          Drop a file to fill in its name, or type a path
-        </p>
-        <div className="mt-2.5 flex gap-1.5">
+      <UploadButton onUploaded={onAdd} />
+
+      {/* Still available for a file already sitting on this machine. */}
+      <details className="group">
+        <summary className="cursor-pointer list-none text-[11px] text-text-1 transition-colors duration-150 hover:text-text-0">
+          or reference a path already on this machine
+        </summary>
+        <div className="mt-2 flex gap-1.5">
           <input
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             onKeyDown={(event) => event.key === 'Enter' && submit()}
             placeholder="data/samples/incident.pdf"
             aria-label="Source path"
-            className="min-w-0 flex-1 rounded-[8px] border border-border bg-bg-2 px-2.5 py-1.5 text-[12px] text-text-0 placeholder:text-text-2 focus:border-border-2 focus:outline-none"
+            className="min-w-0 flex-1 rounded-[8px] border border-border bg-bg-0 px-2.5 py-1.5 text-[12px] text-text-0 placeholder:text-text-2 focus:border-border-2 focus:outline-none"
           />
           <button
             type="button"
@@ -103,13 +109,7 @@ export function SourcePanel({
             Add
           </button>
         </div>
-        {dropped && (
-          <p className="mt-2 text-left text-[11px] leading-snug text-warn">
-            Dropped “{dropped}”. Add the directory it lives in — the console cannot
-            upload, it points the engine at a path.
-          </p>
-        )}
-      </div>
+      </details>
 
       <ul className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto">
         {files.map((source, index) => {
