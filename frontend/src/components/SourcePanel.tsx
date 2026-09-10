@@ -60,7 +60,7 @@ export function SourcePanel({
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4">
+    <div className="flex flex-col gap-3">
       <div className="flex items-start gap-2">
         {files.length === 0 && !prompt.trim() && (
           <LottieMark
@@ -83,7 +83,9 @@ export function SourcePanel({
         </div>
       </div>
 
-      <UploadButton onUploaded={onAdd} />
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+        <div className="flex flex-col gap-2">
+          <UploadButton onUploaded={onAdd} />
 
       {/* Still available for a file already sitting on this machine. */}
       <details className="group">
@@ -110,8 +112,30 @@ export function SourcePanel({
           </button>
         </div>
       </details>
+        </div>
 
-      <ul className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto">
+        <div className="flex flex-col gap-1.5">
+          <label
+            htmlFor="prompt"
+            className="flex items-center gap-1.5 text-[12px] text-text-1"
+          >
+            <Type className="size-3.5" strokeWidth={1.75} />
+            Text source
+          </label>
+          <textarea
+            id="prompt"
+            value={prompt}
+            onChange={(event) => onPromptChange(event.target.value)}
+            placeholder="Paste or write source material here."
+            className={cn(
+              'min-h-[132px] flex-1 resize-y rounded-[12px] border border-border bg-bg-0 px-3 py-2.5 text-[12px] leading-relaxed',
+              'text-text-0 placeholder:text-text-2 focus:border-border-2 focus:outline-none',
+            )}
+          />
+        </div>
+      </div>
+
+      <ul className="flex max-h-[136px] flex-col gap-1.5 overflow-y-auto">
         {files.map((source, index) => {
           const path = source.path ?? ''
           const { ext, icon: Icon, plan } = describe(path)
@@ -147,26 +171,6 @@ export function SourcePanel({
         )}
       </ul>
 
-      <div className="flex flex-col gap-1.5">
-        <label
-          htmlFor="prompt"
-          className="flex items-center gap-1.5 text-[12px] text-text-1"
-        >
-          <Type className="size-3.5" strokeWidth={1.75} />
-          Text source
-        </label>
-        <textarea
-          id="prompt"
-          value={prompt}
-          onChange={(event) => onPromptChange(event.target.value)}
-          rows={4}
-          placeholder="Paste or write source material here."
-          className={cn(
-            'resize-y rounded-[8px] border border-border bg-bg-0 px-2.5 py-2 text-[12px] leading-relaxed',
-            'text-text-0 placeholder:text-text-2 focus:border-border-2 focus:outline-none',
-          )}
-        />
-      </div>
     </div>
   )
 }

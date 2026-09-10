@@ -42,8 +42,8 @@ export function Workspace() {
       <Header title="Workspace" subtitle="Compose a transform" />
 
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto md:flex-row md:overflow-hidden">
-        <div className="grid min-w-0 flex-1 grid-cols-1 gap-px overflow-y-auto bg-border lg:grid-cols-[300px_1fr] lg:overflow-hidden">
-        <section className="bg-bg-1 p-4 lg:overflow-y-auto">
+        <div className="flex min-w-0 flex-1 flex-col gap-px overflow-y-auto bg-border">
+        <section className="shrink-0 bg-bg-1 p-4">
           <SourcePanel
             sources={state.sources}
             prompt={state.prompt}
@@ -53,14 +53,14 @@ export function Workspace() {
           />
         </section>
 
-        <section className="bg-bg-1 p-4 lg:overflow-y-auto">
+        <section className="min-h-0 flex-1 bg-bg-1 p-4">
           <div className="flex items-baseline justify-between">
             <h2 className="text-[13px] text-text-0">Output types</h2>
             <span className="tabular text-[12px] text-text-1">
               {state.selected.length} of {ARTEFACTS.length} selected
             </span>
           </div>
-          <div className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-2 2xl:grid-cols-3">
+          <div className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
             {ARTEFACTS.map((artefact) => (
               <OutputTypeCard
                 key={artefact.type}
