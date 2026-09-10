@@ -3,6 +3,8 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { AlertTriangle, Check, CircleDashed, Loader2, X } from 'lucide-react'
 import { Header } from '@/components/layout/Header'
 import { MemoryPanel } from '@/components/MemoryPanel'
+import { LottieMark } from '@/components/Lottie'
+import completeMark from '@/assets/lottie/verification-complete.json'
 import { ARTEFACT_BY_TYPE } from '@/lib/artefacts'
 import { type JobFrame, type VerificationFrame, useTransformStream } from '@/lib/sse'
 import { cn } from '@/lib/utils'
@@ -175,7 +177,14 @@ function VerificationSummary({ report }: { report: VerificationFrame }) {
   return (
     <section className="surface-card p-4">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
-        <h2 className="shrink-0 text-[13px] text-text-0">Verification</h2>
+        <h2 className="flex shrink-0 items-center gap-1.5 text-[13px] text-text-0">
+          <LottieMark
+            animationData={completeMark}
+            size={18}
+            fallback={<Check className="size-4 text-ok" strokeWidth={2} />}
+          />
+          Verification
+        </h2>
         <span className="tabular text-[12px] text-text-1 sm:text-right">{report.line}</span>
       </div>
 

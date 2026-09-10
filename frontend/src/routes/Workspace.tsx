@@ -6,6 +6,8 @@ import { Header } from '@/components/layout/Header'
 import { OutputTypeCard } from '@/components/OutputTypeCard'
 import { Segmented } from '@/components/Segmented'
 import { SourcePanel } from '@/components/SourcePanel'
+import { LottieMark } from '@/components/Lottie'
+import emptyMark from '@/assets/lottie/workspace-empty.json'
 import { ARTEFACTS, estimateSeconds } from '@/lib/artefacts'
 import { AUDIENCES, DETAILS, LANGUAGES, OBJECTIVES, STYLES, TONES } from '@/lib/params'
 import { buildRequest, useWorkspace } from '@/store/workspace'
@@ -43,6 +45,23 @@ export function Workspace() {
 
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-px overflow-y-auto bg-border xl:grid-cols-[300px_1fr_280px] xl:overflow-hidden">
         <section className="bg-bg-1 p-4 xl:overflow-y-auto">
+          {!hasSource && (
+            <div className="mb-4 flex flex-col items-center gap-2 rounded-[8px] border border-border bg-bg-0 px-3 py-5 text-center">
+              <LottieMark
+                animationData={emptyMark}
+                size={80}
+                fallback={
+                  <div className="flex size-full items-center justify-center">
+                    <span className="size-3 rounded-full bg-accent/70" />
+                  </div>
+                }
+              />
+              <p className="max-w-[30ch] text-[12px] leading-snug text-text-1">
+                Nothing to transform yet. Add a file path or write a text source
+                below.
+              </p>
+            </div>
+          )}
           <SourcePanel
             sources={state.sources}
             prompt={state.prompt}

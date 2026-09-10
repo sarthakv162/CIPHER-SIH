@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
 import { EgressPill } from '@/components/EgressPill'
+import { KineticGrid } from '@/components/KineticGrid'
 
 /**
  * Entry screen. Product name, what it does in one line, one action.
@@ -9,6 +10,7 @@ import { EgressPill } from '@/components/EgressPill'
 export function Entry() {
   return (
     <div className="relative flex h-dvh w-full flex-col overflow-hidden bg-bg-0">
+      <KineticGrid className="pointer-events-none absolute inset-0 size-full" />
       <div className="ambient-wash" aria-hidden="true" />
       <div className="ambient-vignette" aria-hidden="true" />
 
