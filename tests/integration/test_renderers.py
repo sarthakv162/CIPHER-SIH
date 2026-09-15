@@ -44,7 +44,11 @@ def test_advisory_binaries_open(artefacts_dir: Path, tmp_path: Path) -> None:
     render(advisory, tmp_path)
 
     document = docx.Document(str(tmp_path / "advisory.docx"))
-    text = "\n".join(p.text for p in document.paragraphs)
+    paragraphs = "\n".join(p.text for p in document.paragraphs)
+    cells = "\n".join(
+        cell.text for table in document.tables for row in table.rows for cell in row.cells
+    )
+    text = f"{paragraphs}\n{cells}"
     assert advisory.indicators[0].value in text
     assert advisory.recommended_actions[0].action in text
 

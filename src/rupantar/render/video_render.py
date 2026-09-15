@@ -158,6 +158,7 @@ def _panel_rows(plans: list[PanelPlan]) -> list[dict[str, Any]]:
                 "duration_seconds": plan.duration,
                 "is_extra": plan.is_extra,
                 "background_evidence": plan.background_evidence or None,
+                "lower_third_severity": plan.lower_third[1] or None,
             }
         )
     return rows
@@ -196,7 +197,7 @@ def _write_panels(
     for plan in plans:
         target = out_dir / f"panel_{plan.index:02d}.png"
         try:
-            render_plan_panel(target, plan, len(plans), footer, theme)
+            render_plan_panel(target, plan, len(plans), footer, theme, warnings)
         except Exception as exc:  # noqa: BLE001 - degrade, never crash the job
             warnings.append(f"panel {plan.index} not rendered ({type(exc).__name__}: {exc})")
             continue

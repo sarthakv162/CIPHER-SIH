@@ -12,6 +12,7 @@ from rupantar.core.schemas import ArtefactType, Job, JobStatus, TransformRequest
 _EXEC = ArtefactType.executive_summary
 _VIDEO = ArtefactType.video_package
 _INFOGRAPHIC = ArtefactType.infographic_spec
+_ADVISORY = ArtefactType.advisory
 
 
 def plan(
@@ -49,7 +50,9 @@ def plan(
     video = by_type.get(_VIDEO)
     if video is not None:
         edges = [
-            src.id for src in (by_type.get(_EXEC), by_type.get(_INFOGRAPHIC)) if src is not None
+            src.id
+            for src in (by_type.get(_EXEC), by_type.get(_INFOGRAPHIC), by_type.get(_ADVISORY))
+            if src is not None
         ]
         if edges:
             video.depends_on = [*video.depends_on, *edges]

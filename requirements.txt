@@ -19,3 +19,5 @@ selectolax>=0.3
 faster-whisper>=1.1
 pymupdf>=1.24
 psutil>=6
+resvg-py>=0.5
+piper-tts==1.8.0

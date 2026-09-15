@@ -12,14 +12,14 @@ from typing import Any
 
 from rupantar.agents.base import ArtefactAgent
 from rupantar.audit.egress import scan_egress
-from rupantar.audit.provenance import Manifest, app_version, write_manifest
-from rupantar.core.artefacts import ArtefactBase, InfographicSpec
+from rupantar.core.artefacts import Advisory, ArtefactBase, InfographicSpec
 from rupantar.core.errors import AgentError, ConfigError
 from rupantar.core.schemas import ArtefactType, Job, JobStatus, SourceDossier, TransformRequest
 from rupantar.core.store import Store
 from rupantar.ingest.dossier import assemble_dossier
 from rupantar.models.client import LlamaClient
 from rupantar.models.manager import ModelManager
+from rupantar.orchestrator._manifests import emit_all_manifests
 from rupantar.orchestrator._run_support import (
     client_read_timeout,
     consecutive_runs,
@@ -77,6 +77,7 @@ class _RunContext:
     stream: bool
     strict_airgap: bool
     infographic_holder: dict[str, InfographicSpec] = field(default_factory=dict)
+    advisory_severity_holder: dict[str, str] = field(default_factory=dict)
     verification_params: dict[str, Any] | None = None
     progress: ProgressSink | None = None
 
@@ -88,6 +89,7 @@ class _RunContext:
             source_paths=list(self.source_paths),
             infographic_spec=self.infographic_holder.get("spec"),
             template_id=self.request.params.template,
+            advisory_severity=self.advisory_severity_holder.get("severity", ""),
         )
 
 
@@ -168,7 +170,15 @@ async def execute(
     )
 
     succeeded, report = await _run_groups(transform_id, jobs, ctx)
-    _emit_all_manifests(succeeded, report, ctx)
+    emit_all_manifests(
+        succeeded,
+        report,
+        manager=ctx.manager,
+        request=ctx.request,
+        dossier_sha=ctx.dossier_sha,
+        operator=ctx.operator,
+        clock=ctx.clock,
+    )
     final_jobs = await store.list_jobs_for_transform(transform_id)
     notify(progress, "transform", transform_payload(transform_id, final_jobs, final=True))
     return final_jobs
@@ -267,6 +277,8 @@ async def _run_group(group: list[Job], ctx: _RunContext, client: LlamaClient) ->
             outcome.artefact, InfographicSpec
         ):
             ctx.infographic_holder["spec"] = outcome.artefact
+        if job.artefact_type is ArtefactType.advisory and isinstance(outcome.artefact, Advisory):
+            ctx.advisory_severity_holder["severity"] = outcome.artefact.severity.value
         results.append(outcome)
     return results
 
@@ -326,22 +338,6 @@ async def _verify_group(
     return report
 
 
-def _emit_all_manifests(
-    outcomes: list[_JobOutcome], report: VerificationReport | None, ctx: _RunContext
-) -> None:
-    """Write a provenance manifest for every succeeded job's files, once verification is known."""
-    for outcome in outcomes:
-        verification = report.for_manifest(outcome.agent.artefact_type) if report else None
-        _emit_manifests(
-            outcome.paths,
-            job=outcome.job,
-            agent=outcome.agent,
-            ctx=ctx,
-            verification=verification,
-            render_warnings=outcome.render_warnings,
-        )
-
-
 async def _egress_aborts(ctx: _RunContext, job: Job) -> bool:
     """Scan for non-loopback connections; fail the job when --strict-airgap and one is found."""
     report = scan_egress()
@@ -355,40 +351,6 @@ async def _egress_aborts(ctx: _RunContext, job: Job) -> bool:
     )
     await _transition(ctx.store, job, JobStatus.FAILED, ctx.clock, ctx.progress)
     return True
-
-
-def _emit_manifests(
-    paths: list[Path],
-    *,
-    job: Job,
-    agent: ArtefactAgent,
-    ctx: _RunContext,
-    verification: dict[str, Any] | None = None,
-    render_warnings: list[str] | None = None,
-) -> None:
-    """Write a provenance manifest beside every produced file."""
-    meta = ctx.manager.model_meta(job.model_key)
-    params = ctx.request.params.model_dump(mode="json")
-    for path in paths:
-        manifest = Manifest(
-            source_sha256=ctx.dossier_sha,
-            artefact_type=agent.artefact_type,
-            artefact_format=path.suffix.lstrip("."),
-            model_key=job.model_key,
-            model_sha256=meta.get("sha256"),
-            model_quant=str(meta.get("quant", "unknown")),
-            prompt_version=agent.prompt_version,
-            generation_params=params,
-            created_at=job.created_at.isoformat(),
-            rendered_at=ctx.clock().isoformat(),
-            operator=ctx.operator,
-            app_version=app_version(),
-            job_id=job.id,
-            transform_id=job.transform_id,
-            verification=verification,
-            render_warnings=render_warnings or [],
-        )
-        write_manifest(path, manifest)
 
 
 async def _transition(

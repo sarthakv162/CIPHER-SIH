@@ -473,6 +473,60 @@ Also build:
 > - Still deferred, not part of 9b: `.potx`/`.dotx` templates, the WeasyPrint advisory PDF, and
 >   the `template` generation parameter (the `GET /templates` endpoint lands, its consumers do not).
 
+> **Phase 9c — composed video upgrade (AUTHORIZED 2026-09-16).** The user directed a further
+> scoped slice of Phase 9's video output, reusing assets the pipeline already produces. No new
+> model. Scope:
+> - **SVG panels, resolving the Phase 9a rasteriser deviation.** `resvg-py` (a self-contained
+>   Rust-backed wheel, no system `libcairo`/`DYLD_LIBRARY_PATH` dependency — verified working
+>   offline on this machine 2026-09-16) replaces the Pillow panel path in `render/video_render.py`
+>   with the Jinja→SVG→`resvg_py.svg_to_bytes`(PNG) path the plan originally specified in Phase 7.
+>   Panel layouts unchanged (title card / statement / stat block / closing / hero / chart),
+>   still theme-driven, still degrade to the existing Pillow renderer on any resvg failure
+>   (missing font, malformed SVG, render error) with a manifest warning — never crash the job.
+> - **No new theme file.** `configs/templates/ntro-formal.yaml` (Phase 9a) already is the single
+>   shared theme both the video panels and the infographic SVG read from; a literal second
+>   `theme.yaml` would fragment that. Reusing it satisfies the "one shared visual identity"
+>   requirement without inventing a parallel config.
+> - **Infographic hero panel upgraded to the real rendered SVG.** The existing
+>   `video_package` → `infographic_spec` dependency edge and internal-generation fallback
+>   (Phase 9a, `orchestrator/_video_prep.py`) are unchanged; the hero panel now rasterises the
+>   actual infographic SVG (via the same resvg path) instead of only a Pillow-recreated summary.
+> - **B-roll (real source frames as scrimmed backgrounds, credited by evidence ID) is already
+>   built (Phase 9a) and unchanged** — carried into the SVG panel path.
+> - **Motion:** existing degradable fade+xfade crossfade tier is kept. Ken Burns `zoompan` is
+>   re-attempted with a different technique (per-panel `zoompan` on a single still before
+>   concatenation, not across the whole looped-still timeline, which is what collapsed duration
+>   in the Phase 9a attempt) — if it still fails, degrade exactly as before and record the
+>   attempt in `MEMORY.md`, do not sink further time into it (three-attempts rule).
+> - **Lower third** already shows a persistent artefact-type label and has a severity-tint
+>   mechanism (`render/panels.py:_draw_lower_third`) that Phase 9a never wired to a real value.
+>   `orchestrator/planner.py` gains a `video_package` → `advisory` `depends_on` edge (same
+>   mechanism as the `executive_summary`/`infographic_spec` edges) **only when `advisory` is also
+>   requested in the transform**; when present, its `Severity` tints the lower third. No edge, no
+>   internal generation, no severity shown — pure best-effort, never blocks or fails the video.
+> - New dependency: `resvg-py` (self-contained wheel; imported inside functions only, joining the
+>   `render/` `_HEAVY` INV-3 set alongside `PIL`). No change to `configs/models.yaml` — this is a
+>   rendering library, not a model.
+
+> **Phase 9d — standalone illustrated panels (AUTHORIZED 2026-09-16).** Deliberately outside the
+> pipeline, per the user's explicit framing: not a `ModelManager` slot, not a runtime, not an
+> entry in `configs/models.yaml`, not touched by `selfcheck`. A one-off script,
+> `scripts/illustrate_panels.py <storyboard.json> --out <dir> [--steps N]`, reads an existing
+> `storyboard.json`, generates one PNG panel per scene from its `visual_recommendation` with a
+> local few-step diffusion model (SDXL-Turbo or similar) under `models/imagegen/` (gitignored,
+> fetched by a separate one-time command documented in the script's own header, never called by
+> application code — same acquisition discipline as `scripts/fetch_models.sh`). Panel filenames
+> match what `render/video_render.py` already expects, so the existing renderer picks them up
+> with no code change. Absent model files → the script exits with a clear message and changes
+> nothing. `GenerationParams.video_style: composed | illustrated` (new plain `enum.Enum`, additive
+> frozen-contract change, default `composed`) selects `render/video_render.py`'s behaviour:
+> `illustrated` uses the script's panel set when present, falling back to `composed` otherwise;
+> the chosen mode is recorded in the manifest. **Non-negotiable:** every panel the script
+> produced gets its own manifest entry marked synthetic / no-source-evidence, explicitly
+> distinct from a b-roll frame (real source evidence ID) or an infographic-derived panel (traced
+> to the `infographic_spec` artefact) — this is the one element in the system that cannot be
+> traced to source, and it must say so rather than hide it.
+
 **Dashboard** with source input, output-type checkboxes, generation parameter controls, live job progress, **Model Manager memory visualiser**, artefact downloads, converter panel, egress indicator.
 - Platform-accurate previews with live character counters for the `linkedin_post` and `x_thread` artefacts (X 280/post, LinkedIn 3000, truncation preview).
 

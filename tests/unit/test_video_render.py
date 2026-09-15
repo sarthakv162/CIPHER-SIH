@@ -8,7 +8,8 @@ from pathlib import Path
 import pytest
 
 from rupantar.render import video_render
-from rupantar.render._video_scene import derive_scene_type, extract_frame
+from rupantar.render._video_scene import derive_scene_type, extract_frame, plan_panels
+from rupantar.render.context import RenderContext
 from rupantar.render.video_render import _scene_timeline, render_video
 
 
@@ -95,6 +96,26 @@ def test_broll_frame_extraction_failure_degrades(
     result = extract_frame(Path("/no/such/video.mp4"), 3.0, tmp_path / "f.png", warnings)
     assert result is None
     assert any("frame extraction" in w for w in warnings)
+
+
+def test_lower_third_carries_advisory_severity_when_context_has_one() -> None:
+    from rupantar.render.theme import load_theme
+
+    theme = load_theme("ntro-formal")
+    context = RenderContext(advisory_severity="critical")
+    plans, _ = plan_panels(_Package([4, 4]), theme, context, Path("/tmp"), [])
+    assert all(plan.lower_third == ("Video Package", "critical") for plan in plans)
+
+
+def test_lower_third_severity_empty_without_advisory() -> None:
+    from rupantar.render.theme import load_theme
+
+    theme = load_theme("ntro-formal")
+    plans, _ = plan_panels(_Package([4, 4]), theme, None, Path("/tmp"), [])
+    assert all(plan.lower_third == ("Video Package", "") for plan in plans)
+    context = RenderContext()  # advisory_severity default is ""
+    plans, _ = plan_panels(_Package([4, 4]), theme, context, Path("/tmp"), [])
+    assert all(plan.lower_third == ("Video Package", "") for plan in plans)
 
 
 def test_ffmpeg_failure_is_caught(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

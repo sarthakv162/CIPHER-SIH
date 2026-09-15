@@ -15,6 +15,11 @@ from rupantar.render.theme import Theme
 
 _LEADING_NUMBER = re.compile(r"^\s*([+-]?\d[\d,]*(?:\.\d+)?)")
 
+# A shared linear axis stops being readable once one bar dwarfs the rest -- e.g. "4 datasets"
+# next to "20,000 visits" would draw three bars as invisible slivers beside one that fills the
+# chart. Past this many times the smallest value, the numbers are not comparable on one axis.
+_MAX_BAR_MAGNITUDE_RATIO = 12.0
+
 
 @dataclass
 class ChartData:
@@ -45,13 +50,21 @@ def extract_chart_data(spec: Any) -> ChartData | None:
         parsed = parse_leading_number(getattr(section, "stat_value", ""))
         if parsed is not None:
             points.append((str(getattr(section, "stat_label", "")).strip() or "value", parsed))
-    if len(points) >= 2:
+    if len(points) >= 2 and _comparable_magnitudes(points):
         return ChartData(kind="bar", title=str(getattr(spec, "headline", "")), points=points)
     layout = getattr(getattr(spec, "layout_recommendation", None), "value", None)
     if layout == "timeline" and len(sections) >= 2:
         labels = [str(getattr(s, "stat_label", "")).strip() or "step" for s in sections]
         return ChartData(kind="timeline", title=str(getattr(spec, "headline", "")), labels=labels)
     return None
+
+
+def _comparable_magnitudes(points: list[tuple[str, float]]) -> bool:
+    """False when the largest value dwarfs the smallest -- a shared axis would mislead."""
+    magnitudes = [abs(value) for _, value in points if value != 0]
+    if not magnitudes:
+        return True
+    return max(magnitudes) / min(magnitudes) <= _MAX_BAR_MAGNITUDE_RATIO
 
 
 def render_chart(target: Path, data: ChartData, theme: Theme) -> None:

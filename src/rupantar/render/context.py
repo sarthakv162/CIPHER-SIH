@@ -1,8 +1,8 @@
 """RenderContext: optional extra material a renderer draws on. ``render_video`` uses the theme/
-dossier/source-path/infographic fields; ``render_pptx``/``render_docx`` use ``template_id`` and
-``configs_dir`` to select a document template, and append to ``warnings`` on a template fallback
-so the caller can fold them into the artefact's provenance manifest. Every other renderer
-ignores this object entirely.
+dossier/source-path/infographic/advisory-severity fields; ``render_pptx``/``render_docx`` use
+``template_id`` and ``configs_dir`` to select a document template, and append to ``warnings`` on
+a template fallback so the caller can fold them into the artefact's provenance manifest. Every
+other renderer ignores this object entirely.
 """
 
 from __future__ import annotations
@@ -24,6 +24,7 @@ class RenderContext:
     infographic_spec: InfographicSpec | None = None
     template_id: str = "ntro-formal"
     configs_dir: Path | None = None
+    advisory_severity: str = ""
     # Mutated by render_pptx/render_docx when they degrade to a fallback; the frozen dataclass
     # only forbids reassigning this attribute, not appending to the list it already holds.
     warnings: list[str] = field(default_factory=list)

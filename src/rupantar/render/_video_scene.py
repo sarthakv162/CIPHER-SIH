@@ -15,6 +15,7 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
+from rupantar.render._video_svg import render_svg_panel
 from rupantar.render.charts import ChartData, extract_chart_data, parse_leading_number, render_chart
 from rupantar.render.panels import render_panel
 from rupantar.render.theme import Theme
@@ -50,6 +51,7 @@ class PanelPlan:
     lower_third: tuple[str, str] = ("", "")
     is_extra: bool = False
     chart_data: ChartData | None = field(default=None, compare=False)
+    infographic_spec: Any | None = field(default=None, compare=False)
 
 
 def reads_as_quote(text: str) -> bool:
@@ -126,7 +128,8 @@ def plan_panels(
     """Build the ordered panel plan: scene panels + infographic extras + b-roll backgrounds."""
     scenes = list(artefact.scenes)
     count = len(scenes)
-    lower = ("Video Package", "")
+    severity = getattr(context, "advisory_severity", "") if context is not None else ""
+    lower = ("Video Package", severity)
     plans: list[PanelPlan] = []
     for i, scene in enumerate(scenes):
         layout = derive_scene_type(i, count, scene)
@@ -165,6 +168,7 @@ def _infographic_panels(
             narration="",
             lower_third=lower,
             is_extra=True,
+            infographic_spec=spec,
         )
     ]
     data = extract_chart_data(spec)
@@ -280,21 +284,30 @@ def extract_frame(
     return target if target.is_file() else None
 
 
-def render_plan_panel(target: Path, plan: PanelPlan, count: int, footer: str, theme: Theme) -> None:
-    """Render one planned panel PNG (a thin adaptor onto ``panels.render_panel``)."""
+def render_plan_panel(
+    target: Path, plan: PanelPlan, count: int, footer: str, theme: Theme, warnings: list[str]
+) -> None:
+    """Render one planned panel PNG: SVG via resvg, falling back to the Pillow renderer."""
     if plan.layout == "chart" and plan.chart_data is not None:
         render_chart(target, plan.chart_data, theme)
         return
-    render_panel(
-        target,
-        layout=plan.layout,
-        title=plan.title,
-        body_lines=plan.body_lines,
-        scene_index=plan.index,
-        scene_count=count,
-        footer=footer,
-        theme=theme,
-        background=plan.background,
-        scrim=plan.background is not None,
-        lower_third=plan.lower_third,
-    )
+    kwargs: dict[str, Any] = {
+        "layout": plan.layout,
+        "title": plan.title,
+        "body_lines": plan.body_lines,
+        "scene_index": plan.index,
+        "scene_count": count,
+        "footer": footer,
+        "theme": theme,
+        "background": plan.background,
+        "scrim": plan.background is not None,
+        "lower_third": plan.lower_third,
+    }
+    try:
+        render_svg_panel(target, hero_spec=plan.infographic_spec, **kwargs)
+    except Exception as exc:  # noqa: BLE001 - degrade to the Pillow renderer, never crash the job
+        warnings.append(
+            f"panel {plan.index} svg render failed ({type(exc).__name__}: {exc}) "
+            "- fell back to the raster panel renderer"
+        )
+        render_panel(target, **kwargs)

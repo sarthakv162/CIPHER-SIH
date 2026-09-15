@@ -67,6 +67,32 @@ def test_video_package_alone_has_no_dependency() -> None:
     assert jobs[0].depends_on == []
 
 
+def test_video_package_depends_on_advisory_when_both_present() -> None:
+    for order in (
+        (ArtefactType.advisory, ArtefactType.video_package),
+        (ArtefactType.video_package, ArtefactType.advisory),
+    ):
+        jobs = plan(_request(*order), _AGENTS, new_id=_ids(), clock=_clock)
+        by_type = {job.artefact_type: job for job in jobs}
+        video = by_type[ArtefactType.video_package]
+        assert by_type[ArtefactType.advisory].id in video.depends_on
+
+
+def test_video_package_depends_on_all_three_when_all_present() -> None:
+    jobs = plan(
+        _request(ArtefactType.advisory, ArtefactType.executive_summary, ArtefactType.video_package),
+        _AGENTS,
+        new_id=_ids(),
+        clock=_clock,
+    )
+    by_type = {job.artefact_type: job for job in jobs}
+    video = by_type[ArtefactType.video_package]
+    assert set(video.depends_on) == {
+        by_type[ArtefactType.executive_summary].id,
+        by_type[ArtefactType.advisory].id,
+    }
+
+
 def test_missing_agent_raises_config_error_naming_the_yaml() -> None:
     agents = {k: v for k, v in _AGENTS.items() if k != "advisory"}
     with pytest.raises(ConfigError) as excinfo:

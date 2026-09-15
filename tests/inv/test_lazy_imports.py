@@ -31,6 +31,7 @@ _HEAVY = {
     "av",
     "numpy",
     "PIL",
+    "resvg_py",
 }
 
 
