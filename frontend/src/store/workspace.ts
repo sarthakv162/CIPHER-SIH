@@ -11,7 +11,11 @@ interface WorkspaceState {
   removeSource: (index: number) => void
   setPrompt: (value: string) => void
   toggle: (type: ArtefactType) => void
-  setParam: <K extends keyof GenerationParams>(key: K, value: GenerationParams[K]) => void
+  setSelected: (types: ArtefactType[]) => void
+  setParam: <K extends keyof GenerationParams>(
+    key: K,
+    value: GenerationParams[K],
+  ) => void
   reset: () => void
 }
 
@@ -33,6 +37,7 @@ export const useWorkspace = create<WorkspaceState>((set) => ({
     set((state) => ({ sources: state.sources.filter((_, i) => i !== index) })),
 
   setPrompt: (prompt) => set({ prompt }),
+  setSelected: (selected) => set({ selected }),
 
   toggle: (type) =>
     set((state) => ({
@@ -41,14 +46,17 @@ export const useWorkspace = create<WorkspaceState>((set) => ({
         : [...state.selected, type],
     })),
 
-  setParam: (key, value) => set((state) => ({ params: { ...state.params, [key]: value } })),
+  setParam: (key, value) =>
+    set((state) => ({ params: { ...state.params, [key]: value } })),
 
-  reset: () => set({ sources: [], prompt: '', selected: ['executive_summary'] }),
+  reset: () =>
+    set({ sources: [], prompt: '', selected: ['executive_summary'] }),
 }))
 
 /** The request body, assembled exactly as `TransformRequest` expects it. */
 export function buildRequest(state: WorkspaceState) {
   const sources: SourceInput[] = [...state.sources]
-  if (state.prompt.trim()) sources.push({ kind: 'text', text: state.prompt.trim() })
+  if (state.prompt.trim())
+    sources.push({ kind: 'text', text: state.prompt.trim() })
   return { sources, output_types: state.selected, params: state.params }
 }

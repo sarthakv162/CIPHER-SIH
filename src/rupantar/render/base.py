@@ -55,7 +55,9 @@ def render(
 ) -> list[Path]:
     """Render `artefact` to each requested format under `out_dir`; return the written paths.
 
-    Only ``render_video`` consumes ``context``; every other renderer ignores it.
+    ``render_video``, ``render_pptx``, ``render_docx`` and ``render_pdf`` consume ``context``
+    (video for its theme/dossier/b-roll material, the three document renderers for template
+    selection and theme-driven colour); every other renderer ignores it.
     """
     atype = _artefact_type(artefact)
     wanted = tuple(formats) if formats is not None else FORMATS.get(atype, ("md",))
@@ -69,10 +71,22 @@ def render(
                 "or drop the format from FORMATS"
             )
         path = out_dir / f"{atype}.{fmt}"
-        result: list[Path] | None = (
-            render_video(artefact, path, context=context)
-            if renderer is render_video
-            else renderer(artefact, path)
-        )
-        written.extend(result or [path])
+        written.extend(_dispatch_one(renderer, artefact, path, context) or [path])
     return written
+
+
+def _dispatch_one(
+    renderer: _Renderer, artefact: ArtefactBase, path: Path, context: RenderContext | None
+) -> list[Path] | None:
+    """Call `renderer`, passing `context` only to the four renderers that consume it."""
+    if renderer is render_video:
+        return render_video(artefact, path, context=context)
+    if renderer is render_pptx:
+        return render_pptx(artefact, path, context=context) or [path]
+    if renderer is render_docx:
+        render_docx(artefact, path, context=context)
+        return None
+    if renderer is render_pdf:
+        render_pdf(artefact, path, context=context)
+        return None
+    return renderer(artefact, path)

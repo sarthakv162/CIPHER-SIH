@@ -117,6 +117,11 @@ class GenerationParams(BaseModel):
     detail: Detail = Detail.standard
     objective: Objective = Objective.inform
     style: Style = Style.plain
+    # A free string, not an enum: templates are declared in configs/templates/templates.yaml,
+    # data the schema must not need a code change to grow. An unknown id degrades gracefully
+    # to the built-in renderer (render/pptx_render.py, render/docx_render.py) rather than
+    # failing validation here.
+    template: str = "ntro-formal"
 
 
 class TransformRequest(BaseModel):

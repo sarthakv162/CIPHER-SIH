@@ -20,10 +20,13 @@ export function PresentationView({
   if (!slide) return null
 
   return (
-    <div className="flex h-full min-h-0 gap-3">
-      <ol className="flex w-[132px] shrink-0 flex-col gap-1.5 overflow-y-auto">
+    <div className="flex h-full min-h-0 flex-col gap-3 md:flex-row">
+      <ol
+        aria-label="Presentation slides"
+        className="flex shrink-0 gap-1.5 overflow-x-auto md:w-[132px] md:flex-col md:overflow-y-auto"
+      >
         {artefact.slides.map((item, index) => (
-          <li key={index}>
+          <li key={index} className="w-[132px] shrink-0 md:w-auto">
             <button
               type="button"
               onClick={() => setActive(index)}
@@ -35,7 +38,9 @@ export function PresentationView({
                   : 'border-border bg-bg-2 hover:border-border-2 hover:bg-bg-3',
               )}
             >
-              <span className="tabular text-[13px] text-text-1">{index + 1}</span>
+              <span className="tabular text-[14px] text-text-1">
+                {index + 1}
+              </span>
               <span className="mt-0.5 line-clamp-2 block text-[14px] leading-snug text-text-0">
                 {item.title}
               </span>
@@ -46,8 +51,12 @@ export function PresentationView({
 
       <div className="flex min-w-0 flex-1 flex-col gap-3">
         <div className="surface-card flex aspect-video min-h-0 flex-col justify-center gap-3 p-6">
-          <span className="section-label">{slide.layout.replace('_', ' ')}</span>
-          <h2 className="text-[26px] leading-tight text-text-0">{slide.title}</h2>
+          <span className="section-label">
+            {slide.layout.replace('_', ' ')}
+          </span>
+          <h2 className="text-[26px] leading-tight text-text-0">
+            {slide.title}
+          </h2>
           <ul className="flex flex-col gap-1.5">
             {slide.bullets.map((bullet, index) => (
               <li
@@ -102,7 +111,7 @@ export function InfographicView({
   )
 }
 
-interface Scene {
+export interface Scene {
   duration_seconds: number
   scene_description: string
   on_screen_text: string
@@ -137,8 +146,8 @@ export function VideoView({
         />
       ) : (
         <p className="rounded-[8px] border border-warn/25 bg-warn/10 px-3 py-2.5 text-[15px] leading-snug text-warn">
-          No MP4 was assembled — the renderer degraded to a storyboard. The scene
-          plan below is still complete.
+          No MP4 was assembled — the renderer degraded to a storyboard. The
+          scene plan below is still complete.
         </p>
       )}
 
@@ -151,10 +160,16 @@ export function VideoView({
               onClick={() => setActive(index)}
               className={cn(
                 'shrink-0 overflow-hidden rounded-[8px] border transition-colors duration-150',
-                index === active ? 'border-accent/60' : 'border-border hover:border-border-2',
+                index === active
+                  ? 'border-accent/60'
+                  : 'border-border hover:border-border-2',
               )}
             >
-              <img src={panel} alt={`Panel ${index + 1}`} className="h-20 w-auto" />
+              <img
+                src={panel}
+                alt={`Panel ${index + 1}`}
+                className="h-20 w-auto"
+              />
             </button>
           ))}
         </div>
@@ -166,7 +181,9 @@ export function VideoView({
             key={index}
             className={cn(
               'rounded-[8px] border p-3',
-              index === active ? 'border-accent/40 bg-bg-2' : 'border-border bg-bg-2',
+              index === active
+                ? 'border-accent/40 bg-bg-2'
+                : 'border-border bg-bg-2',
             )}
           >
             <div className="flex items-baseline justify-between gap-2">

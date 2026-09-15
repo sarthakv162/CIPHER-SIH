@@ -8,6 +8,8 @@ const EASE = [0.2, 0, 0, 1] as const
 interface UploadButtonProps {
   /** Called with the server-side path once the file is on disk. */
   onUploaded: (path: string) => void
+  purpose?: 'source' | 'conversion'
+  accept?: string
 }
 
 /**
@@ -17,7 +19,11 @@ interface UploadButtonProps {
  * returns the path — the engine reads sources from the filesystem, and a browser
  * never exposes a real one. Same-origin, so nothing leaves this machine.
  */
-export function UploadButton({ onUploaded }: UploadButtonProps) {
+export function UploadButton({
+  onUploaded,
+  purpose = 'source',
+  accept,
+}: UploadButtonProps) {
   const input = useRef<HTMLInputElement | null>(null)
   const [dragging, setDragging] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -29,13 +35,18 @@ export function UploadButton({ onUploaded }: UploadButtonProps) {
     setError(null)
     setProgress(file.name)
     try {
-      const response = await fetch(`/sources?filename=${encodeURIComponent(file.name)}`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/octet-stream' },
-        body: file,
-      })
+      const response = await fetch(
+        `/sources?filename=${encodeURIComponent(file.name)}&purpose=${purpose}`,
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/octet-stream' },
+          body: file,
+        },
+      )
       if (!response.ok) {
-        const body = (await response.json().catch(() => null)) as { detail?: string } | null
+        const body = (await response.json().catch(() => null)) as {
+          detail?: string
+        } | null
         throw new Error(body?.detail ?? `Upload failed (${response.status})`)
       }
       const result = (await response.json()) as { path: string }
@@ -50,7 +61,7 @@ export function UploadButton({ onUploaded }: UploadButtonProps) {
 
   const take = (files: FileList | null) => {
     const file = files?.[0]
-    if (file) void send(file)
+    if (file && !busy) void send(file)
   }
 
   return (
@@ -74,7 +85,7 @@ export function UploadButton({ onUploaded }: UploadButtonProps) {
         transition={{ duration: 0.15, ease: EASE }}
         className={cn(
           'group relative flex w-full flex-col items-center justify-center gap-2 overflow-hidden',
-          'rounded-[12px] border border-dashed px-4 py-7 transition-colors duration-200',
+          'min-h-[176px] rounded-[12px] border border-dashed px-4 py-5 transition-colors duration-200',
           dragging
             ? 'border-accent bg-accent/12'
             : 'border-border-2 bg-bg-0 hover:border-accent/60 hover:bg-accent/6',
@@ -91,30 +102,52 @@ export function UploadButton({ onUploaded }: UploadButtonProps) {
           animate={dragging ? { y: -3 } : { y: 0 }}
           transition={{ duration: 0.2, ease: EASE }}
           className={cn(
-            'flex size-11 items-center justify-center rounded-full border transition-colors duration-200',
+            'flex size-10 items-center justify-center rounded-xl border transition-colors duration-200',
             dragging
               ? 'border-accent/50 bg-accent/20'
               : 'border-border bg-bg-2 group-hover:border-accent/40 group-hover:bg-accent/12',
           )}
         >
           {busy ? (
-            <Loader2 className="size-5 animate-spin text-accent" strokeWidth={1.75} />
+            <Loader2
+              className="size-5 animate-spin text-accent"
+              strokeWidth={1.75}
+            />
           ) : (
             <Upload className="size-5 text-accent" strokeWidth={1.75} />
           )}
         </motion.span>
 
-        <span className="text-[16px] text-text-0">
-          {busy ? `Uploading ${progress}…` : dragging ? 'Drop to upload' : 'Upload a source'}
+        <span className="max-w-full break-words text-[14px] font-medium text-text-0">
+          {busy
+            ? `Uploading ${progress}…`
+            : dragging
+              ? 'Drop to upload'
+              : 'Drop your source here'}
         </span>
-        <span className="text-[14px] leading-snug text-text-1">
-          Drag a file here, or click to browse — pdf, docx, image, audio, video
+        <span className="text-[13px] leading-snug text-text-1">
+          or{' '}
+          <span className="text-accent underline underline-offset-2">
+            browse files
+          </span>{' '}
+          on your machine
+        </span>
+        <span className="mt-1 text-[12px] tracking-[.07em] text-text-2">
+          {purpose === 'conversion'
+            ? 'CSV · JSON · YAML · XML · SPREADSHEETS · LOGS'
+            : 'PDF · DOCX · TEXT · IMAGE · AUDIO · VIDEO'}
         </span>
       </motion.button>
 
       <input
         ref={input}
         type="file"
+        accept={
+          accept ??
+          (purpose === 'conversion'
+            ? '.csv,.tsv,.json,.jsonl,.yaml,.yml,.xml,.xlsx,.parquet,.log,.cef,.txt'
+            : '.txt,.md,.html,.htm,.pdf,.docx,.png,.jpg,.jpeg,.webp,.gif,.wav,.mp3,.m4a,.flac,.ogg,.mp4,.mov,.mkv,.webm')
+        }
         hidden
         onChange={(event) => {
           take(event.target.files)
@@ -129,9 +162,13 @@ export function UploadButton({ onUploaded }: UploadButtonProps) {
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.15, ease: EASE }}
+            role="alert"
             className="flex items-start gap-1.5 text-[14px] leading-snug text-danger"
           >
-            <AlertTriangle className="mt-px size-3 shrink-0" strokeWidth={1.75} />
+            <AlertTriangle
+              className="mt-px size-3 shrink-0"
+              strokeWidth={1.75}
+            />
             {error}
           </motion.p>
         )}

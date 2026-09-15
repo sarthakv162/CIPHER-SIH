@@ -12,8 +12,8 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from rupantar.api.app import create_app
-from rupantar.api.routes.templates import read_templates
 from rupantar.core.config import Env, load_config
+from rupantar.render.template_registry import load_templates
 
 
 @pytest.fixture
@@ -55,22 +55,37 @@ def test_templates_lists_ntro_formal(api: tuple[TestClient, FastAPI]) -> None:
     response = client.get("/templates")
     assert response.status_code == 200
     entries = response.json()
-    by_name = {entry["name"]: entry for entry in entries}
-    assert "ntro-formal" in by_name
-    entry = by_name["ntro-formal"]
+    by_id = {entry["id"]: entry for entry in entries}
+    assert {"ntro-formal", "executive", "technical"} <= set(by_id)
+    entry = by_id["ntro-formal"]
     assert entry["label"] == "NTRO Formal"
     assert entry["description"]
-    assert entry["accent"].startswith("#")
+    assert "presentation" in entry["supports"]
+    assert entry["thumbnail_url"] == "/templates/ntro-formal/thumbnail"
 
 
-def test_templates_does_not_add_a_generation_parameter(api: tuple[TestClient, FastAPI]) -> None:
+def test_template_thumbnail_is_served(api: tuple[TestClient, FastAPI]) -> None:
+    client, _ = api
+    response = client.get("/templates/ntro-formal/thumbnail")
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "image/png"
+
+
+def test_unknown_template_thumbnail_is_a_404(api: tuple[TestClient, FastAPI]) -> None:
+    client, _ = api
+    assert client.get("/templates/does-not-exist/thumbnail").status_code == 404
+
+
+def test_templates_generation_parameter_defaults_to_ntro_formal(
+    api: tuple[TestClient, FastAPI],
+) -> None:
     client, _ = api
     schema = client.get("/openapi.json").json()["components"]["schemas"]["GenerationParams"]
-    assert "template" not in schema["properties"]
+    assert schema["properties"]["template"]["default"] == "ntro-formal"
 
 
-def test_read_templates_is_empty_when_the_directory_is_missing(tmp_path: Path) -> None:
-    assert read_templates(tmp_path / "nope") == []
+def test_load_templates_is_empty_when_the_directory_is_missing(tmp_path: Path) -> None:
+    assert load_templates(tmp_path / "nope") == []
 
 
 def test_release_stamps_the_manifest_and_keeps_every_field(

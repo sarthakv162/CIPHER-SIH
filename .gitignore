@@ -19,6 +19,10 @@ data/outputs/*
 !data/outputs/.gitkeep
 data/samples/*
 !data/samples/.gitkeep
+data/uploads/*
+!data/uploads/.gitkeep
+data/qa_sessions/*
+!data/qa_sessions/.gitkeep
 data/*.db
 *.sqlite
 *.sqlite3

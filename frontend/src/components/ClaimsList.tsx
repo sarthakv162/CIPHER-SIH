@@ -1,6 +1,10 @@
 import { AlertTriangle, Check, HelpCircle } from 'lucide-react'
 import type { ArtefactType } from '@/lib/api'
-import { type ClaimAssessment, type VerificationReport, claimsFor } from '@/lib/verification'
+import {
+  type ClaimAssessment,
+  type VerificationReport,
+  claimsFor,
+} from '@/lib/verification'
 import { cn } from '@/lib/utils'
 
 /** Status pill. The colours are the console's, and they mean the same here as
@@ -18,12 +22,16 @@ export function VerificationBadge({
       ? 'border-ok/25 bg-ok/10 text-ok'
       : 'border-warn/25 bg-warn/10 text-warn'
 
-  const Icon = conflicted ? AlertTriangle : status === 'SUPPORTED' ? Check : HelpCircle
+  const Icon = conflicted
+    ? AlertTriangle
+    : status === 'SUPPORTED'
+      ? Check
+      : HelpCircle
 
   return (
     <span
       className={cn(
-        'inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[13px]',
+        'inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[14px]',
         tone,
       )}
     >
@@ -64,8 +72,11 @@ export function ClaimsList({ report, artefactType }: ClaimsListProps) {
             "n of m supported" would sit next to a visible conflict badge and read
             as a contradiction. Count the conflicted ones separately. */}
         <span className="tabular text-[14px] text-text-1">
-          {claims.filter((c) => c.status === 'SUPPORTED' && !conflicted.has(c.claim_id))
-            .length}{' '}
+          {
+            claims.filter(
+              (c) => c.status === 'SUPPORTED' && !conflicted.has(c.claim_id),
+            ).length
+          }{' '}
           supported
           {claims.filter((c) => c.status !== 'SUPPORTED').length > 0 &&
             ` · ${claims.filter((c) => c.status !== 'SUPPORTED').length} unsupported`}
@@ -84,7 +95,9 @@ export function ClaimsList({ report, artefactType }: ClaimsListProps) {
         ))}
       </ul>
 
-      <p className="mt-2.5 text-[14px] leading-snug text-text-1">{report.disclaimer}</p>
+      <p className="mt-2.5 text-[14px] leading-snug text-text-1">
+        {report.disclaimer}
+      </p>
     </section>
   )
 }
@@ -125,17 +138,21 @@ function ClaimRow({
             claim.evidence_ids.map((id) => (
               <span
                 key={id}
-                className="rounded-[4px] border border-accent/25 bg-accent/10 px-1.5 py-0.5 text-[13px] text-accent"
+                className="rounded-[4px] border border-accent/25 bg-accent/10 px-1.5 py-0.5 text-[14px] text-accent"
               >
                 {id}
               </span>
             ))
           ) : (
-            <span className="text-[14px] text-text-1">No evidence unit entails this.</span>
+            <span className="text-[14px] text-text-1">
+              No evidence unit entails this.
+            </span>
           )}
         </div>
         {claim.note && (
-          <p className="mt-1 text-[14px] leading-snug text-text-1">{claim.note}</p>
+          <p className="mt-1 text-[14px] leading-snug text-text-1">
+            {claim.note}
+          </p>
         )}
       </div>
     </li>

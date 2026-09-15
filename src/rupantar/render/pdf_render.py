@@ -1,64 +1,64 @@
-"""Advisory PDF rendering with fpdf2. Core fonts are latin-1, so text is transliterated."""
+"""Advisory PDF rendering with fpdf2 and the theme design system: a coloured header band,
+a severity badge, accent-barred section headings, real bordered tables for indicators and
+recommended actions, and a tinted handling callout. Core fonts are latin-1, so text is
+transliterated. Never raises: a broken theme degrades to a hardcoded fallback palette, and a
+table-build problem degrades to the previous plain-bulleted rendering -- both record a warning
+on `context` instead of failing the document.
+"""
 
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
 
-
-def _latin1(text: str) -> str:
-    """Coerce text into the latin-1 range fpdf2's core fonts can render."""
-    swaps = {"—": "-", "–": "-", "‘": "'", "’": "'", "“": '"', "”": '"'}
-    for src, dst in swaps.items():
-        text = text.replace(src, dst)
-    return text.encode("latin-1", "replace").decode("latin-1")
+from rupantar.render import _pdf_layout as layout
+from rupantar.render._theme_fallback import safe_theme
+from rupantar.render.context import RenderContext
 
 
-def render_pdf(artefact: Any, path: Path) -> None:
+def render_pdf(artefact: Any, path: Path, *, context: RenderContext | None = None) -> None:
     """Render an advisory to a PDF file at `path`."""
     from fpdf import FPDF
+    from fpdf.fonts import FontFace
 
-    pdf = FPDF()
-    pdf.set_auto_page_break(auto=True, margin=15)
+    theme = safe_theme(context)
+
+    class _ThemedPDF(FPDF):  # local: keeps the fpdf import lazy (INV-3)
+        def footer(self) -> None:
+            layout.footer(self, theme)
+
+    pdf = _ThemedPDF()
+    pdf.set_auto_page_break(auto=True, margin=22)
     pdf.add_page()
 
     banner = artefact.confidence_notes.strip() or "OFFICIAL - DEMO"
-    _line(pdf, _latin1(banner), size=10, style="B")
-    _line(pdf, _latin1(artefact.title), size=16, style="B")
-    for label, value in (
-        ("Advisory ID", artefact.advisory_id),
-        ("Severity", artefact.severity.value),
-        ("Issued for", artefact.issued_for),
-    ):
-        _line(pdf, _latin1(f"{label}: {value}"), size=10)
-
-    _section(pdf, "Summary", artefact.summary)
-    _section(pdf, "Background", artefact.background)
-    for detail in artefact.technical_details:
-        _section(pdf, detail.heading, detail.body)
-    _section(pdf, "Affected entities", "; ".join(artefact.affected_entities) or "none stated")
-    indicators = "\n".join(
-        f"- {i.ioc_type.value}: {i.value}" + (f" ({i.note})" if i.note else "")
-        for i in artefact.indicators
+    layout.header_band(pdf, theme, artefact.title, banner)
+    layout.at_a_glance(
+        pdf, theme, artefact.advisory_id, artefact.severity.value, artefact.issued_for
     )
-    _section(pdf, "Indicators", indicators or "none provided")
-    actions = "\n".join(f"- [{r.priority.value}] {r.action}" for r in artefact.recommended_actions)
-    _section(pdf, "Recommended actions", actions)
-    _section(pdf, "References", "\n".join(f"- {r}" for r in artefact.references) or "none")
-    _section(pdf, "Handling", artefact.handling_caveat)
+
+    layout.heading(pdf, theme, "Summary")
+    layout.body(pdf, artefact.summary)
+    layout.heading(pdf, theme, "Background")
+    layout.body(pdf, artefact.background)
+    layout.heading(pdf, theme, "Technical details")
+    for detail in artefact.technical_details:
+        layout.subheading(pdf, detail.heading)
+        layout.body(pdf, detail.body)
+
+    layout.heading(pdf, theme, "Affected entities")
+    layout.body(pdf, "; ".join(artefact.affected_entities) or "none stated")
+
+    layout.heading(pdf, theme, "Indicators")
+    layout.indicators_table(pdf, theme, FontFace, artefact.indicators, context)
+
+    layout.heading(pdf, theme, "Recommended actions")
+    layout.actions_table(pdf, theme, FontFace, artefact.recommended_actions, context)
+
+    layout.heading(pdf, theme, "References")
+    layout.body(pdf, "\n".join(f"- {r}" for r in artefact.references) or "none")
+
+    layout.heading(pdf, theme, "Handling")
+    layout.callout(pdf, theme, artefact.handling_caveat)
 
     pdf.output(str(path))
-
-
-def _line(pdf: Any, text: str, *, size: int, style: str = "") -> None:
-    """Write one wrapped paragraph at the given font size and style."""
-    pdf.set_font("Helvetica", style=style, size=size)
-    pdf.set_x(pdf.l_margin)
-    pdf.multi_cell(pdf.epw, size * 0.6, text, new_x="LMARGIN", new_y="NEXT", wrapmode="CHAR")
-
-
-def _section(pdf: Any, heading: str, body: str) -> None:
-    """Write a bold heading followed by a body paragraph."""
-    pdf.ln(2)
-    _line(pdf, _latin1(heading), size=12, style="B")
-    _line(pdf, _latin1(body), size=10)

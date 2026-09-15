@@ -37,6 +37,7 @@ export interface GenerationParams {
   detail: Detail
   objective: Objective
   style: Style
+  template: string
 }
 
 export interface SourceInput {
@@ -105,10 +106,11 @@ export interface EgressReport {
 }
 
 export interface TemplateRow {
-  name: string
+  id: string
   label: string
   description: string
-  accent?: string | null
+  supports: ArtefactType[]
+  thumbnail_url: string | null
 }
 
 class ApiError extends Error {

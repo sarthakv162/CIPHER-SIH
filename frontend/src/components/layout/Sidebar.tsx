@@ -1,80 +1,142 @@
-import { NavLink } from 'react-router-dom'
-import { ArrowLeftRight, FileStack, type LucideIcon, Plus, ShieldCheck } from 'lucide-react'
+import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom'
+import {
+  ArrowLeftRight,
+  FileStack,
+  PanelLeft,
+  Settings2,
+  SquarePen,
+  FileText,
+  MessageSquare,
+  Shapes,
+} from 'lucide-react'
 import { RecentTransforms } from '@/components/RecentTransforms'
+import { BrandMark } from '@/components/Brand'
+import { useWorkspace } from '@/store/workspace'
 import { cn } from '@/lib/utils'
 
-interface NavItemProps {
-  to: string
-  label: string
-  icon: LucideIcon
-  end?: boolean
-}
-
-function NavItem({ to, label, icon: Icon, end }: NavItemProps) {
+export function Sidebar({
+  onNavigate,
+  collapsed = false,
+  onCollapse,
+}: {
+  onNavigate?: () => void
+  collapsed?: boolean
+  onCollapse?: () => void
+}) {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const category = new URLSearchParams(location.search).get('category')
+  const reset = useWorkspace((s) => s.reset)
   return (
-    <NavLink
-      to={to}
-      end={end}
-      className={({ isActive }) =>
-        cn(
-          'group flex items-center gap-2.5 rounded-[8px] px-2.5 py-2 text-[16px] transition-colors',
-          'duration-150 ease-[cubic-bezier(0.2,0,0,1)]',
-          isActive
-            ? 'bg-bg-3 text-text-0'
-            : 'text-text-1 hover:bg-bg-2 hover:text-text-0',
-        )
-      }
+    <aside
+      className={cn('studio-sidebar', collapsed && 'is-collapsed')}
+      onClick={(e) => {
+        if ((e.target as HTMLElement).closest('a')) onNavigate?.()
+      }}
     >
-      {({ isActive }) => (
-        <>
-          <Icon
-            className={cn('size-4 shrink-0', isActive ? 'text-accent' : 'text-text-1')}
-            strokeWidth={1.75}
-          />
-          <span className="truncate">{label}</span>
-        </>
-      )}
-    </NavLink>
-  )
-}
-
-/** Left rail: new transform, recent work, then the standing tools at the bottom. */
-export function Sidebar() {
-  return (
-    <aside className="flex w-[264px] shrink-0 flex-col gap-5 px-3 py-4">
-      <div className="flex items-center gap-2.5 px-2.5 pt-1">
-        <div className="relative flex size-7 items-center justify-center rounded-[8px] bg-bg-3 ring-1 ring-border">
-          <span className="text-[16px] leading-none text-accent">◈</span>
-        </div>
-        <div className="min-w-0">
-          <div className="truncate text-[16px] leading-tight text-text-0">Rupantar</div>
-          <div className="truncate text-[14px] leading-tight text-text-1">Operator console</div>
-        </div>
-      </div>
-
-      <NavLink
-        to="/workspace"
+      <div
         className={cn(
-          'mx-0.5 flex items-center gap-2 rounded-[8px] border border-border bg-bg-2 px-2.5 py-2',
-          'text-[16px] text-text-0 transition-colors duration-150 hover:border-border-2 hover:bg-bg-3',
+          'mb-6 flex h-10 items-center',
+          collapsed ? 'justify-center' : 'justify-between px-1',
         )}
       >
-        <Plus className="size-4 text-accent" strokeWidth={1.75} />
-        New transform
-      </NavLink>
-
-      <nav className="flex min-h-0 flex-1 flex-col gap-1.5">
-        <div className="section-label px-2.5">Recent</div>
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <RecentTransforms />
+        {!collapsed && (
+          <Link
+            to="/"
+            aria-label="Cipher home"
+            className="flex items-center gap-2 text-[17px] font-medium tracking-[-.025em]"
+          >
+            <span className="brand-symbol"><BrandMark className="!size-6" /></span>
+            <span>CIPHER<span className="text-accent">.</span><span className="brand-caption">CREATIVE STUDIO</span></span>
+          </Link>
+        )}
+        {onCollapse && (
+          <button
+            type="button"
+            onClick={onCollapse}
+            className="icon-button"
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            <PanelLeft className="size-[19px]" strokeWidth={1.7} />
+          </button>
+        )}
+      </div>
+      <nav aria-label="Main navigation" className="w-full space-y-1">
+        <button
+          type="button"
+          onClick={() => {
+            reset()
+            navigate('/')
+            onNavigate?.()
+          }}
+          className="studio-nav-link new-transform w-full"
+          title="New transform"
+          aria-label="New transform"
+        >
+          <SquarePen className="size-[18px] shrink-0" strokeWidth={1.7} />
+          {!collapsed && 'New transform'}
+        </button>
+        {[
+          { to: '/artefacts', label: 'Library', icon: FileStack },
+          { to: '/parivartan', label: 'Convert files', icon: ArrowLeftRight },
+        ].map(({ to, label, icon: Icon }) => (
+          <NavLink
+            key={to}
+            to={to}
+            title={label}
+            aria-label={label}
+            className={({ isActive }) =>
+              cn('studio-nav-link', isActive && 'active')
+            }
+          >
+            <Icon className="size-[18px] shrink-0" strokeWidth={1.7} />
+            {!collapsed && label}
+          </NavLink>
+        ))}
+      </nav>
+      {!collapsed && <div className="sidebar-features">
+        <p className="nav-label">Create something</p>
+        {[
+          { id: 'documents', label: 'Documents', icon: FileText, count: 2 },
+          { id: 'social', label: 'Social content', icon: MessageSquare, count: 2 },
+          { id: 'visual', label: 'Visuals & video', icon: Shapes, count: 3 },
+        ].map(({ id, label, icon: Icon, count }) => <Link key={id} to={`/?category=${id}`} className={cn('studio-nav-link', (location.pathname === '/' || location.pathname === '/workspace') && category === id && 'active')}><Icon className="size-[18px]" strokeWidth={1.6} />{label}<span className="nav-count">{count}</span></Link>)}
+      </div>}
+      {!collapsed && (
+        <div className="mt-8 flex min-h-0 flex-1 flex-col">
+          <p className="nav-label">Recent transforms</p>
+          <nav
+            aria-label="Recent transforms"
+            className="min-h-0 overflow-y-auto"
+          >
+            <RecentTransforms />
+          </nav>
         </div>
-      </nav>
-
-      <nav className="flex flex-col gap-0.5 border-t border-border pt-3">
-        <NavItem to="/artefacts" label="Artefacts" icon={FileStack} />
-        <NavItem to="/parivartan" label="Parivartan" icon={ArrowLeftRight} />
-        <NavItem to="/system" label="System" icon={ShieldCheck} />
-      </nav>
+      )}
+      <div
+        className={cn(
+          'mt-auto w-full pt-5',
+          !collapsed && 'border-t border-border',
+        )}
+      >
+        <NavLink
+          to="/system"
+          className={({ isActive }) =>
+            cn('studio-nav-link', isActive && 'active')
+          }
+          title="System settings"
+          aria-label="System settings"
+        >
+          <Settings2 className="size-[18px] shrink-0" strokeWidth={1.7} />
+          {!collapsed && 'System settings'}
+        </NavLink>
+        {!collapsed && (
+          <p className="mt-3 px-3 text-[14px] text-text-1">
+            Local workspace · On-device AI
+          </p>
+        )}
+      </div>
     </aside>
   )
 }

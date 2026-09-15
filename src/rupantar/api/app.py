@@ -12,6 +12,7 @@ from rupantar import __version__
 from rupantar.agents.base import ArtefactAgent
 from rupantar.agents.loader import load_agents
 from rupantar.api.events import EventBus
+from rupantar.api.qa_sessions import QaSessionStore
 from rupantar.core.config import AppConfig, load_config
 from rupantar.core.store import Store
 from rupantar.models.manager import ModelManager
@@ -49,6 +50,12 @@ def get_bus(request: Request) -> EventBus:
     return bus
 
 
+def get_qa_sessions(request: Request) -> QaSessionStore:
+    """The in-memory "Ask about sources" session cache -- never a Transform, never on disk."""
+    sessions: QaSessionStore = request.app.state.qa_sessions
+    return sessions
+
+
 def create_app(config: AppConfig | None = None) -> FastAPI:
     """Build the FastAPI app; construct the manager/store/agents but load no model."""
     from rupantar.audit.egress import enforce_offline_env
@@ -75,7 +82,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             await manager.aclose()
             await store.close()
 
-    app = FastAPI(title="Rupantar", version=__version__ or "0", lifespan=lifespan)
+    app = FastAPI(title="CIPHER", version=__version__ or "0", lifespan=lifespan)
     app.state.config = config
     app.state.registry = registry
     app.state.manager = manager
@@ -83,8 +90,10 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     app.state.agents = agents
     app.state.bus = bus
     app.state.tasks = set()
+    app.state.qa_sessions = QaSessionStore()
 
     from rupantar.api.routes import (
+        ask,
         convert,
         events,
         files,
@@ -92,6 +101,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         jobs,
         models,
         release,
+        rerender,
         selfcheck,
         templates,
         transforms,
@@ -110,5 +120,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     app.include_router(templates.router)
     app.include_router(selfcheck.router)
     app.include_router(uploads.router)
+    app.include_router(ask.router)
+    app.include_router(rerender.router)
     mount_frontend(app, default_dist_dir(config.configs_dir))
     return app

@@ -1,0 +1,89 @@
+# Document-template manifest for render/pptx_render.py and render/docx_render.py.
+#
+# Not the same thing as the theme YAMLs in this same directory (e.g. ntro-formal.yaml) --
+# those are video/SVG design tokens (palette, type scale); these are real Office document
+# templates, each backed by a .potx/.dotx file loaded through python-pptx/python-docx.
+#
+# See docs/TEMPLATES.md for exactly which layout indices and named styles a replacement
+# .potx/.dotx must provide. A template missing here, or missing a required layout/style,
+# degrades gracefully to the built-in renderer -- see render/pptx_render.py and
+# render/docx_render.py.
+
+templates:
+  - id: ntro-formal
+    label: NTRO Formal
+    description: >-
+      The default house style: formal register, a high-contrast classification banner,
+      cool blues. Placeholder file -- swap ntro-formal.potx/.dotx for the real design.
+    supports: [presentation, advisory, executive_summary]
+    thumbnail: ntro-formal.png
+    pptx:
+      file: ntro-formal.potx
+      layouts:
+        title_slide: 0
+        title: 2
+        bullets: 1
+        two_column: 3
+        quote: 1
+        closing: 2
+    docx:
+      file: ntro-formal.dotx
+      styles:
+        title: Title
+        heading1: Heading 1
+        heading2: Heading 2
+        bullet: List Bullet
+        severity_banner: Severity Banner
+        classification_footer: Classification Footer
+
+  - id: executive
+    label: Executive
+    description: >-
+      A lighter, briefing-style look for leadership-facing decks and one-pagers.
+      Placeholder file -- swap executive.potx/.dotx for the real design.
+    supports: [presentation, advisory, executive_summary]
+    thumbnail: executive.png
+    pptx:
+      file: executive.potx
+      layouts:
+        title_slide: 0
+        title: 2
+        bullets: 1
+        two_column: 3
+        quote: 1
+        closing: 2
+    docx:
+      file: executive.dotx
+      styles:
+        title: Title
+        heading1: Heading 1
+        heading2: Heading 2
+        bullet: List Bullet
+        severity_banner: Severity Banner
+        classification_footer: Classification Footer
+
+  - id: technical
+    label: Technical
+    description: >-
+      A denser, technical look for advisories and technical presentations.
+      Placeholder file -- swap technical.potx/.dotx for the real design.
+    supports: [presentation, advisory, executive_summary]
+    thumbnail: technical.png
+    pptx:
+      file: technical.potx
+      layouts:
+        title_slide: 0
+        title: 2
+        bullets: 1
+        two_column: 3
+        quote: 1
+        closing: 2
+    docx:
+      file: technical.dotx
+      styles:
+        title: Title
+        heading1: Heading 1
+        heading2: Heading 2
+        bullet: List Bullet
+        severity_banner: Severity Banner
+        classification_footer: Classification Footer

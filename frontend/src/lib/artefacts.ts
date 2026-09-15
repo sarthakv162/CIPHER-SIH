@@ -10,7 +10,15 @@ import {
 } from 'lucide-react'
 import type { ArtefactType } from './api'
 
-interface ArtefactMeta {
+export const CATEGORIES = [
+  { id: 'all', label: 'All formats' },
+  { id: 'documents', label: 'Documents' },
+  { id: 'social', label: 'Social' },
+  { id: 'visual', label: 'Visual & video' },
+] as const
+export type ArtefactCategory = (typeof CATEGORIES)[number]['id']
+
+export interface ArtefactMeta {
   type: ArtefactType
   label: string
   description: string
@@ -19,6 +27,7 @@ interface ArtefactMeta {
    *  7-artefact run at ~14.5 tok/s. Not a guess, and not a round number. */
   seconds: number
   icon: LucideIcon
+  category: Exclude<ArtefactCategory, 'all'>
 }
 
 export const ARTEFACTS: ArtefactMeta[] = [
@@ -29,6 +38,7 @@ export const ARTEFACTS: ArtefactMeta[] = [
     formats: ['md', 'docx'],
     seconds: 40,
     icon: FileText,
+    category: 'documents',
   },
   {
     type: 'advisory',
@@ -37,6 +47,7 @@ export const ARTEFACTS: ArtefactMeta[] = [
     formats: ['md', 'docx', 'pdf'],
     seconds: 47,
     icon: ShieldAlert,
+    category: 'documents',
   },
   {
     type: 'linkedin_post',
@@ -45,6 +56,7 @@ export const ARTEFACTS: ArtefactMeta[] = [
     formats: ['md'],
     seconds: 31,
     icon: Share2,
+    category: 'social',
   },
   {
     type: 'x_thread',
@@ -53,6 +65,7 @@ export const ARTEFACTS: ArtefactMeta[] = [
     formats: ['md'],
     seconds: 24,
     icon: MessageSquare,
+    category: 'social',
   },
   {
     type: 'presentation',
@@ -61,6 +74,7 @@ export const ARTEFACTS: ArtefactMeta[] = [
     formats: ['md', 'pptx'],
     seconds: 55,
     icon: Presentation,
+    category: 'visual',
   },
   {
     type: 'infographic_spec',
@@ -69,6 +83,7 @@ export const ARTEFACTS: ArtefactMeta[] = [
     formats: ['md', 'svg'],
     seconds: 32,
     icon: Image,
+    category: 'visual',
   },
   {
     type: 'video_package',
@@ -77,6 +92,7 @@ export const ARTEFACTS: ArtefactMeta[] = [
     formats: ['md', 'srt', 'mp4'],
     seconds: 75,
     icon: Video,
+    category: 'visual',
   },
 ]
 

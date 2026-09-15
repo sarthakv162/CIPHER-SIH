@@ -108,7 +108,7 @@ def _draw_timeline(draw: Any, theme: Theme, labels: list[str]) -> None:
     for index, label in enumerate(labels):
         cx = int(left + step * index) if count > 1 else (left + right) // 2
         draw.ellipse((cx - 12, mid - 12, cx + 12, mid + 12), fill=theme.rgb("accent"))
-        for offset, line in enumerate(_wrap_label(label)):
+        for offset, line in enumerate(wrap_label(label)):
             draw.text(
                 (cx - 60, mid + 28 + offset * 22),
                 line,
@@ -117,7 +117,7 @@ def _draw_timeline(draw: Any, theme: Theme, labels: list[str]) -> None:
             )
 
 
-def _wrap_label(label: str) -> list[str]:
+def wrap_label(label: str) -> list[str]:
     """Split a node label into at most two short lines."""
     words = label.split()
     if len(words) <= 2:

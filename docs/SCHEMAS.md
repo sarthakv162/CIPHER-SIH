@@ -65,7 +65,16 @@ language: str = "en"
 detail: enum[brief, standard, deep]
 objective: enum[inform, warn, persuade, instruct, announce, summarise]
 style: enum[plain, narrative, bulleted, technical]
+template: str = "ntro-formal"
 ```
+
+**Template handling.** `template` selects a document template (a real `.potx`/`.dotx` file,
+declared in `configs/templates/templates.yaml`) for `presentation`/`advisory`/`executive_summary`
+output — see `docs/TEMPLATES.md`. It is a free string, not an enum, so a new template needs no
+schema change; an unknown id, a missing template file, or a template missing a required layout
+or named style degrades to the built-in renderer output with a warning recorded on the
+artefact's provenance manifest (`Manifest.render_warnings`) — it never fails the job. Added
+after the Phase 0 freeze (deviation, `MEMORY.md`).
 
 **Language handling.** The brain model (Qwen) is multilingual, so text artefacts honour `language`
 on a best-effort basis. ASR (`faster-whisper *.en`) and TTS (`piper en_US-*`) are English-only in

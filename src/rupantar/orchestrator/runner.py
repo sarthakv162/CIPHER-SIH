@@ -81,12 +81,13 @@ class _RunContext:
     progress: ProgressSink | None = None
 
     def render_context(self) -> RenderContext:
-        """A fresh RenderContext for the video renderer from this run's material."""
+        """A fresh RenderContext for this run's material, template selection included."""
         return RenderContext(
             theme_name=_THEME_NAME,
             dossier=self.dossier,
             source_paths=list(self.source_paths),
             infographic_spec=self.infographic_holder.get("spec"),
+            template_id=self.request.params.template,
         )
 
 
@@ -98,6 +99,7 @@ class _JobOutcome:
     agent: ArtefactAgent
     artefact: ArtefactBase
     paths: list[Path] = field(default_factory=list)
+    render_warnings: list[str] = field(default_factory=list)
 
 
 async def prepare(
@@ -291,13 +293,19 @@ async def _run_job(job: Job, ctx: _RunContext, client: LlamaClient) -> _JobOutco
         return None
     job_dir = ctx.out_root / job.id
     json_path = Path(write_artefact(job_dir, agent.artefact_type, artefact))
-    render_ctx = ctx.render_context() if job.artefact_type is ArtefactType.video_package else None
+    render_ctx = ctx.render_context()
     rendered = render(
         artefact, job_dir, formats=FORMATS.get(agent.artefact_type, ()), context=render_ctx
     )
     job.artefact_path = str(json_path)
     await _transition(ctx.store, job, JobStatus.SUCCEEDED, ctx.clock, ctx.progress)
-    return _JobOutcome(job=job, agent=agent, artefact=artefact, paths=[json_path, *rendered])
+    return _JobOutcome(
+        job=job,
+        agent=agent,
+        artefact=artefact,
+        paths=[json_path, *rendered],
+        render_warnings=render_ctx.warnings,
+    )
 
 
 async def _verify_group(
@@ -330,6 +338,7 @@ def _emit_all_manifests(
             agent=outcome.agent,
             ctx=ctx,
             verification=verification,
+            render_warnings=outcome.render_warnings,
         )
 
 
@@ -355,6 +364,7 @@ def _emit_manifests(
     agent: ArtefactAgent,
     ctx: _RunContext,
     verification: dict[str, Any] | None = None,
+    render_warnings: list[str] | None = None,
 ) -> None:
     """Write a provenance manifest beside every produced file."""
     meta = ctx.manager.model_meta(job.model_key)
@@ -376,6 +386,7 @@ def _emit_manifests(
             job_id=job.id,
             transform_id=job.transform_id,
             verification=verification,
+            render_warnings=render_warnings or [],
         )
         write_manifest(path, manifest)
 

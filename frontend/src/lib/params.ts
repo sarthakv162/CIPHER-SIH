@@ -64,4 +64,5 @@ export const DEFAULT_PARAMS: GenerationParams = {
   detail: 'standard',
   objective: 'inform',
   style: 'plain',
+  template: 'ntro-formal',
 }

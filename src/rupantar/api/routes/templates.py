@@ -1,66 +1,73 @@
-"""GET /templates: the output templates a picker can offer. No generation parameter is wired yet."""
+"""GET /templates: the document templates a picker can offer, with thumbnail URLs.
+GET /templates/{id}/thumbnail: the thumbnail image itself, served as a static file.
+"""
 
 from __future__ import annotations
 
-import logging
-from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from rupantar.api.app import get_config
+from rupantar.api.paths import safe_file_name
 from rupantar.core.config import AppConfig
-from rupantar.core.errors import ConfigError
+from rupantar.render.template_registry import (
+    TemplateSpec,
+    get_template,
+    load_templates,
+    template_file,
+)
 
 router = APIRouter(tags=["templates"])
-_log = logging.getLogger("rupantar.api")
 
 
 class TemplateEntry(BaseModel):
     """One selectable output template."""
 
-    name: str
+    id: str
     label: str
     description: str
-    accent: str
-
-
-def templates_dir(config: AppConfig) -> Path:
-    """Where theme YAML files live."""
-    return config.configs_dir / "templates"
+    supports: list[str]
+    thumbnail_url: str | None = None
 
 
 @router.get("/templates")
 async def list_templates(config: Annotated[AppConfig, Depends(get_config)]) -> list[TemplateEntry]:
-    """List every readable template under configs/templates, sorted by name."""
-    return read_templates(templates_dir(config))
-
-
-def read_templates(directory: Path) -> list[TemplateEntry]:
-    """Parse each `*.yaml` in `directory` into a TemplateEntry, skipping unreadable ones."""
-    if not directory.is_dir():
-        return []
-    entries: list[TemplateEntry] = []
-    for path in sorted(directory.glob("*.yaml")):
-        entry = _entry(path)
-        if entry is not None:
-            entries.append(entry)
+    """List every template declared in configs/templates/templates.yaml."""
+    entries = []
+    for spec in load_templates(config.configs_dir):
+        entries.append(
+            TemplateEntry(
+                id=spec.id,
+                label=spec.label,
+                description=spec.description.strip(),
+                supports=list(spec.supports),
+                thumbnail_url=_thumbnail_url(config, spec),
+            )
+        )
     return entries
 
 
-def _entry(path: Path) -> TemplateEntry | None:
-    """Load one theme file into a TemplateEntry, or None when it does not parse."""
-    from rupantar.render.theme import load_theme
-
-    try:
-        theme = load_theme(path.stem, configs_dir=path.parent.parent)
-    except ConfigError as exc:
-        _log.warning("skipping template %s: %s", path.name, exc)
+def _thumbnail_url(config: AppConfig, spec: TemplateSpec) -> str | None:
+    """The thumbnail route for `spec`, or None when it declares none or the file is missing."""
+    if not spec.thumbnail or not safe_file_name(spec.thumbnail):
         return None
-    return TemplateEntry(
-        name=theme.name,
-        label=theme.label or theme.name,
-        description=theme.description.strip(),
-        accent=theme.palette.accent,
-    )
+    if not template_file(config.configs_dir, spec.thumbnail).is_file():
+        return None
+    return f"/templates/{spec.id}/thumbnail"
+
+
+@router.get("/templates/{template_id}/thumbnail")
+async def template_thumbnail(
+    template_id: str, config: Annotated[AppConfig, Depends(get_config)]
+) -> FileResponse:
+    """Serve one template's thumbnail PNG, or 404 when the template or its image is missing."""
+    spec = get_template(template_id, configs_dir=config.configs_dir)
+    if spec is None or not spec.thumbnail or not safe_file_name(spec.thumbnail):
+        raise HTTPException(status_code=404, detail=f"template {template_id!r} has no thumbnail")
+    path = template_file(config.configs_dir, spec.thumbnail)
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail=f"template {template_id!r} has no thumbnail")
+    return FileResponse(path, media_type="image/png")

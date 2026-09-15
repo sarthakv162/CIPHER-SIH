@@ -1,22 +1,54 @@
-import { Outlet } from 'react-router-dom'
+import { createContext, useContext, useEffect, useState } from 'react'
+import { Outlet, useLocation } from 'react-router-dom'
+import * as Dialog from '@radix-ui/react-dialog'
+import { X } from 'lucide-react'
 import { Sidebar } from './Sidebar'
 
-/**
- * Page frame: sidebar rail beside a rounded content window, over an ambient
- * accent wash. The wash is a static gradient — no canvas, no rAF — so nothing
- * behind a working screen competes with inference for CPU.
- */
+const NavigationContext = createContext(() => {})
+export const useOpenNavigation = () => useContext(NavigationContext)
+
 export function AppShell() {
+  const [open, setOpen] = useState(false)
+  const [collapsed, setCollapsed] = useState(false)
+  const { pathname } = useLocation()
+  useEffect(() => {
+    setOpen(false)
+  }, [pathname])
   return (
-    <div className="relative flex h-dvh w-full overflow-hidden bg-bg-0">
-      <div className="ambient-wash" aria-hidden="true" />
-      <div className="ambient-vignette" aria-hidden="true" />
-      <div className="relative z-10 flex w-full gap-0 p-2.5">
-        <Sidebar />
-        <main className="surface-raised relative flex min-w-0 flex-1 flex-col overflow-hidden">
+    <NavigationContext.Provider value={() => setOpen(true)}>
+      <div className="studio-frame">
+        <a className="skip-link" href="#main-content">
+          Skip to content
+        </a>
+        <div className="hidden lg:flex">
+          <Sidebar
+            collapsed={collapsed}
+            onCollapse={() => setCollapsed((value) => !value)}
+          />
+        </div>
+        <Dialog.Root open={open} onOpenChange={setOpen}>
+          <Dialog.Portal>
+            <Dialog.Overlay className="dialog-overlay" />
+            <Dialog.Content className="mobile-nav" aria-describedby={undefined}>
+              <Dialog.Title className="sr-only">Studio navigation</Dialog.Title>
+              <Sidebar onNavigate={() => setOpen(false)} />
+              <Dialog.Close
+                aria-label="Close navigation"
+                className="icon-button absolute right-2 top-2"
+              >
+                <X className="size-4" />
+              </Dialog.Close>
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="studio-main relative flex min-w-0 flex-1 flex-col overflow-hidden focus:outline-none"
+        >
           <Outlet />
         </main>
       </div>
-    </div>
+    </NavigationContext.Provider>
   )
 }

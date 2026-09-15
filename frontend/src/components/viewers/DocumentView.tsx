@@ -19,7 +19,12 @@ interface Advisory {
   background: string
   technical_details: { heading: string; body: string }[]
   affected_entities: string[]
-  indicators: { type?: string; ioc_type?: string; value: string; note?: string }[]
+  indicators: {
+    type?: string
+    ioc_type?: string
+    value: string
+    note?: string
+  }[]
   recommended_actions: { priority: string; action: string }[]
   references: string[]
   handling_caveat: string
@@ -27,30 +32,44 @@ interface Advisory {
 
 export function AdvisoryView({ artefact }: { artefact: Advisory }) {
   return (
-    <article className="mx-auto max-w-[70ch] px-1 py-1">
+    <article className="surface-card mx-auto w-full max-w-[76ch] border-t-4 border-t-accent p-5 md:p-9">
       <div
         className={cn(
           'flex flex-wrap items-center gap-x-3 gap-y-1 rounded-[8px] border px-3 py-2',
           SEVERITY[artefact.severity] ?? SEVERITY.informational,
         )}
       >
-        <span className="text-[15px] tracking-wide uppercase">{artefact.severity}</span>
-        <span className="tabular text-[15px] opacity-80">{artefact.advisory_id}</span>
-        <span className="ml-auto text-[15px] opacity-80">{artefact.issued_for}</span>
+        <span className="text-[15px] tracking-wide uppercase">
+          {artefact.severity}
+        </span>
+        <span className="tabular text-[15px] opacity-80">
+          {artefact.advisory_id}
+        </span>
+        <span className="ml-auto text-[15px] opacity-80">
+          {artefact.issued_for}
+        </span>
       </div>
 
-      <h1 className="mt-4 text-[26px] leading-tight text-balance break-words text-text-0">{artefact.title}</h1>
-      <p className="mt-3 text-[16px] leading-relaxed text-text-1">{artefact.summary}</p>
+      <h1 className="mt-4 text-[26px] leading-tight text-balance break-words text-text-0">
+        {artefact.title}
+      </h1>
+      <p className="mt-3 text-[16px] leading-relaxed text-text-1">
+        {artefact.summary}
+      </p>
 
       <Section title="Background">
-        <p className="text-[16px] leading-relaxed text-text-0">{artefact.background}</p>
+        <p className="text-[16px] leading-relaxed text-text-0">
+          {artefact.background}
+        </p>
       </Section>
 
       <Section title="Technical detail">
         {artefact.technical_details.map((detail) => (
           <div key={detail.heading} className="mt-3 first:mt-0">
             <h3 className="text-[16px] text-text-0">{detail.heading}</h3>
-            <p className="mt-1 text-[16px] leading-relaxed text-text-1">{detail.body}</p>
+            <p className="mt-1 text-[16px] leading-relaxed text-text-1">
+              {detail.body}
+            </p>
           </div>
         ))}
       </Section>
@@ -96,7 +115,7 @@ export function AdvisoryView({ artefact }: { artefact: Advisory }) {
             <li key={index} className="flex items-baseline gap-2">
               <span
                 className={cn(
-                  'shrink-0 rounded-[4px] border px-1.5 py-0.5 text-[13px] uppercase',
+                  'shrink-0 rounded-[4px] border px-1.5 py-0.5 text-[14px] uppercase',
                   action.priority === 'immediate'
                     ? 'border-danger/30 bg-danger/10 text-danger'
                     : action.priority === 'high'
@@ -106,7 +125,9 @@ export function AdvisoryView({ artefact }: { artefact: Advisory }) {
               >
                 {action.priority}
               </span>
-              <span className="text-[16px] leading-relaxed text-text-0">{action.action}</span>
+              <span className="text-[16px] leading-relaxed text-text-0">
+                {action.action}
+              </span>
             </li>
           ))}
         </ol>
@@ -129,11 +150,19 @@ interface ExecutiveSummary {
   one_line_takeaway: string
 }
 
-export function ExecutiveSummaryView({ artefact }: { artefact: ExecutiveSummary }) {
+export function ExecutiveSummaryView({
+  artefact,
+}: {
+  artefact: ExecutiveSummary
+}) {
   return (
-    <article className="mx-auto max-w-[70ch] px-1 py-1">
-      <h1 className="text-[26px] leading-tight text-balance break-words text-text-0">{artefact.title}</h1>
-      <p className="mt-2 text-[18px] leading-relaxed text-text-1">{artefact.headline}</p>
+    <article className="surface-card mx-auto w-full max-w-[76ch] border-t-4 border-t-accent p-5 md:p-9">
+      <h1 className="text-[26px] leading-tight text-balance break-words text-text-0">
+        {artefact.title}
+      </h1>
+      <p className="mt-2 text-[18px] leading-relaxed text-text-1">
+        {artefact.headline}
+      </p>
 
       <p className="mt-4 rounded-[8px] border border-accent/25 bg-accent/8 px-3 py-2.5 text-[16px] leading-relaxed text-text-0">
         {artefact.one_line_takeaway}
@@ -142,7 +171,10 @@ export function ExecutiveSummaryView({ artefact }: { artefact: ExecutiveSummary 
       <Section title="Key points">
         <ul className="flex flex-col gap-1.5">
           {artefact.key_points.map((point, index) => (
-            <li key={index} className="flex gap-2 text-[16px] leading-relaxed text-text-0">
+            <li
+              key={index}
+              className="flex gap-2 text-[16px] leading-relaxed text-text-0"
+            >
               <span className="text-text-2">—</span>
               {point}
             </li>
@@ -151,13 +183,18 @@ export function ExecutiveSummaryView({ artefact }: { artefact: ExecutiveSummary 
       </Section>
 
       <Section title="Context">
-        <p className="text-[16px] leading-relaxed text-text-0">{artefact.context}</p>
+        <p className="text-[16px] leading-relaxed text-text-0">
+          {artefact.context}
+        </p>
       </Section>
 
       <Section title="Implications">
         <ul className="flex flex-col gap-1.5">
           {artefact.implications.map((item, index) => (
-            <li key={index} className="flex gap-2 text-[16px] leading-relaxed text-text-0">
+            <li
+              key={index}
+              className="flex gap-2 text-[16px] leading-relaxed text-text-0"
+            >
               <span className="text-text-2">—</span>
               {item}
             </li>
@@ -169,7 +206,10 @@ export function ExecutiveSummaryView({ artefact }: { artefact: ExecutiveSummary 
         <Section title="Recommended actions">
           <ol className="flex flex-col gap-1.5">
             {artefact.recommended_actions.map((action, index) => (
-              <li key={index} className="flex gap-2 text-[16px] leading-relaxed text-text-0">
+              <li
+                key={index}
+                className="flex gap-2 text-[16px] leading-relaxed text-text-0"
+              >
                 <span className="tabular text-text-2">{index + 1}.</span>
                 {action}
               </li>
@@ -181,7 +221,13 @@ export function ExecutiveSummaryView({ artefact }: { artefact: ExecutiveSummary 
   )
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({
+  title,
+  children,
+}: {
+  title: string
+  children: React.ReactNode
+}) {
   return (
     <section className="mt-5">
       <h2 className="section-label">{title}</h2>

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import unicodedata
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
@@ -51,6 +51,24 @@ ALLOWED_SUFFIXES = frozenset(
     }
 )
 
+# Converter uploads have their own allowlist; these are not valid AI source files.
+CONVERSION_SUFFIXES = frozenset(
+    {
+        ".csv",
+        ".tsv",
+        ".json",
+        ".jsonl",
+        ".yaml",
+        ".yml",
+        ".xml",
+        ".xlsx",
+        ".parquet",
+        ".log",
+        ".cef",
+        ".txt",
+    }
+)
+
 
 class UploadResult(BaseModel):
     """Where the file landed, ready to be used as a `SourceInput.path`."""
@@ -88,16 +106,18 @@ async def upload_source(
     request: Request,
     config: Annotated[AppConfig, Depends(get_config)],
     filename: Annotated[str, Query(min_length=1, max_length=255)],
+    purpose: Annotated[Literal["source", "conversion"], Query()] = "source",
 ) -> UploadResult:
     """Write an uploaded source under `data/uploads/` and return the path to transform."""
     name = sanitise(filename)
     if not name:
         raise HTTPException(status_code=400, detail="filename is not a usable file name")
     suffix = Path(name).suffix.lower()
-    if suffix not in ALLOWED_SUFFIXES:
+    allowed = CONVERSION_SUFFIXES if purpose == "conversion" else ALLOWED_SUFFIXES
+    if suffix not in allowed:
         raise HTTPException(
             status_code=415,
-            detail=f"{suffix or 'that file type'} is not a source type this engine reads",
+            detail=f"{suffix or 'that file type'} is not supported for {purpose} uploads",
         )
 
     body = await request.body()

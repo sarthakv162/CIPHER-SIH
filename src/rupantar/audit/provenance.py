@@ -56,6 +56,7 @@ class Manifest(BaseModel):
     transform_id: str
     verification: dict[str, Any] | None = None
     release: Release | None = None
+    render_warnings: list[str] = Field(default_factory=list)
 
 
 def manifest_path(artefact_path: Path) -> Path:

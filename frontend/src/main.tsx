@@ -4,6 +4,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
 import { App } from './App'
 import './index.css'
+import { initializeAppearance } from './store/appearance'
+
+initializeAppearance()
 
 // Retry once: the backend is local, so a failing request is a real failure, not
 // a flaky network. Nothing here reaches beyond this origin.

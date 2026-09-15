@@ -114,6 +114,22 @@ class Theme(BaseModel):
         """Severity tint as an ``(r, g, b)`` tuple for Pillow."""
         return hex_to_rgb(self.severity_colour(level))
 
+    def text_on(self, background: str) -> str:
+        """``text`` or ``text_inverse``, whichever gives the higher WCAG contrast on ``background``.
+
+        A single fixed "inverse" colour reads fine on some severity tints and fails contrast on
+        others (navy-on-red, white-on-yellow) -- this picks per chip instead of guessing once.
+        """
+        bg = hex_to_rgb(background)
+        light, dark = self.colour("text"), self.colour("text_inverse")
+        light_ratio = _contrast_ratio(hex_to_rgb(light), bg)
+        dark_ratio = _contrast_ratio(hex_to_rgb(dark), bg)
+        return light if light_ratio >= dark_ratio else dark
+
+    def rgb_on(self, background: str) -> RGB:
+        """``text_on`` as an ``(r, g, b)`` tuple for Pillow."""
+        return hex_to_rgb(self.text_on(background))
+
     def font_path(self, weight: str = "regular") -> str | None:
         """First existing font file for the weight, else ``None`` (caller uses the bitmap font)."""
         candidates = self.fonts.bold if weight == "bold" else self.fonts.regular
@@ -121,6 +137,24 @@ class Theme(BaseModel):
             if candidate and Path(candidate).is_file():
                 return candidate
         return None
+
+
+def _relative_luminance(rgb: RGB) -> float:
+    """WCAG relative luminance of an ``(r, g, b)`` colour, 0 (black) to 1 (white)."""
+
+    def channel(value: int) -> float:
+        c = value / 255
+        return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+
+    r, g, b = rgb
+    return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
+
+
+def _contrast_ratio(a: RGB, b: RGB) -> float:
+    """WCAG contrast ratio between two colours, from 1 (identical) to 21 (black on white)."""
+    la, lb = _relative_luminance(a), _relative_luminance(b)
+    lighter, darker = max(la, lb), min(la, lb)
+    return (lighter + 0.05) / (darker + 0.05)
 
 
 def hex_to_rgb(value: str) -> RGB:

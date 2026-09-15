@@ -255,7 +255,12 @@ def _draw_lower_third(image: Any, draw: Any, theme: Theme, lower_third: tuple[st
         width = int(draw.textlength(text, font=font)) + 28
         x0 = CANVAS[0] - MARGIN - width
         draw.rectangle((x0, bar_top + 10, x0 + width, bar_top + 42), fill=chip)
-        draw.text((x0 + 14, bar_top + 15), text, font=font, fill=theme.rgb("text_inverse"))
+        draw.text(
+            (x0 + 14, bar_top + 15),
+            text,
+            font=font,
+            fill=theme.rgb_on(theme.severity_colour(severity)),
+        )
 
 
 def _draw_footer(draw: Any, theme: Theme, footer: str) -> None:

@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Fingerprint, X } from 'lucide-react'
 import { motion } from 'framer-motion'
+import * as Dialog from '@radix-ui/react-dialog'
 import { cn } from '@/lib/utils'
 
 const EASE = [0.2, 0, 0, 1] as const
@@ -23,9 +24,18 @@ export interface Manifest {
   transform_id: string
   verification?: Record<string, unknown> | null
   release?: Record<string, unknown> | null
+  render_warnings?: string[]
 }
 
-function Row({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+function Row({
+  label,
+  value,
+  mono,
+}: {
+  label: string
+  value: string
+  mono?: boolean
+}) {
   return (
     <div className="grid grid-cols-[110px_1fr] gap-2 py-1.5">
       <dt className="text-[15px] text-text-1">{label}</dt>
@@ -62,105 +72,158 @@ export function ProvenanceDrawer({
   const { data, isLoading, isError } = useQuery({
     queryKey: ['manifest', transformId, jobId],
     queryFn: async (): Promise<Manifest> => {
-      const response = await fetch(`/transforms/${transformId}/jobs/${jobId}/manifest`)
-      if (!response.ok) throw new Error(`manifest unavailable (${response.status})`)
+      const response = await fetch(
+        `/transforms/${transformId}/jobs/${jobId}/manifest`,
+      )
+      if (!response.ok)
+        throw new Error(`manifest unavailable (${response.status})`)
       return (await response.json()) as Manifest
     },
   })
 
   return (
-    <motion.aside
-      initial={{ x: 24, opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
-      exit={{ x: 24, opacity: 0 }}
-      transition={{ duration: 0.2, ease: EASE }}
-      className="glass flex w-[340px] shrink-0 flex-col border-l border-border"
-      aria-label="Provenance"
+    <Dialog.Root
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
     >
-      <header className="hairline-b flex items-center justify-between px-4 py-3">
-        <h2 className="flex items-center gap-2 text-[16px] text-text-0">
-          <Fingerprint className="size-4 text-accent" strokeWidth={1.75} />
-          Provenance
-        </h2>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close provenance"
-          className="rounded-[5px] p-1 text-text-1 transition-colors duration-150 hover:bg-bg-3 hover:text-text-0"
-        >
-          <X className="size-4" strokeWidth={1.75} />
-        </button>
-      </header>
+      <Dialog.Portal>
+        <Dialog.Overlay className="dialog-overlay" />
+        <Dialog.Content asChild aria-describedby={undefined}>
+          <motion.aside
+            initial={{ x: 24, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: 24, opacity: 0 }}
+            transition={{ duration: 0.2, ease: EASE }}
+            className="glass fixed inset-y-0 right-0 z-50 flex w-full max-w-[400px] flex-col border-l border-border shadow-xl"
+            aria-label="Provenance"
+          >
+            <header className="hairline-b flex items-center justify-between px-4 py-3">
+              <Dialog.Title className="flex items-center gap-2 text-[16px] text-text-0">
+                <Fingerprint
+                  className="size-4 text-accent"
+                  strokeWidth={1.75}
+                />
+                Provenance
+              </Dialog.Title>
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Close provenance"
+                className="rounded-[5px] p-1 text-text-1 transition-colors duration-150 hover:bg-bg-3 hover:text-text-0"
+              >
+                <X className="size-4" strokeWidth={1.75} />
+              </button>
+            </header>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
-        {isLoading && <p className="text-[15px] text-text-1">Reading the manifest…</p>}
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
+              {isLoading && (
+                <p className="text-[15px] text-text-1">Reading the manifest…</p>
+              )}
 
-        {isError && (
-          <p className="text-[15px] leading-snug text-warn">
-            No manifest yet. It is written once the whole transform finishes, so a
-            job that has just landed may briefly have none.
-          </p>
-        )}
-
-        {data && (
-          <>
-            <dl className="divide-y divide-border">
-              <Row label="Source SHA-256" value={data.source_sha256} mono />
-              <Row label="Model" value={`${data.model_key} · ${data.model_quant}`} />
-              <Row label="Model SHA-256" value={data.model_sha256 ?? 'not recorded'} mono />
-              <Row label="Prompt version" value={data.prompt_version} />
-              <Row label="Format" value={data.artefact_format} />
-              <Row label="Operator" value={data.operator} />
-              <Row label="Generated" value={new Date(data.created_at).toLocaleString()} />
-              <Row label="Rendered" value={new Date(data.rendered_at).toLocaleString()} />
-              <Row label="Engine" value={data.app_version} />
-            </dl>
-
-            <section className="mt-4">
-              <h3 className="section-label">Generation parameters</h3>
-              <div className="mt-1.5 flex flex-wrap gap-1">
-                {Object.entries(data.generation_params).map(([key, value]) => (
-                  <span
-                    key={key}
-                    className="rounded-[5px] border border-border bg-bg-2 px-1.5 py-0.5 text-[14px] text-text-1"
-                  >
-                    {key}: <span className="text-text-0">{String(value)}</span>
-                  </span>
-                ))}
-              </div>
-            </section>
-
-            <section className="mt-4">
-              <h3 className="section-label">Evidence cited</h3>
-              {sources.length > 0 ? (
-                <div className="mt-1.5 flex flex-wrap gap-1">
-                  {sources.map((id) => (
-                    <span
-                      key={id}
-                      className="rounded-[5px] border border-accent/25 bg-accent/10 px-1.5 py-0.5 text-[14px] text-accent"
-                    >
-                      {id}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <p className="mt-1.5 text-[15px] text-text-1">
-                  This artefact cites no evidence IDs.
+              {isError && (
+                <p className="text-[15px] leading-snug text-warn">
+                  No manifest yet. It is written once the whole transform
+                  finishes, so a job that has just landed may briefly have none.
                 </p>
               )}
-            </section>
 
-            {data.release && (
-              <section className="mt-4">
-                <h3 className="section-label">Release</h3>
-                <pre className="mt-1.5 overflow-x-auto rounded-[8px] border border-border bg-bg-0 p-2 text-[14px] text-text-1">
-                  {JSON.stringify(data.release, null, 2)}
-                </pre>
-              </section>
-            )}
-          </>
-        )}
-      </div>
-    </motion.aside>
+              {data && (
+                <>
+                  <dl className="divide-y divide-border">
+                    <Row
+                      label="Source SHA-256"
+                      value={data.source_sha256}
+                      mono
+                    />
+                    <Row
+                      label="Model"
+                      value={`${data.model_key} · ${data.model_quant}`}
+                    />
+                    <Row
+                      label="Model SHA-256"
+                      value={data.model_sha256 ?? 'not recorded'}
+                      mono
+                    />
+                    <Row label="Prompt version" value={data.prompt_version} />
+                    <Row label="Format" value={data.artefact_format} />
+                    <Row label="Operator" value={data.operator} />
+                    <Row
+                      label="Generated"
+                      value={new Date(data.created_at).toLocaleString()}
+                    />
+                    <Row
+                      label="Rendered"
+                      value={new Date(data.rendered_at).toLocaleString()}
+                    />
+                    <Row label="Engine" value={data.app_version} />
+                  </dl>
+
+                  <section className="mt-4">
+                    <h3 className="section-label">Generation parameters</h3>
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {Object.entries(data.generation_params).map(
+                        ([key, value]) => (
+                          <span
+                            key={key}
+                            className="rounded-[5px] border border-border bg-bg-2 px-1.5 py-0.5 text-[14px] text-text-1"
+                          >
+                            {key}:{' '}
+                            <span className="text-text-0">{String(value)}</span>
+                          </span>
+                        ),
+                      )}
+                    </div>
+                  </section>
+
+                  <section className="mt-4">
+                    <h3 className="section-label">Evidence cited</h3>
+                    {sources.length > 0 ? (
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {sources.map((id) => (
+                          <span
+                            key={id}
+                            className="rounded-[5px] border border-accent/25 bg-accent/10 px-1.5 py-0.5 text-[14px] text-accent"
+                          >
+                            {id}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="mt-1.5 text-[15px] text-text-1">
+                        This artefact cites no evidence IDs.
+                      </p>
+                    )}
+                  </section>
+
+                  {data.render_warnings && data.render_warnings.length > 0 && (
+                    <section className="mt-4">
+                      <h3 className="section-label">Render warnings</h3>
+                      <ul className="mt-1.5 space-y-1">
+                        {data.render_warnings.map((warning, i) => (
+                          <li key={i} className="text-[14px] leading-snug text-warn">
+                            {warning}
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  )}
+
+                  {data.release && (
+                    <section className="mt-4">
+                      <h3 className="section-label">Release</h3>
+                      <pre className="mt-1.5 overflow-x-auto rounded-[8px] border border-border bg-bg-0 p-2 text-[14px] text-text-1">
+                        {JSON.stringify(data.release, null, 2)}
+                      </pre>
+                    </section>
+                  )}
+                </>
+              )}
+            </div>
+          </motion.aside>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   )
 }

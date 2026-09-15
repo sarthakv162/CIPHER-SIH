@@ -31,6 +31,18 @@ def _headings(document: object) -> set[str]:
     }
 
 
+def _all_text(document: object) -> str:
+    """Every paragraph plus every table cell's text: indicators/actions render as real tables."""
+    paragraphs = "\n".join(p.text for p in document.paragraphs)  # type: ignore[attr-defined]
+    cells = "\n".join(
+        cell.text
+        for table in document.tables  # type: ignore[attr-defined]
+        for row in table.rows
+        for cell in row.cells
+    )
+    return f"{paragraphs}\n{cells}"
+
+
 def test_docx_advisory_carries_its_content(artefacts_dir: Path, tmp_path: Path) -> None:
     """The advisory .docx opens and contains its title, headings, indicators, and actions."""
     import docx
@@ -40,7 +52,7 @@ def test_docx_advisory_carries_its_content(artefacts_dir: Path, tmp_path: Path) 
     render_docx(advisory, path)
 
     document = docx.Document(str(path))
-    text = "\n".join(p.text for p in document.paragraphs)
+    text = _all_text(document)
     footer = document.sections[0].footer.paragraphs[0].text
 
     assert advisory.title in text

@@ -33,6 +33,8 @@ npm run build
 #    that list is a genuine finding and fails the build. Each entry below was checked
 #    in the built bundle and is advice text or a namespace URI, never dereferenced:
 #    ungap/url-search-params is inside react-router's IE11 polyfill warning string.
+#    Radix Dialog's docs URL is console-error advice for a missing accessible title
+#    (react-dialog/dist/index.mjs, TitleWarning). It is never fetched or rendered.
 
 echo "==> Checking fetch vectors are same-origin"
 fail=0
@@ -52,7 +54,7 @@ while IFS= read -r ref; do
 done < <(grep -ohE '(src|href)="[^"]*"' "${DIST}/index.html" || true)
 
 echo "==> Checking for unexpected remote URLs"
-ALLOWED='://(localhost|127\.0\.0\.1)|www\.w3\.org|scripts\.sil\.org/OFL|github\.com/rsms/inter|github\.com/ungap/url-search-params|reactjs\.org/docs/error-decoder|reactrouter\.com/|tailwindcss\.com'
+ALLOWED='://(localhost|127\.0\.0\.1)|www\.w3\.org|scripts\.sil\.org/OFL|github\.com/rsms/inter|github\.com/ungap/url-search-params|reactjs\.org/docs/error-decoder|reactrouter\.com/|tailwindcss\.com|radix-ui\.com/primitives/docs/components/'
 
 while IFS= read -r url; do
   echo "  UNEXPECTED REMOTE URL: ${url}" >&2

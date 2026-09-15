@@ -1,42 +1,31 @@
 import { NavLink } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useRecentTransforms } from '@/lib/transforms'
 import { cn } from '@/lib/utils'
-
-interface TransformRow {
-  transform_id: string
-  created_at: string
-  status: 'PENDING' | 'RUNNING' | 'SUCCEEDED' | 'FAILED'
-  output_types: string[]
-  job_count: number
-  has_verification: boolean
-  verification_ok: boolean
-  conflicts: number
-}
 
 /** Recent work, newest first. A red dot means verification found a conflict that
  *  nobody has released yet — visible before the operator opens the run. */
 export function RecentTransforms() {
-  const { data, isLoading } = useQuery({
-    queryKey: ['transforms'],
-    queryFn: async (): Promise<TransformRow[]> => {
-      const response = await fetch('/transforms?limit=25')
-      if (!response.ok) throw new Error('transforms unavailable')
-      return (await response.json()) as TransformRow[]
-    },
-    refetchInterval: 20_000,
-  })
+  const { data, isLoading, isError } = useRecentTransforms()
 
   if (isLoading) {
-    return <p className="px-2.5 py-1.5 text-[15px] text-text-1">Loading…</p>
+    return (
+      <p className="px-3 py-2 text-[14px] text-text-1">Loading activity…</p>
+    )
   }
 
   if (!data || data.length === 0) {
-    return <p className="px-2.5 py-1.5 text-[15px] text-text-1">No transforms yet.</p>
+    return (
+      <p className="px-3 py-2 text-[14px] leading-relaxed text-text-1">
+        {isError
+          ? 'Local engine unavailable.'
+          : 'Your transforms will appear here.'}
+      </p>
+    )
   }
 
   return (
     <ul className="flex flex-col gap-0.5">
-      {data.map((row) => (
+      {data.slice(0, 8).map((row) => (
         <li key={row.transform_id}>
           <NavLink
             to={`/runs/${row.transform_id}`}
@@ -60,7 +49,7 @@ export function RecentTransforms() {
                         : 'bg-ok',
                 )}
               />
-              <span className="tabular truncate text-[15px] text-text-0">
+              <span className="tabular truncate text-[14px] capitalize text-text-0">
                 {row.output_types.length === 1
                   ? row.output_types[0].replace(/_/g, ' ')
                   : `${row.job_count} artefacts`}
@@ -72,7 +61,7 @@ export function RecentTransforms() {
                 />
               )}
             </span>
-            <span className="tabular truncate pl-3 text-[14px] text-text-1">
+            <span className="tabular truncate pl-3 text-[12px] text-text-1">
               {new Date(row.created_at).toLocaleString(undefined, {
                 month: 'short',
                 day: 'numeric',

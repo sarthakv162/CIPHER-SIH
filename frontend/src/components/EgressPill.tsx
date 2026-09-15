@@ -16,25 +16,29 @@ export function EgressPill() {
     staleTime: 10_000,
   })
 
-  if (isError) {
+  if (isError || !data) {
     return (
-      <span className="flex items-center gap-1.5 rounded-full border border-border bg-bg-2 px-2.5 py-1 text-[15px] text-text-1">
+      <span
+        role="status"
+        className="flex items-center gap-2 text-[14px] text-text-1"
+      >
         <ShieldAlert className="size-3.5" strokeWidth={1.75} />
-        Egress unknown
+        <span className="hidden sm:inline">
+          {isError ? 'Engine unavailable' : 'Checking status…'}
+        </span>
       </span>
     )
   }
 
-  const clean = data?.clean ?? true
-  const count = data?.violations.length ?? 0
+  const clean = data.clean
+  const count = data.violations.length
 
   return (
     <span
+      role="status"
       className={cn(
-        'flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[15px] transition-colors duration-200',
-        clean
-          ? 'border-ok/25 bg-ok/10 text-ok'
-          : 'border-danger/30 bg-danger/10 text-danger',
+        'flex items-center gap-2 text-[14px] transition-colors duration-200',
+        clean ? 'text-text-1' : 'text-danger',
       )}
       title={
         clean
@@ -50,7 +54,7 @@ export function EgressPill() {
       <span className="tabular">
         {clean ? (
           <>
-            <span className="hidden sm:inline">Offline · 0 external connections</span>
+            <span className="hidden sm:inline">On-device · Offline</span>
             <span className="sm:hidden">Offline</span>
           </>
         ) : (
