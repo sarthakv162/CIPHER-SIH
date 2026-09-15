@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from rupantar.core.errors import ConfigError
+from rupantar.core.schemas import VideoStyle
 from rupantar.render._video_mux import build_mp4
 from rupantar.render._video_scene import (
     PanelPlan,
@@ -25,6 +26,8 @@ from rupantar.render._video_scene import (
 )
 from rupantar.render.context import RenderContext
 from rupantar.render.theme import Theme, load_theme
+
+_PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 
 # matches configs/models.yaml tts.path / tts.config
 _TTS_MODEL = Path("models/tts/en_US-lessac-medium.onnx")
@@ -47,13 +50,17 @@ def render_video(
     warnings: list[str] = []
     written: list[Path] = []
     theme = _resolve_theme(context, warnings)
+    video_style = context.video_style if context is not None else VideoStyle.composed
+    provenance = context.panel_provenance if context is not None else {}
     footer = str(getattr(artefact, "title", "video_package"))
     plans: list[PanelPlan] = []
     visual_sources: list[dict[str, str]] = []
     try:
         plans, visual_sources = plan_panels(artefact, theme, context, out_dir, warnings)
         plans = [replace(p, duration=max(1, min(p.duration, max_scene_seconds))) for p in plans]
-        panels = _write_panels(out_dir, plans, footer, theme, warnings)
+        panels = _write_panels(
+            out_dir, plans, footer, theme, warnings, video_style=video_style, provenance=provenance
+        )
         written.extend(panels)
         narration = _write_narration(out_dir, artefact, warnings)
         if narration is not None:
@@ -65,7 +72,9 @@ def render_video(
         warnings.append(f"video assembly aborted ({type(exc).__name__}: {exc})")
     finally:
         _cleanup(out_dir)
-    written.insert(0, _write_storyboard(out_dir, artefact, plans, visual_sources, warnings))
+    written.insert(
+        0, _write_storyboard(out_dir, artefact, plans, visual_sources, warnings, video_style)
+    )
     if warnings:
         warn_path = out_dir / "video_package.warnings.txt"
         warn_path.write_text("\n".join(warnings) + "\n", encoding="utf-8")
@@ -170,6 +179,7 @@ def _write_storyboard(
     plans: list[PanelPlan],
     visual_sources: list[dict[str, str]],
     warnings: list[str],
+    video_style: VideoStyle = VideoStyle.composed,
 ) -> Path:
     """Write storyboard.json with the scene timeline, panel plan, and any render warnings."""
     scenes = _scene_timeline(artefact.scenes)
@@ -179,6 +189,7 @@ def _write_storyboard(
         "logline": artefact.logline,
         "runtime_seconds_target": artefact.runtime_seconds_target,
         "subtitle_hint": artefact.subtitle_hint,
+        "video_style": video_style.value,
         "scenes": scenes,
         "panels": _panel_rows(plans),
         "visual_sources": visual_sources,
@@ -189,19 +200,62 @@ def _write_storyboard(
     return target
 
 
+def _is_valid_png(path: Path) -> bool:
+    """True when `path` is a readable, non-empty file starting with the PNG signature."""
+    try:
+        with path.open("rb") as handle:
+            return handle.read(len(_PNG_MAGIC)) == _PNG_MAGIC
+    except OSError:
+        return False
+
+
+def _composed_provenance(plan: PanelPlan) -> str | None:
+    """Disclosure label for a composed-render panel: infographic, b-roll, or none to disclose."""
+    if plan.layout in ("infographic_hero", "chart"):
+        return "infographic"
+    if plan.background_evidence:
+        return "b_roll"
+    return None
+
+
 def _write_panels(
-    out_dir: Path, plans: list[PanelPlan], footer: str, theme: Theme, warnings: list[str]
+    out_dir: Path,
+    plans: list[PanelPlan],
+    footer: str,
+    theme: Theme,
+    warnings: list[str],
+    *,
+    video_style: VideoStyle = VideoStyle.composed,
+    provenance: dict[str, str] | None = None,
 ) -> list[Path]:
-    """Draw one panel PNG per plan; a failed panel is skipped with a warning, not raised."""
+    """Draw one panel PNG per plan; a failed panel is skipped with a warning, not raised.
+
+    In `illustrated` style, a scene (non-extra) panel already on disk as a valid PNG is left
+    untouched and marked "synthetic"; missing/unreadable falls back to composed for that panel
+    only, with a warning. Extra panels (infographic hero/chart) are always composed.
+    """
+    prov = provenance if provenance is not None else {}
     panels: list[Path] = []
     for plan in plans:
         target = out_dir / f"panel_{plan.index:02d}.png"
+        if video_style is VideoStyle.illustrated and not plan.is_extra:
+            if _is_valid_png(target):
+                prov[target.name] = "synthetic"
+                panels.append(target)
+                continue
+            warnings.append(
+                f"panel {plan.index} illustrated image missing or unreadable "
+                "- fell back to the composed renderer"
+            )
         try:
             render_plan_panel(target, plan, len(plans), footer, theme, warnings)
         except Exception as exc:  # noqa: BLE001 - degrade, never crash the job
             warnings.append(f"panel {plan.index} not rendered ({type(exc).__name__}: {exc})")
             continue
         panels.append(target)
+        label = _composed_provenance(plan)
+        if label is not None:
+            prov[target.name] = label
     return panels
 
 

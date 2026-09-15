@@ -90,6 +90,7 @@ class _RunContext:
             infographic_spec=self.infographic_holder.get("spec"),
             template_id=self.request.params.template,
             advisory_severity=self.advisory_severity_holder.get("severity", ""),
+            video_style=self.request.params.video_style,
         )
 
 
@@ -102,6 +103,7 @@ class _JobOutcome:
     artefact: ArtefactBase
     paths: list[Path] = field(default_factory=list)
     render_warnings: list[str] = field(default_factory=list)
+    panel_provenance: dict[str, str] = field(default_factory=dict)
 
 
 async def prepare(
@@ -317,6 +319,7 @@ async def _run_job(job: Job, ctx: _RunContext, client: LlamaClient) -> _JobOutco
         artefact=artefact,
         paths=[json_path, *rendered],
         render_warnings=render_ctx.warnings,
+        panel_provenance=dict(render_ctx.panel_provenance),
     )
 
 

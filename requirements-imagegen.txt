@@ -1,0 +1,14 @@
+# Optional, standalone dependencies for scripts/illustrate_panels.py ONLY.
+# Deliberately NOT part of requirements.txt / pyproject.toml: torch + diffusers are a
+# multi-GB air-gap liability that every deployment would otherwise pay for, even when
+# nobody uses this one-off script. Install into a separate venv if you want to run it:
+#
+#   python -m venv .venv-imagegen && .venv-imagegen/bin/pip install -r requirements-imagegen.txt
+#
+# Then fetch the model per scripts/illustrate_panels.py's own header, and run it with
+# .venv-imagegen/bin/python, never with the project's main .venv.
+torch>=2.2
+diffusers>=0.27
+transformers>=4.40
+accelerate>=0.30
+Pillow>=10

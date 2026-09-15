@@ -57,6 +57,11 @@ class Manifest(BaseModel):
     verification: dict[str, Any] | None = None
     release: Release | None = None
     render_warnings: list[str] = Field(default_factory=list)
+    # Disclosure for a video_package panel PNG: "synthetic" (scripts/illustrate_panels.py,
+    # no source evidence), "b_roll" (a real dossier evidence id, already carried by the panel's
+    # background), "infographic" (traced to the infographic_spec artefact), or None (theme-only,
+    # nothing to disclose). Never set for any other artefact/format.
+    panel_provenance: str | None = None
 
 
 def manifest_path(artefact_path: Path) -> Path:

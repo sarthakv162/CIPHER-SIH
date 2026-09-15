@@ -38,6 +38,7 @@ def emit_all_manifests(
             clock=clock,
             verification=verification,
             render_warnings=outcome.render_warnings,
+            panel_provenance=outcome.panel_provenance,
         )
 
 
@@ -53,10 +54,12 @@ def _emit_manifests(
     clock: Callable[[], datetime],
     verification: dict[str, Any] | None = None,
     render_warnings: list[str] | None = None,
+    panel_provenance: dict[str, str] | None = None,
 ) -> None:
     """Write a provenance manifest beside every produced file."""
     meta = manager.model_meta(job.model_key)
     params = request.params.model_dump(mode="json")
+    provenance = panel_provenance or {}
     for path in paths:
         manifest = Manifest(
             source_sha256=dossier_sha,
@@ -75,5 +78,6 @@ def _emit_manifests(
             transform_id=job.transform_id,
             verification=verification,
             render_warnings=render_warnings or [],
+            panel_provenance=provenance.get(path.name),
         )
         write_manifest(path, manifest)

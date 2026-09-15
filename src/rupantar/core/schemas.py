@@ -87,6 +87,13 @@ class Style(Enum):
     technical = "technical"
 
 
+class VideoStyle(Enum):
+    """How `render_video` sources its scene panels."""
+
+    composed = "composed"
+    illustrated = "illustrated"
+
+
 class SourceInput(BaseModel):
     """One source of information: exactly one of `text` or `path` is set."""
 
@@ -122,6 +129,10 @@ class GenerationParams(BaseModel):
     # to the built-in renderer (render/pptx_render.py, render/docx_render.py) rather than
     # failing validation here.
     template: str = "ntro-formal"
+    # composed = the built-in theme-driven SVG/Pillow panel renderer (render/video_render.py);
+    # illustrated = scripts/illustrate_panels.py's pre-generated PNGs, when present on disk,
+    # falling back to composed per-panel otherwise. See docs/SCHEMAS.md.
+    video_style: VideoStyle = VideoStyle.composed
 
 
 class TransformRequest(BaseModel):

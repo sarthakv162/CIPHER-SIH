@@ -66,6 +66,7 @@ detail: enum[brief, standard, deep]
 objective: enum[inform, warn, persuade, instruct, announce, summarise]
 style: enum[plain, narrative, bulleted, technical]
 template: str = "ntro-formal"
+video_style: enum[composed, illustrated] = composed
 ```
 
 **Template handling.** `template` selects a document template (a real `.potx`/`.dotx` file,
@@ -75,6 +76,17 @@ schema change; an unknown id, a missing template file, or a template missing a r
 or named style degrades to the built-in renderer output with a warning recorded on the
 artefact's provenance manifest (`Manifest.render_warnings`) — it never fails the job. Added
 after the Phase 0 freeze (deviation, `MEMORY.md`).
+
+**Video style handling.** `video_style` selects how `render_video` (`video_package` output)
+sources its per-scene panel images. `composed` (default) is the built-in theme-driven
+SVG/Pillow renderer, unchanged. `illustrated` looks for a pre-generated `panel_NN.png` already
+on disk (written by the standalone, non-application `scripts/illustrate_panels.py` — never run
+automatically) for each scene panel; when present it is used as-is and marked `"synthetic"` in
+that file's `Manifest.panel_provenance`, when absent or unreadable that one panel degrades to
+the composed renderer with a warning — it never fails the job, and infographic
+hero/chart "extra" panels are always composed regardless of this setting. Unlike `template`,
+this is a genuinely closed two-value set, so it is a plain `enum.Enum`, not a free string.
+Added after the Phase 0 freeze (deviation, `MEMORY.md`).
 
 **Language handling.** The brain model (Qwen) is multilingual, so text artefacts honour `language`
 on a best-effort basis. ASR (`faster-whisper *.en`) and TTS (`piper en_US-*`) are English-only in
