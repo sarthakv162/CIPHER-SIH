@@ -527,6 +527,36 @@ Also build:
 > to the `infographic_spec` artefact) — this is the one element in the system that cannot be
 > traced to source, and it must say so rather than hide it.
 
+> **Phase 9e — pptx colour/chart parity with the docx renderer (AUTHORIZED 2026-09-16).** The
+> user reported the `presentation` deck still looks bare next to the `advisory`/`executive_summary`
+> docx and the infographic SVG, and asked for it to gain the same colour language plus real
+> graphs/charts. No new model, no schema change, no new template file (the shipped `.potx` files
+> remain placeholders with zero visual design per `docs/TEMPLATES.md` — the docx's richness comes
+> almost entirely from `render/_docx_theme.py`'s in-code shading/borders, not from the `.dotx`
+> file, so the fix for pptx is the equivalent code-level decoration layer, not a template ask).
+> Scope:
+> - **Chart reliability fix.** `orchestrator/planner.py` gains `presentation -> infographic_spec`
+>   and `presentation -> advisory` `depends_on` edges (same conditional pattern as the existing
+>   `video_package` edges — only when the target type is also requested), so a presentation
+>   scheduled before its infographic/advisory sibling in the same brain group no longer misses the
+>   chart data / severity tint that was already generated. `orchestrator/_video_prep.py`'s
+>   `ensure_infographic_spec` gate widens from "only a `video_package` group" to "a
+>   `video_package` or `presentation` group lacking an `infographic_spec`" — the deck gets a chart
+>   even when the user requests it alone, via the same one-extra-brain-call-inside-the-open-lease
+>   mechanism, still never persisted/manifested, still swallowing `AgentError`.
+> - **Richer `render/_pptx_theme.py` decoration**, all reusing `Theme`/`charts.py` exactly as the
+>   docx/video renderers already do — never fabricating a number that is not genuinely in the
+>   `InfographicSpec`: a persistent footer (artefact title + slide number, mirroring the video
+>   panels' footer and the docx's `classification_footer` style), a themed divider rule under
+>   every slide title (the pptx equivalent of the docx's `bottom_border`), and colour-shaded stat
+>   callout boxes built from `InfographicSpec.sections` (the pptx equivalent of the docx's
+>   shaded severity/priority table cells) on their own slide alongside the existing bar/timeline
+>   chart picture.
+> - **`two_column` actually splits `Slide.bullets` across both placeholders** (closing the known
+>   limitation recorded in `docs/TEMPLATES.md`) — a pure renderer change, no schema touch.
+> - Every addition degrades exactly like the existing decorations: a failure records a warning via
+>   `_warn`/`context.warnings` and skips only that decoration, never the slide or the deck.
+
 **Dashboard** with source input, output-type checkboxes, generation parameter controls, live job progress, **Model Manager memory visualiser**, artefact downloads, converter panel, egress indicator.
 - Platform-accurate previews with live character counters for the `linkedin_post` and `x_thread` artefacts (X 280/post, LinkedIn 3000, truncation preview).
 

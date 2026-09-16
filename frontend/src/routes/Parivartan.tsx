@@ -5,6 +5,7 @@ import {
   ArrowLeftRight,
   ArrowRight,
   Check,
+  Download,
   Loader2,
   LockKeyhole,
   RefreshCw,
@@ -26,6 +27,7 @@ interface ConversionReport {
   rows: number
   warnings: string[]
   output_path: string | null
+  download_name: string | null
   duration_seconds: number
   ok: boolean
 }
@@ -322,10 +324,14 @@ function ReportView({ report }: { report: ConversionReport }) {
           {report.rows} rows · {duration(report.duration_seconds)}
         </span>
       </div>
-      {report.output_path && (
-        <p className="mt-2 text-[14px] break-all text-text-1">
-          Saved to <code className="text-text-0">{report.output_path}</code>
-        </p>
+      {report.download_name && (
+        <a
+          href={`/conversions/download/${encodeURIComponent(report.download_name)}`}
+          download
+          className="secondary-button mt-3 inline-flex"
+        >
+          <Download className="size-3.5" /> Download {report.download_name}
+        </a>
       )}
       {report.warnings.length > 0 && (
         <ul className="mt-3 space-y-1">

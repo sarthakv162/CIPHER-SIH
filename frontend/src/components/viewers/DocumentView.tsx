@@ -30,9 +30,42 @@ interface Advisory {
   handling_caveat: string
 }
 
-export function AdvisoryView({ artefact }: { artefact: Advisory }) {
+const TEMPLATE_STYLES: Record<string, { border: string; badge: string; takeawayBg: string; label: string }> = {
+  'ntro-formal': {
+    border: 'border-t-accent',
+    badge: 'border-accent/25 bg-accent/10 text-accent',
+    takeawayBg: 'border-accent/25 bg-accent/8',
+    label: 'NTRO FORMAL',
+  },
+  executive: {
+    border: 'border-t-emerald-600',
+    badge: 'border-emerald-600/30 bg-emerald-600/10 text-emerald-700 dark:text-emerald-400',
+    takeawayBg: 'border-emerald-600/25 bg-emerald-600/8',
+    label: 'EXECUTIVE BRIEFING',
+  },
+  technical: {
+    border: 'border-t-purple-600',
+    badge: 'border-purple-600/30 bg-purple-600/10 text-purple-700 dark:text-purple-400',
+    takeawayBg: 'border-purple-600/25 bg-purple-600/8',
+    label: 'TECHNICAL REPORT',
+  },
+}
+
+export function AdvisoryView({
+  artefact,
+  template = 'ntro-formal',
+}: {
+  artefact: Advisory
+  template?: string
+}) {
+  const style = TEMPLATE_STYLES[template] ?? TEMPLATE_STYLES['ntro-formal']
   return (
-    <article className="surface-card mx-auto w-full max-w-[76ch] border-t-4 border-t-accent p-5 md:p-9">
+    <article className={cn('surface-card mx-auto w-full max-w-[76ch] border-t-4 p-5 md:p-9', style.border)}>
+      <div className="mb-3 flex items-center justify-between">
+        <span className={cn('rounded-[6px] border px-2 py-0.5 text-[12px] font-semibold tracking-wider uppercase', style.badge)}>
+          {style.label}
+        </span>
+      </div>
       <div
         className={cn(
           'flex flex-wrap items-center gap-x-3 gap-y-1 rounded-[8px] border px-3 py-2',
@@ -152,11 +185,19 @@ interface ExecutiveSummary {
 
 export function ExecutiveSummaryView({
   artefact,
+  template = 'ntro-formal',
 }: {
   artefact: ExecutiveSummary
+  template?: string
 }) {
+  const style = TEMPLATE_STYLES[template] ?? TEMPLATE_STYLES['ntro-formal']
   return (
-    <article className="surface-card mx-auto w-full max-w-[76ch] border-t-4 border-t-accent p-5 md:p-9">
+    <article className={cn('surface-card mx-auto w-full max-w-[76ch] border-t-4 p-5 md:p-9', style.border)}>
+      <div className="mb-4 flex items-center justify-between">
+        <span className={cn('rounded-[6px] border px-2.5 py-1 text-[12px] font-semibold tracking-wider uppercase', style.badge)}>
+          {style.label}
+        </span>
+      </div>
       <h1 className="text-[26px] leading-tight text-balance break-words text-text-0">
         {artefact.title}
       </h1>
@@ -164,7 +205,7 @@ export function ExecutiveSummaryView({
         {artefact.headline}
       </p>
 
-      <p className="mt-4 rounded-[8px] border border-accent/25 bg-accent/8 px-3 py-2.5 text-[16px] leading-relaxed text-text-0">
+      <p className={cn('mt-4 rounded-[8px] border px-3 py-2.5 text-[16px] leading-relaxed text-text-0', style.takeawayBg)}>
         {artefact.one_line_takeaway}
       </p>
 

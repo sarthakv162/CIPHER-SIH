@@ -10,9 +10,17 @@ initializeAppearance()
 
 // Retry once: the backend is local, so a failing request is a real failure, not
 // a flaky network. Nothing here reaches beyond this origin.
+//
+// networkMode: 'always' on both queries and mutations. TanStack Query's default
+// ('online') pauses every request whenever the browser's navigator.onLine flips
+// false — which it does the moment Wi-Fi is switched off, even though this app's
+// entire backend is loopback-only and unaffected by that. Left at the default,
+// air-gapped operation (the whole point of this project) hangs every fetch and
+// mutation, including "Create", indefinitely as soon as the network radio is off.
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { retry: 1, refetchOnWindowFocus: false, staleTime: 5_000 },
+    queries: { retry: 1, refetchOnWindowFocus: false, staleTime: 5_000, networkMode: 'always' },
+    mutations: { networkMode: 'always' },
   },
 })
 

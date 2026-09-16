@@ -1,0 +1,209 @@
+- generic [ref=f3e3]:
+  - link "Skip to content" [ref=f3e4] [cursor=pointer]:
+    - /url: "#main-content"
+  - complementary [ref=f3e6]:
+    - generic [ref=f3e7]:
+      - link "Cipher home" [ref=f3e8] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f3e14]:
+          - text: CIPHER.
+          - generic [ref=f3e15]: CREATIVE STUDIO
+      - button "Collapse sidebar" [ref=f3e16] [cursor=pointer]
+    - navigation "Main navigation" [ref=f3e19]:
+      - button "New transform" [ref=f3e20] [cursor=pointer]
+      - link "Library" [ref=f3e24] [cursor=pointer]:
+        - /url: /artefacts
+      - link "Convert files" [ref=f3e29] [cursor=pointer]:
+        - /url: /parivartan
+    - generic [ref=f3e33]:
+      - paragraph [ref=f3e34]: Create something
+      - link "Documents 2" [ref=f3e35] [cursor=pointer]:
+        - /url: /?category=documents
+        - text: Documents
+        - generic [ref=f3e39]: "2"
+      - link "Social content 2" [ref=f3e40] [cursor=pointer]:
+        - /url: /?category=social
+        - text: Social content
+        - generic [ref=f3e43]: "2"
+      - link "Visuals & video 3" [ref=f3e44] [cursor=pointer]:
+        - /url: /?category=visual
+        - text: Visuals & video
+        - generic [ref=f3e49]: "3"
+    - generic [ref=f3e50]:
+      - paragraph [ref=f3e51]: Recent transforms
+      - navigation "Recent transforms" [ref=f3e52]:
+        - list [ref=f3e350]:
+          - listitem [ref=f3e351]:
+            - link "6 artefacts 16 Sept, 07:53" [ref=f3e352] [cursor=pointer]:
+              - /url: /runs/ea229a8a96dd427eb5e12030dc1f50e9
+              - generic [ref=f3e353]: 6 artefacts
+              - generic [ref=f3e356]: 16 Sept, 07:53
+          - listitem [ref=f3e357]:
+            - link "2 artefacts 15 Sept, 23:30" [ref=f3e358] [cursor=pointer]:
+              - /url: /runs/0d7d3596ae9d4350a6717d6fb794396d
+              - generic [ref=f3e359]: 2 artefacts
+              - generic [ref=f3e362]: 15 Sept, 23:30
+          - listitem [ref=f3e363]:
+            - link "infographic spec 15 Sept, 23:21" [ref=f3e364] [cursor=pointer]:
+              - /url: /runs/e39bbae787444e57a51a5676ce6490c2
+              - generic [ref=f3e365]: infographic spec
+              - generic [ref=f3e368]: 15 Sept, 23:21
+          - listitem [ref=f3e369]:
+            - link "2 artefacts 1 conflict found by verification 15 Sept, 23:19" [ref=f3e370] [cursor=pointer]:
+              - /url: /runs/8697abde4e8543008cad4499f9de74c1
+              - generic [ref=f3e371]:
+                - generic [ref=f3e373]: 2 artefacts
+                - generic "1 conflict found by verification" [ref=f3e374]
+              - generic [ref=f3e375]: 15 Sept, 23:19
+          - listitem [ref=f3e376]:
+            - link "executive summary 14 Sept, 23:40" [ref=f3e377] [cursor=pointer]:
+              - /url: /runs/cd8e9f4e6f8141939e973329991c5f23
+              - generic [ref=f3e378]: executive summary
+              - generic [ref=f3e381]: 14 Sept, 23:40
+          - listitem [ref=f3e382]:
+            - link "presentation 14 Sept, 23:25" [ref=f3e383] [cursor=pointer]:
+              - /url: /runs/3888d7c62fc949069b681bb572ecf862
+              - generic [ref=f3e384]: presentation
+              - generic [ref=f3e387]: 14 Sept, 23:25
+          - listitem [ref=f3e388]:
+            - link "video package 14 Sept, 22:15" [ref=f3e389] [cursor=pointer]:
+              - /url: /runs/fc1b5f6920394a2b85b2f96d185f5680
+              - generic [ref=f3e390]: video package
+              - generic [ref=f3e393]: 14 Sept, 22:15
+          - listitem [ref=f3e394]:
+            - link "executive summary 14 Sept, 22:12" [ref=f3e395] [cursor=pointer]:
+              - /url: /runs/8248e56e101b41b0bc684ca89b926e04
+              - generic [ref=f3e396]: executive summary
+              - generic [ref=f3e399]: 14 Sept, 22:12
+    - link "System settings" [ref=f3e55] [cursor=pointer]:
+      - /url: /system
+  - main [ref=f3e59]:
+    - generic [ref=f3e60]:
+      - generic [ref=f3e61]:
+        - generic [ref=f3e62]: Workspace /
+        - generic [ref=f3e63]: New transform
+      - generic [ref=f3e64]:
+        - status "No non-loopback connection observed in this process tree" [ref=f3e400]:
+          - generic [ref=f3e68]: On-device · Offline
+        - generic [ref=f3e69]:
+          - button "Switch to light mode" [ref=f3e70] [cursor=pointer]
+          - button "Customize appearance" [ref=f3e77] [cursor=pointer]
+    - generic [ref=f3e85]:
+      - generic [ref=f3e86]:
+        - paragraph [ref=f3e87]: OFFLINE • AIR-GAPPED • ON-DEVICE AI
+        - heading "Source material, transformed." [level=1] [ref=f3e88]
+        - paragraph [ref=f3e89]: Turn documents, audio, video, and text into verified communication artefacts.
+      - generic [ref=f3e90]:
+        - generic [ref=f3e91]:
+          - tablist "Composer mode" [ref=f3e92]:
+            - tab "Add as source" [selected] [ref=f3e93] [cursor=pointer]
+            - tab "Ask about sources" [ref=f3e97] [cursor=pointer]
+          - generic [ref=f3e101]: Private by design
+        - generic [ref=f3e106]: Source text or instructions
+        - textbox "Source text or instructions" [active] [ref=f3e107]:
+          - /placeholder: Paste your source, describe an idea, or add a file…
+        - generic [ref=f3e108]:
+          - button "Attach files" [ref=f3e109] [cursor=pointer]
+          - button "Choose output formats" [ref=f3e111] [cursor=pointer]:
+            - generic [ref=f3e112]: Executive summary
+          - button "Generation settings" [ref=f3e115] [cursor=pointer]
+          - button "Generate content" [disabled] [ref=f3e117]:
+            - generic [ref=f3e118]: Create
+      - generic [ref=f3e121]:
+        - generic [ref=f3e123]:
+          - text: Start with your own material or
+          - button "try a sample" [ref=f3e124] [cursor=pointer]
+          - text: .
+        - button "Use a local file path" [ref=f3e126] [cursor=pointer]
+      - region [ref=f3e127]:
+        - generic [ref=f3e128]:
+          - generic [ref=f3e129]:
+            - heading "What will you make?" [level=2] [ref=f3e130]
+            - paragraph [ref=f3e131]: Choose your formats. Give your source a new life.
+          - status [ref=f3e132]: 1 selected
+        - group "Artifact categories" [ref=f3e134]:
+          - button "All formats 7" [pressed] [ref=f3e135] [cursor=pointer]:
+            - text: All formats
+            - generic [ref=f3e140]: "7"
+          - button "Documents 2" [ref=f3e141] [cursor=pointer]:
+            - text: Documents
+            - generic [ref=f3e142]: "2"
+          - button "Social 2" [ref=f3e143] [cursor=pointer]:
+            - text: Social
+            - generic [ref=f3e144]: "2"
+          - button "Visual & video 3" [ref=f3e145] [cursor=pointer]:
+            - text: Visual & video
+            - generic [ref=f3e146]: "3"
+        - generic [ref=f3e147]:
+          - checkbox "Executive summary" [checked] [ref=f3e148] [cursor=pointer]:
+            - generic [ref=f3e149]: Documents
+            - generic [ref=f3e159]:
+              - generic [ref=f3e160]: Executive summary
+              - generic [ref=f3e161]: A decision-maker’s one-page read of the source.
+            - generic [ref=f3e167]:
+              - generic [ref=f3e168]:
+                - generic [ref=f3e169]: md
+                - generic [ref=f3e170]: docx
+              - generic [ref=f3e171]: ~40s
+          - checkbox "Presentation" [ref=f3e175] [cursor=pointer]:
+            - generic [ref=f3e176]: Visual & video
+            - generic [ref=f3e185]:
+              - generic [ref=f3e186]: Presentation
+              - generic [ref=f3e187]: Five to twelve slides with speaker notes.
+            - generic [ref=f3e196]:
+              - generic [ref=f3e197]:
+                - generic [ref=f3e198]: md
+                - generic [ref=f3e199]: pptx
+              - generic [ref=f3e200]: ~55s
+          - checkbox "Infographic" [ref=f3e204] [cursor=pointer]:
+            - generic [ref=f3e205]: Visual & video
+            - generic [ref=f3e215]:
+              - generic [ref=f3e216]: Infographic
+              - generic [ref=f3e217]: Layout, stat blocks and copy, rendered to SVG.
+            - generic [ref=f3e226]:
+              - generic [ref=f3e227]:
+                - generic [ref=f3e228]: md
+                - generic [ref=f3e229]: svg
+              - generic [ref=f3e230]: ~32s
+          - checkbox "Advisory" [ref=f3e234] [cursor=pointer]:
+            - generic [ref=f3e235]: Documents
+            - generic [ref=f3e243]:
+              - generic [ref=f3e244]: Advisory
+              - generic [ref=f3e245]: Severity, indicators of compromise, and prioritised actions.
+            - generic [ref=f3e252]:
+              - generic [ref=f3e253]:
+                - generic [ref=f3e254]: md
+                - generic [ref=f3e255]: docx
+                - generic [ref=f3e256]: pdf
+              - generic [ref=f3e257]: ~47s
+          - checkbox "LinkedIn post" [ref=f3e261] [cursor=pointer]:
+            - generic [ref=f3e262]: Social
+            - generic [ref=f3e274]:
+              - generic [ref=f3e275]: LinkedIn post
+              - generic [ref=f3e276]: Hook, body, hashtags and a call to action.
+            - generic [ref=f3e283]:
+              - generic [ref=f3e284]: md
+              - generic [ref=f3e286]: ~31s
+          - checkbox "X thread" [ref=f3e290] [cursor=pointer]:
+            - generic [ref=f3e291]: Social
+            - generic [ref=f3e299]:
+              - generic [ref=f3e300]: X thread
+              - generic [ref=f3e301]: Three to eight posts with a thread hook.
+            - generic [ref=f3e308]:
+              - generic [ref=f3e309]: md
+              - generic [ref=f3e311]: ~24s
+          - checkbox "Video package" [ref=f3e315] [cursor=pointer]:
+            - generic [ref=f3e316]: Visual & video
+            - generic [ref=f3e325]:
+              - generic [ref=f3e326]: Video package
+              - generic [ref=f3e327]: Scene plan, narration and subtitles, assembled to MP4.
+            - generic [ref=f3e333]:
+              - generic [ref=f3e334]:
+                - generic [ref=f3e335]: md
+                - generic [ref=f3e336]: srt
+                - generic [ref=f3e337]: mp4
+              - generic [ref=f3e338]: ~1m 15s
+        - paragraph [ref=f3e342]: Select multiple cards to create a complete content set from one source.
+    - generic [ref=f3e343]:
+      - generic [ref=f3e344]: Made here. Stays here.
+      - generic [ref=f3e349]: Review generated content before sharing.

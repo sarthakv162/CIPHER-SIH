@@ -1,0 +1,107 @@
+- generic [ref=f3e3]:
+  - link "Skip to content" [ref=f3e4] [cursor=pointer]:
+    - /url: "#main-content"
+  - complementary [ref=f3e6]:
+    - generic [ref=f3e7]:
+      - link "Cipher home" [ref=f3e8] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f3e14]:
+          - text: CIPHER.
+          - generic [ref=f3e15]: CREATIVE STUDIO
+      - button "Collapse sidebar" [ref=f3e16] [cursor=pointer]
+    - navigation "Main navigation" [ref=f3e19]:
+      - button "New transform" [ref=f3e20] [cursor=pointer]
+      - link "Library" [ref=f3e24] [cursor=pointer]:
+        - /url: /artefacts
+      - link "Convert files" [ref=f3e29] [cursor=pointer]:
+        - /url: /parivartan
+    - generic [ref=f3e33]:
+      - paragraph [ref=f3e34]: Create something
+      - link "Documents 2" [ref=f3e35] [cursor=pointer]:
+        - /url: /?category=documents
+        - text: Documents
+        - generic [ref=f3e39]: "2"
+      - link "Social content 2" [ref=f3e40] [cursor=pointer]:
+        - /url: /?category=social
+        - text: Social content
+        - generic [ref=f3e43]: "2"
+      - link "Visuals & video 3" [ref=f3e44] [cursor=pointer]:
+        - /url: /?category=visual
+        - text: Visuals & video
+        - generic [ref=f3e49]: "3"
+    - generic [ref=f3e50]:
+      - paragraph [ref=f3e51]: Recent transforms
+      - navigation "Recent transforms" [ref=f3e52]:
+        - list [ref=f3e350]:
+          - listitem [ref=f3e351]:
+            - link "6 artefacts 16 Sept, 07:53" [ref=f3e352] [cursor=pointer]:
+              - /url: /runs/ea229a8a96dd427eb5e12030dc1f50e9
+              - generic [ref=f3e353]: 6 artefacts
+              - generic [ref=f3e356]: 16 Sept, 07:53
+          - listitem [ref=f3e357]:
+            - link "2 artefacts 15 Sept, 23:30" [ref=f3e358] [cursor=pointer]:
+              - /url: /runs/0d7d3596ae9d4350a6717d6fb794396d
+              - generic [ref=f3e359]: 2 artefacts
+              - generic [ref=f3e362]: 15 Sept, 23:30
+          - listitem [ref=f3e363]:
+            - link "infographic spec 15 Sept, 23:21" [ref=f3e364] [cursor=pointer]:
+              - /url: /runs/e39bbae787444e57a51a5676ce6490c2
+              - generic [ref=f3e365]: infographic spec
+              - generic [ref=f3e368]: 15 Sept, 23:21
+          - listitem [ref=f3e369]:
+            - link "2 artefacts 1 conflict found by verification 15 Sept, 23:19" [ref=f3e370] [cursor=pointer]:
+              - /url: /runs/8697abde4e8543008cad4499f9de74c1
+              - generic [ref=f3e371]:
+                - generic [ref=f3e373]: 2 artefacts
+                - generic "1 conflict found by verification" [ref=f3e374]
+              - generic [ref=f3e375]: 15 Sept, 23:19
+          - listitem [ref=f3e376]:
+            - link "executive summary 14 Sept, 23:40" [ref=f3e377] [cursor=pointer]:
+              - /url: /runs/cd8e9f4e6f8141939e973329991c5f23
+              - generic [ref=f3e378]: executive summary
+              - generic [ref=f3e381]: 14 Sept, 23:40
+          - listitem [ref=f3e382]:
+            - link "presentation 14 Sept, 23:25" [ref=f3e383] [cursor=pointer]:
+              - /url: /runs/3888d7c62fc949069b681bb572ecf862
+              - generic [ref=f3e384]: presentation
+              - generic [ref=f3e387]: 14 Sept, 23:25
+          - listitem [ref=f3e388]:
+            - link "video package 14 Sept, 22:15" [ref=f3e389] [cursor=pointer]:
+              - /url: /runs/fc1b5f6920394a2b85b2f96d185f5680
+              - generic [ref=f3e390]: video package
+              - generic [ref=f3e393]: 14 Sept, 22:15
+          - listitem [ref=f3e394]:
+            - link "executive summary 14 Sept, 22:12" [ref=f3e395] [cursor=pointer]:
+              - /url: /runs/8248e56e101b41b0bc684ca89b926e04
+              - generic [ref=f3e396]: executive summary
+              - generic [ref=f3e399]: 14 Sept, 22:12
+    - link "System settings" [ref=f3e55] [cursor=pointer]:
+      - /url: /system
+  - main [ref=f3e59]:
+    - generic [ref=f3e404]:
+      - generic [ref=f3e405]:
+        - generic [ref=f3e406]: Workspace /
+        - generic [ref=f3e407]: Run
+        - generic [ref=f3e408]: Generating
+      - generic [ref=f3e409]:
+        - status "No non-loopback connection observed in this process tree" [ref=f3e410]:
+          - generic [ref=f3e414]: On-device · Offline
+        - generic [ref=f3e415]:
+          - button "Switch to light mode" [ref=f3e416] [cursor=pointer]
+          - button "Customize appearance" [ref=f3e423] [cursor=pointer]
+    - generic [ref=f3e431]:
+      - heading "Content transformation" [level=1] [ref=f3e432]
+      - generic [ref=f3e433]:
+        - paragraph [ref=f3e434]: Offline networkMode fix verification test.
+        - paragraph [ref=f3e435]: Executive summary
+      - generic [ref=f3e441]:
+        - paragraph [ref=f3e445]: Working on your content…
+        - generic [ref=f3e448]:
+          - generic [ref=f3e451]: Executive summary
+          - generic [ref=f3e452]: Generating
+        - group [ref=f3e453]:
+          - generic "Local processing details" [ref=f3e454] [cursor=pointer]
+    - generic [ref=f3e455]:
+      - link "Edit source & create again" [ref=f3e456] [cursor=pointer]:
+        - /url: /workspace
+      - generic [ref=f3e457]: All processing stays on this device.

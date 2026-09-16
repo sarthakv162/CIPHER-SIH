@@ -87,6 +87,7 @@ export function Artefacts() {
 
   const { data: report } = useVerification(transformId)
   const [released, setReleased] = useState<Set<string>>(new Set())
+  const [appliedTemplates, setAppliedTemplates] = useState<Record<string, string>>({})
 
   const activeId = params.get('job') ?? succeeded[0]?.job_id
   const active = succeeded.find((entry) => entry.job_id === activeId)
@@ -200,12 +201,20 @@ export function Artefacts() {
                       transformId={transformId}
                       jobId={active.job_id}
                       artefactType={active.artefact_type}
+                      appliedTemplate={appliedTemplates[active.job_id] ?? 'ntro-formal'}
+                      onTemplateApplied={(newTemplate) =>
+                        setAppliedTemplates((prev) => ({
+                          ...prev,
+                          [active.job_id]: newTemplate,
+                        }))
+                      }
                     />
                   )}
                   <ArtefactBody
-                    key={active.job_id}
+                    key={`${active.job_id}-${appliedTemplates[active.job_id] ?? 'ntro-formal'}`}
                     transformId={transformId}
                     entry={active}
+                    template={appliedTemplates[active.job_id] ?? 'ntro-formal'}
                   />
                   {report && (
                     <ClaimsList
@@ -367,12 +376,16 @@ function TemplateSection({
   transformId,
   jobId,
   artefactType,
+  appliedTemplate = 'ntro-formal',
+  onTemplateApplied,
 }: {
   transformId: string
   jobId: string
   artefactType: ArtefactType
+  appliedTemplate?: string
+  onTemplateApplied?: (template: string) => void
 }) {
-  const [selected, setSelected] = useState('ntro-formal')
+  const [selected, setSelected] = useState(appliedTemplate)
   const queryClient = useQueryClient()
   const rerender = useMutation({
     mutationFn: async (template: string): Promise<RerenderResult> => {
@@ -390,7 +403,8 @@ function TemplateSection({
       }
       return (await response.json()) as RerenderResult
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      onTemplateApplied?.(data.template)
       void queryClient.invalidateQueries({ queryKey: ['files', transformId, jobId] })
     },
   })
@@ -442,9 +456,11 @@ function TemplateSection({
 export function ArtefactBody({
   transformId,
   entry,
+  template = 'ntro-formal',
 }: {
   transformId: string
   entry: ArtefactEntry
+  template?: string
 }) {
   const { data: files } = useFiles(transformId, entry.job_id)
   const a: Record<string, unknown> = entry.artefact ?? {}
@@ -477,11 +493,11 @@ export function ArtefactBody({
         />
       )
     case 'advisory':
-      return <AdvisoryView artefact={a as never} />
+      return <AdvisoryView artefact={a as never} template={template} />
     case 'executive_summary':
-      return <ExecutiveSummaryView artefact={a as never} />
+      return <ExecutiveSummaryView artefact={a as never} template={template} />
     case 'presentation':
-      return <PresentationView artefact={a as never} />
+      return <PresentationView artefact={a as never} template={template} />
     case 'infographic_spec':
       return (
         <InfographicView

@@ -1,0 +1,61 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - button "Collapse sidebar" [ref=e5] [cursor=pointer]
+    - generic [ref=e6]: RPD Web Application
+    - searchbox "Search projects (not yet available)" [disabled] [ref=e8]
+    - generic [ref=e9]:
+      - generic [ref=e10]:
+        - generic [ref=e15]: W31
+        - generic [ref=e16]: 21 to W52
+      - button "Notifications" [ref=e17] [cursor=pointer]
+      - radiogroup "Colour theme" [ref=e18]:
+        - radio "Light theme" [ref=e19] [cursor=pointer]
+        - radio "Dark theme" [ref=e26] [cursor=pointer]
+        - radio "System theme" [checked] [ref=e29] [cursor=pointer]
+  - generic [ref=e32]:
+    - navigation "Surfaces" [ref=e33]:
+      - generic [ref=e34]:
+        - generic [aria-hidden] [ref=e35]: RPD
+        - generic [ref=e36]:
+          - generic [ref=e37]: Frigoglass
+          - generic [ref=e38]: R&D Portfolio
+      - generic [ref=e39]:
+        - generic [ref=e40]:
+          - generic [ref=e41]: Plan
+          - generic [ref=e42]:
+            - link "Dashboard" [ref=e43] [cursor=pointer]:
+              - /url: /
+            - link "Capacity" [ref=e50] [cursor=pointer]:
+              - /url: /capacity
+            - link "Prioritization" [ref=e56] [cursor=pointer]:
+              - /url: /matrix
+        - generic [ref=e63]:
+          - generic [ref=e64]: Execute
+          - generic [ref=e65]:
+            - link "Timeline" [ref=e66] [cursor=pointer]:
+              - /url: /timeline
+            - link "Register" [ref=e70] [cursor=pointer]:
+              - /url: /register
+        - generic [ref=e75]:
+          - generic [ref=e76]: Configure
+          - link "Planning" [ref=e78] [cursor=pointer]:
+            - /url: /planning
+        - generic [ref=e90]:
+          - generic [ref=e91]: Data
+          - link "Audit Log" [ref=e93] [cursor=pointer]:
+            - /url: /audit-log
+      - generic [ref=e98]:
+        - generic [ref=e104]:
+          - generic [ref=e105]: Hub scope
+          - generic [ref=e106]: All hubs
+        - button "Sign out" [ref=e107] [cursor=pointer]
+    - generic [ref=e114]:
+      - status [ref=e115]:
+        - generic [ref=e116]: Loading
+      - generic [ref=e117]:
+        - status [ref=e118]:
+          - generic [ref=e119]: Loading
+        - status [ref=e120]:
+          - generic [ref=e121]: Loading
+      - status [ref=e122]:
+        - generic [ref=e123]: Loading

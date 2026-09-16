@@ -1,0 +1,32 @@
+[     607ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=cd34cb4b:14335
+[     708ms] [WARNING] ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition. @ http://localhost:5173/@vite/client:532
+[     778ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/node_modules/.pnpm/@fontsource-variable+inter@5.3.0/node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2:0
+[     778ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/node_modules/.pnpm/@fontsource-variable+jetbrains-mono@5.3.0/node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2:0
+[     779ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:5173/@vite/client:1002
+[     785ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/src/surfaces/dashboard/hooks/use-dashboard.ts:0
+[     785ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/src/surfaces/dashboard/components/access-notice.tsx?t=1788872982729:0
+[     785ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/src/surfaces/dashboard/components/hub-type-pipeline-table.tsx?t=1788872982729:0
+[     785ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/src/surfaces/dashboard/components/pipeline-panel.tsx?t=1788876218909:0
+[     785ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/src/surfaces/dashboard/components/project-breakdown.tsx?t=1788875172703:0
+[     785ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/src/components/shared/section-boundary.tsx?t=1788875172703:0
+[     785ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/src/surfaces/dashboard/components/status-overview-cards.tsx?t=1788873586115:0
+[     785ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/src/surfaces/dashboard/components/within-year-panel.tsx?t=1788873881619:0
+[     802ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/favicon.ico:0
+[     806ms] [ERROR] [route error] TypeError: Failed to fetch dynamically imported module: http://localhost:5173/src/surfaces/dashboard/DashboardPage.tsx?t=1788876218909 @ http://localhost:5173/@vite/client:532
+[     807ms] [ERROR] [route error] TypeError: Failed to fetch dynamically imported module: http://localhost:5173/src/surfaces/dashboard/DashboardPage.tsx?t=1788876218909 @ http://localhost:5173/@vite/client:532
+[     813ms] [ERROR] [route error] TypeError: Failed to fetch dynamically imported module: http://localhost:5173/src/surfaces/dashboard/DashboardPage.tsx?t=1788876218909 @ http://localhost:5173/@vite/client:532
+[     813ms] [ERROR] [route error] TypeError: Failed to fetch dynamically imported module: http://localhost:5173/src/surfaces/dashboard/DashboardPage.tsx?t=1788876218909 @ http://localhost:5173/@vite/client:532
+[     993ms] [ERROR] [route error] TypeError: Failed to fetch dynamically imported module: http://localhost:5173/src/surfaces/dashboard/DashboardPage.tsx?t=1788876218909 @ http://localhost:5173/@vite/client:532
+[     993ms] [ERROR] [route error] TypeError: Failed to fetch dynamically imported module: http://localhost:5173/src/surfaces/dashboard/DashboardPage.tsx?t=1788876218909 @ http://localhost:5173/@vite/client:532
+[     994ms] [ERROR] [route error] TypeError: Failed to fetch dynamically imported module: http://localhost:5173/src/surfaces/dashboard/DashboardPage.tsx?t=1788876218909 @ http://localhost:5173/@vite/client:532
+[     994ms] [ERROR] [route error] TypeError: Failed to fetch dynamically imported module: http://localhost:5173/src/surfaces/dashboard/DashboardPage.tsx?t=1788876218909 @ http://localhost:5173/@vite/client:532
+[     997ms] [ERROR] %o
+
+%s
+
+%s
+ TypeError: Failed to fetch dynamically imported module: http://localhost:5173/src/surfaces/dashboard/DashboardPage.tsx?t=1788876218909 The above error occurred in one of your React components. React will try to recreate this component tree from scratch using the error boundary you provided, RenderErrorBoundary. @ http://localhost:5173/@vite/client:532
+[     998ms] [ERROR] React Router caught the following error during render TypeError: Failed to fetch dynamically imported module: http://localhost:5173/src/surfaces/dashboard/DashboardPage.tsx?t=1788876218909 {componentStack: 
+    at Lazy (<anonymous>)
+    at Suspense (<anony…heme-provider.tsx:21:33)
+    at App (<anonymous>)} @ http://localhost:5173/@vite/client:532

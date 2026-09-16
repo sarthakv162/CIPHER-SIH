@@ -53,3 +53,31 @@ def test_convert_unknown_pair_is_400(client: TestClient, fixtures_dir: Path) -> 
         "opts": {},
     }
     assert client.post("/convert", json=body).status_code == 400
+
+
+def test_convert_response_is_downloadable(client: TestClient, fixtures_dir: Path) -> None:
+    """The converted file named in `download_name` is fetchable through the frontend route."""
+    body = {
+        "input_path": str(fixtures_dir / "parivartan" / "clean.csv"),
+        "src_format": "csv",
+        "dst_format": "jsonl",
+        "opts": {},
+    }
+    report = client.post("/convert", json=body).json()
+    assert report["download_name"] == Path(report["output_path"]).name
+
+    download = client.get(f"/conversions/download/{report['download_name']}")
+    assert download.status_code == 200
+    assert download.content == Path(report["output_path"]).read_bytes()
+    assert "attachment" in download.headers["content-disposition"]
+
+
+def test_convert_download_rejects_traversal(client: TestClient) -> None:
+    """A bare `..` segment or an unknown filename is a 404, never a filesystem escape.
+
+    A `filename` containing an actual `/` never reaches this route at all -- Starlette's
+    router only matches a single path segment there, so that case is already excluded
+    before `safe_file_name` runs; this exercises what a single segment *can* smuggle.
+    """
+    assert client.get("/conversions/download/%2e%2e").status_code == 404
+    assert client.get("/conversions/download/does-not-exist.json").status_code == 404

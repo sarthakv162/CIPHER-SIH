@@ -12,12 +12,21 @@ interface Slide {
  *  actually reviewed, rather than as a flat list of slide objects. */
 export function PresentationView({
   artefact,
+  template = 'ntro-formal',
 }: {
   artefact: { title: string; slides: Slide[]; deck_summary: string }
+  template?: string
 }) {
   const [active, setActive] = useState(0)
   const slide = artefact.slides[active]
   if (!slide) return null
+
+  const templateLabel =
+    template === 'executive'
+      ? 'Executive Briefing'
+      : template === 'technical'
+        ? 'Technical Deck'
+        : 'NTRO Formal Deck'
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3 md:flex-row">
@@ -51,9 +60,14 @@ export function PresentationView({
 
       <div className="flex min-w-0 flex-1 flex-col gap-3">
         <div className="surface-card flex aspect-video min-h-0 flex-col justify-center gap-3 p-6">
-          <span className="section-label">
-            {slide.layout.replace('_', ' ')}
-          </span>
+          <div className="flex items-center justify-between">
+            <span className="section-label">
+              {slide.layout.replace('_', ' ')}
+            </span>
+            <span className="rounded-[4px] border border-accent/25 bg-accent/10 px-2 py-0.5 text-[11px] font-semibold uppercase text-accent">
+              {templateLabel}
+            </span>
+          </div>
           <h2 className="text-[26px] leading-tight text-text-0">
             {slide.title}
           </h2>

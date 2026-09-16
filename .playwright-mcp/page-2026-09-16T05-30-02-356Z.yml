@@ -1,0 +1,150 @@
+- generic [ref=f9e3]:
+  - link "Skip to content" [ref=f9e4] [cursor=pointer]:
+    - /url: "#main-content"
+  - complementary [ref=f9e6]:
+    - generic [ref=f9e7]:
+      - link "Cipher home" [ref=f9e8] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f9e14]:
+          - text: CIPHER.
+          - generic [ref=f9e15]: CREATIVE STUDIO
+      - button "Collapse sidebar" [ref=f9e16] [cursor=pointer]
+    - navigation "Main navigation" [ref=f9e19]:
+      - button "New transform" [ref=f9e20] [cursor=pointer]
+      - link "Library" [ref=f9e24] [cursor=pointer]:
+        - /url: /artefacts
+      - link "Convert files" [ref=f9e29] [cursor=pointer]:
+        - /url: /parivartan
+    - generic [ref=f9e33]:
+      - paragraph [ref=f9e34]: Create something
+      - link "Documents 2" [ref=f9e35] [cursor=pointer]:
+        - /url: /?category=documents
+        - text: Documents
+        - generic [ref=f9e39]: "2"
+      - link "Social content 2" [ref=f9e40] [cursor=pointer]:
+        - /url: /?category=social
+        - text: Social content
+        - generic [ref=f9e43]: "2"
+      - link "Visuals & video 3" [ref=f9e44] [cursor=pointer]:
+        - /url: /?category=visual
+        - text: Visuals & video
+        - generic [ref=f9e49]: "3"
+    - generic [ref=f9e50]:
+      - paragraph [ref=f9e51]: Recent transforms
+      - navigation "Recent transforms" [ref=f9e52]:
+        - list [ref=f9e93]:
+          - listitem [ref=f9e94]:
+            - link "advisory 1 conflict found by verification 16 Sept, 10:31" [ref=f9e95] [cursor=pointer]:
+              - /url: /runs/eed71be7ff9347bbacadb5f13d8fc8dc
+              - generic [ref=f9e96]:
+                - generic [ref=f9e98]: advisory
+                - generic "1 conflict found by verification" [ref=f9e99]
+              - generic [ref=f9e100]: 16 Sept, 10:31
+          - listitem [ref=f9e101]:
+            - link "infographic spec 16 Sept, 10:24" [ref=f9e102] [cursor=pointer]:
+              - /url: /runs/68bc792110e246e9abc8e0d59718ce46
+              - generic [ref=f9e103]: infographic spec
+              - generic [ref=f9e106]: 16 Sept, 10:24
+          - listitem [ref=f9e107]:
+            - link "2 artefacts 16 Sept, 10:12" [ref=f9e108] [cursor=pointer]:
+              - /url: /runs/5ea6620ebf844dd7b2e1aee796201b6d
+              - generic [ref=f9e109]: 2 artefacts
+              - generic [ref=f9e112]: 16 Sept, 10:12
+          - listitem [ref=f9e113]:
+            - link "video package 16 Sept, 08:23" [ref=f9e114] [cursor=pointer]:
+              - /url: /runs/c2643f149ee5436d95b276ff7580aa30
+              - generic [ref=f9e115]: video package
+              - generic [ref=f9e118]: 16 Sept, 08:23
+          - listitem [ref=f9e119]:
+            - link "executive summary 16 Sept, 08:18" [ref=f9e120] [cursor=pointer]:
+              - /url: /runs/d3c040d6f32c4bc6b1e08c37ae83c1f1
+              - generic [ref=f9e121]: executive summary
+              - generic [ref=f9e124]: 16 Sept, 08:18
+          - listitem [ref=f9e125]:
+            - link "6 artefacts 16 Sept, 07:53" [ref=f9e126] [cursor=pointer]:
+              - /url: /runs/ea229a8a96dd427eb5e12030dc1f50e9
+              - generic [ref=f9e127]: 6 artefacts
+              - generic [ref=f9e130]: 16 Sept, 07:53
+          - listitem [ref=f9e131]:
+            - link "2 artefacts 15 Sept, 23:30" [ref=f9e132] [cursor=pointer]:
+              - /url: /runs/0d7d3596ae9d4350a6717d6fb794396d
+              - generic [ref=f9e133]: 2 artefacts
+              - generic [ref=f9e136]: 15 Sept, 23:30
+          - listitem [ref=f9e137]:
+            - link "infographic spec 15 Sept, 23:21" [ref=f9e138] [cursor=pointer]:
+              - /url: /runs/e39bbae787444e57a51a5676ce6490c2
+              - generic [ref=f9e139]: infographic spec
+              - generic [ref=f9e142]: 15 Sept, 23:21
+    - link "System settings" [ref=f9e55] [cursor=pointer]:
+      - /url: /system
+  - main [ref=f9e59]:
+    - generic [ref=f9e60]:
+      - generic [ref=f9e61]:
+        - generic [ref=f9e62]: Workspace /
+        - generic [ref=f9e63]: Format converter
+        - generic [ref=f9e64]: Parivartan
+      - generic [ref=f9e65]:
+        - status "No non-loopback connection observed in this process tree" [ref=f9e143]:
+          - generic [ref=f9e69]: On-device · Offline
+        - generic [ref=f9e70]:
+          - button "Switch to light mode" [ref=f9e71] [cursor=pointer]
+          - button "Customize appearance" [ref=f9e78] [cursor=pointer]
+    - generic [ref=f9e86]:
+      - generic [ref=f9e87]:
+        - heading "Convert files" [level=1] [ref=f9e88]
+        - paragraph [ref=f9e89]: Choose a format and upload your file. Conversion runs locally.
+      - generic [ref=f9e148]:
+        - generic [ref=f9e149]:
+          - generic [ref=f9e150]: "01"
+          - heading "Choose your conversion" [level=2] [ref=f9e151]
+        - group [ref=f9e152]:
+          - generic [ref=f9e153]:
+            - generic [ref=f9e154]: From format
+            - combobox "From format" [ref=f9e156] [cursor=pointer]:
+              - option "CEF"
+              - option "CSV" [selected]
+              - option "IOC-CSV"
+              - option "JSON"
+              - option "JSONL"
+              - option "PARQUET"
+              - option "SIGMA"
+              - option "STIX21"
+              - option "TSV"
+              - option "XLSX"
+              - option "XML"
+              - option "YAML"
+          - generic [ref=f9e159]:
+            - generic [ref=f9e160]: To format
+            - combobox "To format" [ref=f9e162] [cursor=pointer]:
+              - option "CSV"
+              - option "JSON" [selected]
+              - option "JSONL"
+              - option "PARQUET"
+              - option "TSV"
+              - option "XLSX"
+              - option "XML"
+              - option "YAML"
+        - paragraph [ref=f9e163]: csv -> json
+        - generic [ref=f9e164]:
+          - generic [ref=f9e165]: "02"
+          - heading "Add your file" [level=2] [ref=f9e166]
+        - group [ref=f9e167]:
+          - button "Drop your source here or browse files on your machine CSV · JSON · YAML · XML · SPREADSHEETS · LOGS" [ref=f9e169] [cursor=pointer]:
+            - generic [ref=f9e174]: Drop your source here
+            - generic [ref=f9e175]: or browse files on your machine
+            - generic [ref=f9e176]: CSV · JSON · YAML · XML · SPREADSHEETS · LOGS
+          - generic [ref=f9e177]: Or enter a file path on this machine
+          - textbox "Or enter a file path on this machine" [ref=f9e178]:
+            - /placeholder: data/samples/data.csv
+            - text: tests/fixtures/parivartan/clean.csv
+        - generic [ref=f9e179]:
+          - generic [ref=f9e180]: Converted on this machine
+          - button "Convert file" [ref=f9e185] [cursor=pointer]
+        - status [ref=f9e189]:
+          - generic [ref=f9e190]:
+            - generic [ref=f9e193]: Your file is ready
+            - generic [ref=f9e194]: 3 rows · 0s
+          - link "Download clean.json" [ref=f9e195] [cursor=pointer]:
+            - /url: /conversions/download/clean.json
+      - group [ref=f9e199]:
+        - generic "Explore all 68 supported conversions" [ref=f9e200] [cursor=pointer]
