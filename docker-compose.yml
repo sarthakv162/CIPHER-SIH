@@ -1,0 +1,44 @@
+# Rupantar, containerised and air-gapped by construction.
+#
+# `rupantar` sits only on the `airgap` network, which Docker marks internal: the container has no
+# route off the host, so INV-4 holds even if the network cable is plugged in. The `gateway`
+# (nginx) is the only thing on both networks, and it only forwards 127.0.0.1:8000 inward.
+#
+#   docker compose up -d --build
+#   open http://127.0.0.1:8000/
+#   docker compose exec rupantar rupantar selfcheck
+
+name: rupantar
+
+services:
+  rupantar:
+    build:
+      context: .
+      target: runtime
+    image: rupantar:latest
+    restart: unless-stopped
+    environment:
+      # Auto-detects to cpu-only inside Linux. Set to test-stub to run without model files.
+      RUPANTAR_PROFILE: ${RUPANTAR_PROFILE:-}
+      RUPANTAR_STRICT_AIRGAP: ${RUPANTAR_STRICT_AIRGAP:-}
+    volumes:
+      - ./models:/app/models:ro
+      - ./data:/app/data
+    networks: [airgap]
+
+  gateway:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      rupantar:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${RUPANTAR_PORT:-8000}:8080"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks: [airgap, edge]
+
+networks:
+  airgap:
+    internal: true
+  edge: {}

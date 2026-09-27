@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
+import psutil
 import pytest
 
 from rupantar.audit.egress import (
     EgressReport,
     RemoteConnection,
+    _is_egress,
     _is_loopback,
+    _listening_ports,
     assert_clean,
     enforce_offline_env,
     scan_egress,
@@ -61,3 +66,25 @@ def test_assert_clean_raises_only_when_strict_and_dirty() -> None:
     with pytest.raises(EgressViolationError):
         assert_clean(dirty, strict=True)
     assert_clean(EgressReport(checked_at="now"), strict=True)
+
+
+def _conn(lport: int, rhost: str, rport: int, status: str) -> SimpleNamespace:
+    raddr = SimpleNamespace(ip=rhost, port=rport) if rhost else ()
+    return SimpleNamespace(
+        laddr=SimpleNamespace(ip="172.18.0.2", port=lport), raddr=raddr, status=status
+    )
+
+
+def test_inbound_client_on_our_listening_port_is_not_egress() -> None:
+    listen = _conn(8000, "", 0, psutil.CONN_LISTEN)
+    inbound = _conn(8000, "172.18.0.3", 51544, psutil.CONN_ESTABLISHED)
+    outbound = _conn(51900, "93.184.216.34", 443, psutil.CONN_ESTABLISHED)
+    listening = _listening_ports([listen, inbound, outbound])
+    assert listening == {8000}
+    assert not _is_egress(listen, listening)
+    assert not _is_egress(inbound, listening)
+    assert _is_egress(outbound, listening)
+
+
+def test_non_loopback_peer_is_egress_when_nothing_listens() -> None:
+    assert _is_egress(_conn(8000, "172.18.0.3", 51544, psutil.CONN_ESTABLISHED), set())

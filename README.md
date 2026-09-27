@@ -116,6 +116,37 @@ itself is wrong, and an `UNSUPPORTED` claim may still be true but simply absent 
 Treat it as a triage aid, not a certification. Disable it (skips both brain calls, zero added
 latency) via `configs/policy.yaml:verification.enabled: false`.
 
+## Docker
+
+Everything (API, operator console, `llama-server` pinned to llama.cpp `b10809`, the whisper
+worker, `piper`, `ffmpeg`) runs from one image. Model weights stay on the host in `./models`
+(mounted read-only); outputs and the SQLite DB land in `./data`.
+
+```bash
+# online, once
+scripts/fetch_models.sh
+docker compose build
+make docker-save                  # -> vendor/rupantar-images.tar.gz (rupantar + nginx)
+
+# on the air-gapped machine
+make docker-load
+docker compose up -d              # console at http://127.0.0.1:8000/  (RUPANTAR_PORT=… to move it)
+docker compose exec rupantar rupantar selfcheck
+make docker-test                  # `make check` inside the Linux image
+```
+
+The `rupantar` container sits only on an `internal` Docker network, so it has **no route off
+the host at all**. An nginx `gateway` is the only thing on both networks, and it forwards only
+`127.0.0.1:8000` inward. The egress monitor treats clients connected to our own listening port
+as ingress, so browser traffic through the gateway does not show up as a violation.
+
+**Performance:** Docker on macOS has no Metal, so inside the container the profile auto-detects
+to `cpu-only` (~2× slower than `apple-metal`; llama.cpp is built with every CPU variant and picks
+the best one at run time). Docker Desktop's VM also caps RAM (8 GB by default). Raise it to
+≥10 GB in Docker Desktop → Resources if you want the vlm and brain to swap comfortably. For the
+timed demo on the M4 Air, run natively. The container is for portability and Linux hosts. An
+NVIDIA/CUDA image variant is not built yet.
+
 ## 4. Development
 
 ```bash

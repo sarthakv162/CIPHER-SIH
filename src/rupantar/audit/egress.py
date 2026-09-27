@@ -8,6 +8,7 @@ import os
 from collections.abc import MutableMapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from typing import Any
 
 import psutil
 
@@ -122,19 +123,37 @@ def _addr(pair: object) -> str:
     return f"{host}:{port}" if port else str(host)
 
 
+def _listening_ports(conns: list[Any]) -> set[int]:
+    """Local ports our process tree is accepting connections on."""
+    return {conn.laddr.port for conn in conns if conn.status == psutil.CONN_LISTEN and conn.laddr}
+
+
+def _is_egress(conn: Any, listening: set[int]) -> bool:
+    """True for an outbound socket to a non-loopback peer; inbound accepts are not egress."""
+    remote_host = getattr(conn.raddr, "ip", "") if conn.raddr else ""
+    if _is_loopback(remote_host):
+        return False
+    return not (conn.laddr and conn.laddr.port in listening)
+
+
 def scan_egress(root_pid: int | None = None) -> EgressReport:
-    """Scan our process tree's inet sockets; flag every connection to a non-loopback remote."""
+    """Scan our process tree's sockets; flag every outbound connection to a non-loopback peer.
+
+    A client connected to one of our own listening ports (a browser reaching the API through a
+    container port-forward, say) is ingress, not egress, and is not flagged.
+    """
     report = EgressReport(checked_at=datetime.now(UTC).isoformat())
+    per_proc: list[tuple[psutil.Process, str, list[Any]]] = []
     for proc in _tree_processes(root_pid):
         try:
-            name = proc.name()
-            conns = proc.net_connections(kind="inet")
+            per_proc.append((proc, proc.name(), proc.net_connections(kind="inet")))
         except psutil.Error:
             continue
+    listening = _listening_ports([c for _, _, conns in per_proc for c in conns])
+    for proc, name, conns in per_proc:
         report.scanned_pids.append(proc.pid)
         for conn in conns:
-            remote_host = getattr(conn.raddr, "ip", "") if conn.raddr else ""
-            if _is_loopback(remote_host):
+            if not _is_egress(conn, listening):
                 continue
             report.violations.append(
                 RemoteConnection(

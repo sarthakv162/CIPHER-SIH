@@ -38,10 +38,12 @@ fonts:
     - "/System/Library/Fonts/Helvetica.ttc"
     - "/System/Library/Fonts/Supplemental/Arial.ttf"
     - "/Library/Fonts/Arial Unicode.ttf"
+    - "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
   bold:
     - "/System/Library/Fonts/Supplemental/Arial Bold.ttf"
     - "/System/Library/Fonts/Helvetica.ttc"
     - "/Library/Fonts/Arial Unicode.ttf"
+    - "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 
 wordmark:
   text: "NTRO · Rupantar"
