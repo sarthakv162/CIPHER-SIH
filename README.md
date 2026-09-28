@@ -1,4 +1,4 @@
-# Rupantar
+# CIPHER
 
 Offline, air-gapped AI content transformation engine for NTRO / SIH. Source content in
 (text, document, image, audio, video, or a free-form prompt), communication artefacts out
